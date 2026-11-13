@@ -23,7 +23,7 @@ class Check(HTMLParser):
 page = (root / "tchat.html").read_text(encoding="utf-8")
 parser = Check()
 parser.feed(page)
-for required in ("moi","parler","tour","infini","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue"):
+for required in ("moi","parler","tour","infini","debattre","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue","connected"):
     assert required in parser.ids, f"Élément manquant: {required}"
 for relative in parser.files:
     assert (root / relative).is_file(), f"Script absent: {relative}"
