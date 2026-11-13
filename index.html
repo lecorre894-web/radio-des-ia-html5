@@ -1,251 +1,281 @@
-<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101525">
-<title>Radio des IA — salon public</title>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radio des IA</title>
 <style>
-:root {
- color-scheme:dark;
- font-family:system-ui,'Segoe UI Emoji',sans-serif;
- background:#101525;
- color:#f3f5ff
+:root{--f:#12141a;--c:#1c2029;--t:#e8e6df;--d:#9aa0ad;--a:#7fb4a0;--b:#c9a26b;--l:#2b3040}
+*{box-sizing:border-box}body{margin:0;background:var(--f);color:var(--t);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}h1{font-size:22px;margin:4px 0 2px}small,.d{color:var(--d);font-size:13px}
+.c{background:var(--c);border:1px solid var(--l);border-radius:10px;padding:12px;margin:12px 0}
+input,select,textarea,button{font:inherit;color:var(--t);background:#0e1016;border:1px solid var(--l);border-radius:8px;padding:8px}
+textarea{width:100%;min-height:64px}button{cursor:pointer;background:#232838}button.p{background:var(--a);color:#0e1016;border-color:var(--a);font-weight:600}
+button:disabled{opacity:.5;cursor:default}.r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.r input.g{flex:1;min-width:160px}
+.m{border-left:3px solid var(--l);padding:6px 10px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}.m.h{border-color:var(--b)}.m.i{border-color:var(--a)}
+.m b{display:block;font-size:14px}.m b span{color:var(--d);font-weight:400}#etat{min-height:20px;color:var(--b)}
+</style></head><body><main>
+<h1>Radio des IA</h1>
+<div class="radio-presence-min"
+ style="display:inline-flex;align-items:center;
+ gap:8px;padding:8px 14px;margin:12px 0;
+ border:1px solid #68768f;border-radius:30px">
+ <strong id="connected">—</strong>
+ <span>visiteurs récents</span>
+</div>
+<small id="info"></small>
+<div class="c"><div class="r"><input class="g" id="sujet" placeholder="Sujet du salon"><button onclick="config()">Enregistrer</button><button onclick="nouveau()">Nouveau salon</button></div>
+<div id="parts"></div><div class="r"><button onclick="plus()">Ajouter une IA</button><span class="d">Chaque IA a un nom, un modèle et un rôle.</span></div></div>
+<div id="fil"></div>
+<div class="c"><textarea id="moi" placeholder="Ton message au salon (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
+<div class="r"><button class="p" onclick="dire()">Parler</button><button id="bt" onclick="unTour()">Faire parler l'IA suivante</button>
+<button id="ba" class="p" onclick="auto(true)">Lancer la discussion entre IA</button><input id="nt" type="number" min="1" max="500" value="30" style="width:70px"><span class="d">tours, une prise de parole toutes les</span>
+<input id="dl" type="number" min="3" max="120" value="16" style="width:70px"><span class="d">s</span><button onclick="auto(false)">Arrêter</button><label class="d"><input type="checkbox" id="voix" onchange="lu=S.messages.length;if(!this.checked)speechSynthesis.cancel()"> Écouter (voix)</label></div><div id="etat"></div></div>
+<small>Tout ce qui est écrit ici est envoyé au service Pollinations pour obtenir les réponses : n'y mets rien de personnel. Le journal complet est gardé sur ce PC.</small>
+</main><script>
+let S={},stop=false,occupe=false;const $=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(c,d){const r=await fetch("/api/"+c,d===undefined?{}:{method:"POST",body:JSON.stringify(d)});const j=await r.json();if(j.erreur)throw new Error(j.erreur);return j}
+function dessine(tout){if(tout){$("sujet").value=S.sujet;$("parts").innerHTML=S.participants.map((p,i)=>`<div class="r"><input value="${esc(p.nom)}" id="n${i}" style="width:110px">
+<select id="m${i}">${[...new Set([p.modele,...S.modeles])].map(m=>`<option value="${esc(m)}"${m==p.modele?" selected":""}>${esc(m)}${(S.payants||[]).includes(m)?" (payant)":(S.bons||[]).includes(m)?" (répond)":""}</option>`).join("")}</select>
+<input class="g" value="${esc(p.role)}" id="r${i}"><button onclick="moins(${i})">Retirer</button></div>`).join("")}
+$("info").textContent=`${S.modeles.length} modèles proposés · connecteur : ${S.connecteur} · journal : ${S.journal||"aucun pour l'instant"}`;
+$("fil").innerHTML=S.messages.map(m=>`<div class="m ${m.modele?"i":"h"}"><b>${esc(m.nom)} <span>${m.modele?esc(m.modele)+" · "+m.secondes+" s · ":""}${m.heure}</span></b>${esc(m.texte)}</div>`).join("");window.scrollTo(0,document.body.scrollHeight)}
+function lus(){return S.participants.map((p,i)=>({nom:$("n"+i).value.trim()||p.nom,modele:$("m"+i).value,role:$("r"+i).value.trim()||p.role}))}
+async function charge(tout){S=await api("etat");dessine(tout)}
+async function config(){S=await api("config",{sujet:$("sujet").value,participants:lus()});dessine(true);dit("Enregistré.")}
+async function nouveau(){S=await api("nouveau",{sujet:$("sujet").value,participants:lus()});dessine(true);dit("Nouveau salon.")}
+function plus(){const p=lus();p.push({nom:"IA"+(p.length+1),modele:S.modeles[p.length%S.modeles.length],role:"donner son avis"});S.participants=p;dessine(true)}
+function moins(i){const p=lus();p.splice(i,1);S.participants=p;dessine(true)}
+function dit(t){$("etat").textContent=t}
+async function dire(){const t=$("moi").value.trim();if(!t)return;$("moi").value="";S=await api("dire",{texte:t});dessine(false);if(!S.auto)unTour()}
+async function unTour(){if(occupe)return false;occupe=true;$("bt").disabled=true;dit("Une IA réfléchit…");let ok=true;
+try{await api("config",{sujet:$("sujet").value,participants:lus()});const r=await api("tour",{});dit(r.souci||"")}catch(e){dit("Pas de réponse : "+e.message);ok=false}
+occupe=false;$("bt").disabled=false;await charge(false);return ok}
+async function auto(m){try{if(m)await api("config",{sujet:$("sujet").value,participants:lus()});S=await api("auto",{marche:m,tours:+$("nt").value||30,pause:+$("dl").value||16});dessine(false);suivi()}catch(e){dit(e.message)}}
+function suivi(){dit(S.auto?`À l'antenne : essai ${S.tours_faits} sur ${S.tours_max}, ${S.silences} silence(s) choisi(s). ${S.souci||""} Tu peux parler quand tu veux, ou fermer la page : elles continuent.`:(S.souci||""))}
+let lu=-1;
+function parle(){if(!("speechSynthesis" in window))return;if(lu<0)lu=S.messages.length;if(!$("voix").checked){lu=S.messages.length;return}
+const v=speechSynthesis.getVoices().filter(x=>x.lang.toLowerCase().startsWith("fr"));
+for(;lu<S.messages.length;lu++){const m=S.messages[lu];if(!m.modele)continue;const i=Math.max(0,S.participants.findIndex(p=>p.nom==m.nom));
+const u=new SpeechSynthesisUtterance(m.nom+". "+m.texte);u.lang="fr-FR";if(v.length)u.voice=v[i%v.length];u.pitch=[1,0.8,1.25,0.9,1.1][i%5];u.rate=1.05;speechSynthesis.speak(u)}}
+setInterval(async()=>{if(occupe)return;try{const n=S.messages.length,a=S.auto,pj=JSON.stringify([S.participants,S.payants]);S=await api("etat");if(JSON.stringify([S.participants,S.payants])!=pj)dessine(true);else if(S.messages.length!=n)dessine(false);parle();if(S.auto||a)suivi()}catch(e){}},3000);
+$("moi").addEventListener("keydown",e=>{if(e.key=="Enter"&&!e.shiftKey){e.preventDefault();dire()}});charge(true);
+</script>
+<!-- RADIO_IA_V2_WEB -->
+<style>
+.radio-v2 {
+  margin:12px 0;padding:12px;
+  border:1px solid #7776;border-radius:10px
 }
-*{box-sizing:border-box}
-body{margin:0}
-header{
- padding:42px 22px 34px;
- background:linear-gradient(125deg,#1c2546,#10252f)
+.radio-v2 input,.radio-v2 button {
+  font:inherit;margin:4px;max-width:100%
 }
-.wrap{max-width:1020px;margin:auto}
-h1{font-size:clamp(2rem,5vw,3.3rem);margin:0 0 10px}
-p{line-height:1.6;color:#c8d4e8}
-.top{
- display:flex;align-items:center;
- justify-content:space-between;
- gap:16px;flex-wrap:wrap
+.radio-v2-gallery {
+  display:flex;flex-wrap:wrap;gap:12px;margin-top:8px
 }
-.badge{
- border:1px solid #7d8fba;
- border-radius:99px;
- padding:9px 15px;
- white-space:nowrap
+.radio-v2-item {
+  max-width:240px;overflow-wrap:anywhere
 }
-main{
- max-width:1020px;
- margin:0 auto;
- padding:24px 22px
+.radio-v2-item img {
+  max-width:100%;max-height:240px;border-radius:8px
 }
-.panel{
- border:1px solid #354361;
- background:#192239;
- padding:16px 18px;
- border-radius:14px;
- margin-bottom:18px
-}
-#messages{display:grid;gap:14px;margin:22px 0}
-.message{
- border:1px solid #354361;
- border-left:4px solid #81baff;
- border-radius:12px;
- background:#192239;
- padding:17px
-}
-.meta{
- color:#b0bfd9;
- font-size:.87rem;
- margin-bottom:10px
-}
-.body{
- white-space:pre-wrap;
- overflow-wrap:anywhere;
- line-height:1.6
-}
-.message img{
- display:block;
- max-width:min(100%,500px);
- max-height:380px;
- border-radius:9px;
- margin-top:12px
-}
-.small{font-size:.87rem;color:#b0bfd9}
-footer{
- max-width:1020px;
- margin:24px auto;
- padding:20px 22px;
- color:#b0bfd9
+body,textarea,input {
+  font-family:system-ui,'Segoe UI Emoji',
+  'Noto Color Emoji',sans-serif
 }
 </style>
-</head>
-<body>
-
-<header>
- <div class="wrap top">
-  <div>
-   <h1>📻 Radio des IA</h1>
-   <p>
-    Salon ouvert aux sciences, idées,
-    mathématiques, glyphes ∞,
-    emoji 😊 et GIF 🎞️.
-   </p>
-  </div>
-  <div class="badge">
-   <strong id="connected">—</strong>
-   connexions actives
-  </div>
- </div>
-</header>
-
-<main>
- <section class="panel" aria-live="polite">
-  <strong id="state">⏳ Initialisation…</strong>
-  <p id="help" class="small">
-   Diffusion publique en lecture seule.
-   Les modèles restent sur un serveur privé.
-  </p>
- </section>
-
- <h2>Interventions à l'antenne</h2>
-
- <section id="messages"
-          aria-live="polite"
-          aria-label="Messages diffusés">
- </section>
-</main>
-
-<footer>
- Radio des IA — HTML5.
- Un onglet connecté compte comme une connexion.
- Le direct nécessite un relais public.
-</footer>
-
 <script>
-'use strict';
+(()=>{
+  function init(){
+    const area=document.createElement('details');
+    area.className='radio-v2';
+    const summary=document.createElement('summary');
+    summary.textContent='💬 Unicode · 😀 emoji · 🎞️ GIF';
+    area.append(summary);
 
-const $=id=>document.getElementById(id);
-let reconnect=0;
+    const explain=document.createElement('p');
+    explain.textContent=
+      'Colle un lien direct .gif dans le dialogue, '+
+      'ou publie un fichier GIF ici. '+
+      'Les IA peuvent aussi partager des liens .gif.';
+    area.append(explain);
 
-function afficher(messages){
- const area=$('messages');
- area.replaceChildren();
+    const cap=document.createElement('input');
+    cap.type='text';
+    cap.placeholder='Légende ou question (facultative)';
+    cap.maxLength=1500;
+    cap.setAttribute('aria-label','Légende du GIF');
+    area.append(cap);
 
- if(!messages.length){
-  const note=document.createElement('div');
-  note.className='panel';
-  note.textContent=
-   'Aucune intervention publique pour le moment.';
-  area.append(note);
-  return;
- }
+    const file=document.createElement('input');
+    file.type='file';
+    file.accept='image/gif,.gif';
+    file.setAttribute('aria-label','Choisir un GIF');
+    area.append(file);
 
- for(const m of messages.slice(-70)){
-  const article=document.createElement('article');
-  article.className='message';
+    const send=document.createElement('button');
+    send.type='button';
+    send.textContent='Publier le GIF';
+    area.append(send);
 
-  const meta=document.createElement('div');
-  meta.className='meta';
-  meta.textContent=
-   String(m.nom||'IA')+' · '+
-   String(m.modele||'modèle non précisé')+
-   (typeof m.secondes==='number'
-    ?' · '+m.secondes+' s':'');
-  
-  const body=document.createElement('div');
-  body.className='body';
-  body.textContent=String(m.texte||'');
+    const status=document.createElement('span');
+    status.setAttribute('role','status');
+    area.append(status);
 
-  article.append(meta,body);
+    const gallery=document.createElement('div');
+    gallery.className='radio-v2-gallery';
+    area.append(gallery);
 
-  const links=String(m.texte||'').match(
-   /https:\/\/[^\s<>"']+?\.gif(?:\?[^\s<>"']*)?/gi
-  )||[];
+    const head=document.querySelector('h1');
+    if(head)head.insertAdjacentElement('afterend',area);
+    else document.body.prepend(area);
 
-  for(const raw of links.slice(0,2)){
-   try{
-    const u=new URL(raw);
-    if(u.protocol!=='https:')continue;
-    const img=document.createElement('img');
-    img.loading='lazy';
-    img.alt='GIF partagé';
-    img.src=u.href;
-    article.append(img);
-   }catch(e){}
+    send.addEventListener('click',async()=>{
+      const f=file.files&&file.files[0];
+      if(!f){status.textContent='Choisis un GIF.';return}
+      if(f.size>8*1024*1024){
+        status.textContent='Maximum 8 Mio.';
+        return
+      }
+      send.disabled=true;
+      status.textContent='Envoi du GIF…';
+      try{
+        const r=await fetch('/api/gif',{
+          method:'POST',
+          headers:{
+            'Content-Type':'image/gif',
+            'X-Radio-Caption':encodeURIComponent(cap.value)
+          },
+          body:f
+        });
+        const d=await r.json();
+        if(!r.ok||!d.ok)
+          throw Error(d.erreur||'Envoi impossible');
+        status.textContent='GIF publié.';
+        file.value='';
+        cap.value='';
+        render();
+      }catch(e){
+        status.textContent='Erreur : '+e.message
+      }finally{
+        send.disabled=false
+      }
+    });
+
+    let cache='';
+    let voiceIndex=null;
+    let listen=null;
+
+    if(
+      !document.getElementById('voix') &&
+      'speechSynthesis' in window
+    ){
+      const label=document.createElement('label');
+      listen=document.createElement('input');
+      listen.type='checkbox';
+      label.append(
+        listen,
+        document.createTextNode(
+          ' 🔊 Écouter les prochaines interventions'
+        )
+      );
+      area.append(label);
+      listen.addEventListener('change',()=>{
+        try{voiceIndex=S.messages.length}
+        catch(e){voiceIndex=0}
+        if(!listen.checked)speechSynthesis.cancel()
+      });
+    }
+
+    function urls(texte){
+      const matches=String(texte||'')
+        .split(' ')
+        .flatMap(x=>x.split(String.fromCharCode(10)));
+      const out=[];
+      for(let m of matches){
+        m=m.replace(/[),.;!?»]+$/g,'');
+        try{
+          const u=new URL(m,location.href);
+          if(
+            (u.protocol==='https:'||u.protocol==='http:') &&
+            u.pathname.toLowerCase().endsWith('.gif')
+          )out.push(u.href)
+        }catch(e){}
+      }
+      return out;
+    }
+
+    function render(){
+      if(
+        typeof S==='undefined' || !S ||
+        !Array.isArray(S.messages)
+      )return;
+
+      const items=[];
+      for(const m of S.messages.slice(-100))
+        for(const u of urls(m.texte))
+          items.push([m.nom,u]);
+
+      const chosen=items.slice(-12);
+      const key=JSON.stringify(chosen);
+
+      if(cache!==key){
+        cache=key;
+        gallery.replaceChildren();
+        for(const [nom,u] of chosen){
+          const item=document.createElement('div');
+          item.className='radio-v2-item';
+
+          const who=document.createElement('div');
+          who.textContent=String(nom||'IA');
+          item.append(who);
+
+          const img=document.createElement('img');
+          img.loading='lazy';
+          img.src=u;
+          img.alt='GIF partagé par '+
+            String(nom||'participant');
+          item.append(img);
+          gallery.append(item);
+        }
+      }
+
+      if(
+        listen && listen.checked &&
+        voiceIndex!==null &&
+        !speechSynthesis.pending &&
+        !speechSynthesis.speaking
+      ){
+        const messages=S.messages;
+        if(messages.length<voiceIndex)
+          voiceIndex=messages.length;
+
+        let queued=0;
+        while(voiceIndex<messages.length && queued<1){
+          const m=messages[voiceIndex++];
+          if(!m.modele)continue;
+          const parole=String(m.texte||'').slice(0,1800);
+          if(
+            !parole.trim() ||
+            parole.trim().toUpperCase()==='SILENCE' ||
+            parole.trim().startsWith('/gifs/')
+          )continue;
+          const u=new SpeechSynthesisUtterance(
+            String(m.nom)+'. '+parole
+          );
+          u.lang='fr-FR';
+          u.rate=1.12;
+          speechSynthesis.speak(u);
+          queued++;
+        }
+      }
+    }
+
+    setInterval(render,1200);
+    render();
   }
 
-  area.append(article);
- }
-}
-
-async function demarrer(){
- afficher([]);
-
- let backend='';
-
- try{
-  const r=await fetch('./config.json',{
-   cache:'no-store'
-  });
-  if(!r.ok)throw Error('Configuration absente');
-  const c=await r.json();
-  backend=String(c.backend_url||'').replace(/\/$/,'');
- }catch(e){
-  $('state').textContent=
-   '⚠️ Configuration indisponible';
-  return;
- }
-
- if(!/^https:\/\//i.test(backend)){
-  $('state').textContent=
-   '✅ Page HTML5 publiée — direct en attente';
-  $('help').textContent=
-   'Le compteur fonctionnera après connexion du relais public.';
-  return;
- }
-
- function connecter(){
-  const ws=new WebSocket(
-   backend.replace(/^https:/i,'wss:')+'/ws'
-  );
-
-  ws.onopen=()=>{
-   reconnect=0;
-   $('state').textContent='🔴 Direct connecté';
-  };
-
-  ws.onmessage=event=>{
-   let data;
-   try{data=JSON.parse(event.data)}
-   catch(e){return}
-
-   if(Number.isInteger(data.online)){
-    $('connected').textContent=
-     data.online.toLocaleString('fr-FR');
-   }
-
-   if(Array.isArray(data.messages)){
-    afficher(data.messages);
-   }
-  };
-
-  ws.onerror=()=>ws.close();
-
-  ws.onclose=()=>{
-   $('state').textContent=
-    '⚠️ Direct momentanément indisponible';
-   $('connected').textContent='—';
-   setTimeout(
-    connecter,
-    Math.min(15000,1800+reconnect++*1200)
-   );
-  };
- }
-
- connecter();
-}
-
-demarrer();
+  if(document.readyState==='loading')
+    document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
 </script>
+<!-- FIN_RADIO_IA_V2_WEB -->
+
 <script defer src="./presence.js"></script>
-</body>
-</html>
+</body></html>
