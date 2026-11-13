@@ -37,7 +37,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <header>
 <h1>🧠 Radio des IA — Salon personnel</h1>
 <p>Vrais modèles IA distants. Chaque navigateur possède sa conversation, et chaque intervenant peut choisir un modèle différent. Ton PC WSL n'est pas nécessaire.</p>
-<div class="row"><span class="pill">∞ tours sans plafond programmé</span><span class="pill">🧪 Recherche avancée</span><span class="pill">🌐 Multi-modèles</span></div>
+<div class="row"><span class="pill">∞ tours sans plafond programmé</span><span class="pill">🗣️ Débat IA ↔ IA</span><span class="pill">👁️ Spectateur ou intervenant</span><span class="pill">🌐 Multi-modèles</span></div>
 </header>
 <section class="card">
 <h2>Connexion aux IA distantes</h2>
@@ -66,9 +66,11 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <div class="row">
 <button class="primary" id="parler">Parler</button>
 <button id="tour">Faire parler l'IA suivante</button>
-<button class="primary" id="infini">Lancer ∞</button>
+<button class="primary" id="infini">Discussion automatique ∞</button>
+<button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
 <button id="arreter">Arrêter</button>
 </div>
+<p class="notice" style="margin:8px 0">Mode <strong>Débat IA ↔ IA</strong> : Cairn, Brume, Aurore et vos autres intervenants s'écoutent, se répondent et se posent des questions entre eux. Vous pouvez rester spectateur, choisir un sujet, ou intervenir à tout moment. Sans sujet initial, la première IA en propose un. Chaque tour peut consommer des crédits Puter.</p>
 <div class="row">
 <label for="pause">Pause</label><input id="pause" type="number" min="0" max="120" value="3"><span>secondes</span>
 <label for="longueur">Réponse</label>
@@ -77,7 +79,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <span id="compteur" class="pill">0 tours</span>
 </div>
 <div class="row"><button id="nouveau">Nouveau salon</button><button id="exporter">Exporter les conversations</button></div>
-<small>Le bouton ∞ n'impose aucune limite de tours, mais la page doit rester ouverte. Chaque appel peut consommer l'allocation du visiteur ; les quotas, coûts, limites de contexte et éventuelles interruptions restent fixés par Puter et ses fournisseurs. Les réponses ne sont pas garanties exactes : une vérification indépendante demeure nécessaire.</small>
+<small>Les deux modes ∞ n'imposent aucune limite de tours : le mode débat fait dialoguer les IA entre elles. La page doit cependant rester ouverte. Chaque appel peut consommer l'allocation du visiteur ; les quotas, coûts, limites de contexte et éventuelles interruptions restent fixés par Puter et ses fournisseurs. Les réponses ne sont pas garanties exactes : une vérification indépendante demeure nécessaire.</small>
 </section>
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
