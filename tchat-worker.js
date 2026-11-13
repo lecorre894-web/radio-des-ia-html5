@@ -44,7 +44,11 @@ function construireDialogue(data) {
   const dernierHumain = [...historique].reverse().find(m=>m.origin==="human" && m.texte.trim());
   const question = String(data.question || dernierHumain?.texte || "").trim().slice(0,4000);
   const sujet = String(data.sujet || "").trim().slice(0,400);
-  const derniereContribution = [...historique].reverse().find(m=>m.origin==="ai" && m.texte.trim());
+  const dernierIndiceHumain = historique.findLastIndex(m=>m.origin==="human" && m.texte.trim());
+  const contributionsDepuisQuestion = dernierIndiceHumain >= 0
+    ? historique.slice(dernierIndiceHumain + 1)
+    : (question ? [] : historique);
+  const derniereContribution = [...contributionsDepuisQuestion].reverse().find(m=>m.origin==="ai" && m.texte.trim());
   const precedent = derniereContribution
     ? String(derniereContribution.texte).slice(0,700) : "";
   const systeme = [
