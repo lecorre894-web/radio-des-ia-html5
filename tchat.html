@@ -27,8 +27,8 @@ textarea{width:100%;min-height:85px;resize:vertical}input[type=number]{width:86p
 <h1>Salon personnel des IA</h1>
 <p class="muted">Votre conversation est distincte de la Radio collective. Le modèle est exécuté dans votre navigateur, sans le serveur WSL de l'administrateur. Les intervenants représentent des rôles différents pilotant le même modèle, pas des fournisseurs indépendants.</p>
 <section class="card">
-<div class="row"><label for="niveau">Moteur local</label><select id="niveau"><option value="leger">Économique · SmolLM2 135M (réponses limitées)</option><option value="equilibre" selected>Conseillé · Qwen2.5 0.5B (plus cohérent)</option></select><button id="charger">Charger l'IA</button></div>
-<small>Premier chargement : téléchargement des fichiers du modèle ; le volume total et la mémoire nécessaire dépendent du modèle et du navigateur. Sur téléphone, commencez par le moteur léger. Internet est nécessaire au premier chargement ; le fonctionnement hors ligne ultérieur dépend du cache du navigateur. Aucun niveau intellectuel maximal n'est imposé, mais les petits modèles peuvent se tromper et restent bien moins puissants que des modèles distants.</small>
+<div class="row"><label for="niveau">Moteur local</label><select id="niveau"><option value="leger">Mobile léger · SmolLM2 135M (français limité)</option><option value="equilibre" selected>Français renforcé · Qwen2.5 0.5B</option><option value="avance">Plus de langage · Qwen2.5 1.5B (PC puissant)</option></select><button id="charger">Charger l'IA</button></div>
+<small>Premier chargement : téléchargement des fichiers du modèle ; le volume total et la mémoire nécessaire dépendent du modèle et du navigateur. Sur téléphone, le moteur léger protège davantage la mémoire mais peut produire du français incohérent. Pour de meilleures phrases, essayez « Français renforcé » ; si le navigateur plante, revenez au mode léger. Le modèle 1.5B est réservé aux appareils suffisamment puissants. Internet est nécessaire au premier chargement ; le fonctionnement hors ligne ultérieur dépend du cache du navigateur. Aucun niveau intellectuel maximal n'est imposé, mais les petits modèles peuvent se tromper et restent bien moins puissants que des modèles distants.</small>
 <div id="etat" role="status">Modèle non chargé</div>
 </section>
 <section class="card">
@@ -56,7 +56,7 @@ let participants=structuredClone(DEFAULT),messages=[],question="",next=0,tours=0
 let worker=null,pending=null,stream=null,lastRenderAt=0;
 function etat(t){$("etat").textContent=t}
 function sauvegarde(){try{localStorage.setItem(KEY,JSON.stringify({participants,messages:messages.slice(-150),question,next,tours,sujet:$("sujet").value,niveau:$("niveau").value}))}catch{}}
-function restaurer(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(!d)return;if(Array.isArray(d.participants)&&d.participants.length&&d.participants.length<=16)participants=d.participants.map(p=>({nom:String(p.nom||"IA").slice(0,40),role:String(p.role||"Recherche").slice(0,120)}));if(Array.isArray(d.messages))messages=d.messages.slice(-150).filter(m=>m&&typeof m.texte==="string"&&(m.origin==="human"||m.texte.trim()));question=String(d.question||"").slice(0,6000);next=Number(d.next)||0;tours=Number(d.tours)||0;$("sujet").value=String(d.sujet||"").slice(0,500);if(["leger","equilibre"].includes(d.niveau))$("niveau").value=d.niveau}catch{}}
+function restaurer(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(!d)return;if(Array.isArray(d.participants)&&d.participants.length&&d.participants.length<=16)participants=d.participants.map(p=>({nom:String(p.nom||"IA").slice(0,40),role:String(p.role||"Recherche").slice(0,120)}));if(Array.isArray(d.messages))messages=d.messages.slice(-150).filter(m=>m&&typeof m.texte==="string"&&(m.origin==="human"||m.texte.trim()));question=String(d.question||"").slice(0,6000);next=Number(d.next)||0;tours=Number(d.tours)||0;$("sujet").value=String(d.sujet||"").slice(0,500);if(["leger","equilibre","avance"].includes(d.niveau))$("niveau").value=d.niveau}catch{}}
 function afficheParts(){const zone=$("parts");zone.replaceChildren();participants.forEach((p,i)=>{const r=document.createElement("div");r.className="row";const name=document.createElement("input");name.value=p.nom;name.maxLength=40;name.setAttribute("aria-label","Nom intervenant");name.onchange=()=>{p.nom=name.value.trim()||p.nom;sauvegarde()};const role=document.createElement("input");role.value=p.role;role.style.flex="1";role.maxLength=120;role.setAttribute("aria-label","Rôle intervenant");role.onchange=()=>{p.role=role.value.trim()||p.role;sauvegarde()};const b=document.createElement("button");b.textContent="Retirer";b.disabled=participants.length===1;b.onclick=()=>{participants.splice(i,1);next=0;afficheParts();sauvegarde()};r.append(name,role,b);zone.append(r)})}
 function render(){
  const zone=$("fil");zone.replaceChildren();
@@ -148,7 +148,18 @@ $("ajouter").onclick=()=>{if(participants.length>=16){etat("16 intervenants au m
 $("effacer").onclick=()=>{if(busy||auto)return;if(!confirm("Effacer cette conversation locale ?"))return;messages=[];question="";next=0;tours=0;render();etat("Nouveau salon créé")};
 $("exporter").onclick=()=>{const blob=new Blob([JSON.stringify({participants,messages},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="radio-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $("moi").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("parler").click()}};
-$("sujet").onchange=sauvegarde;$("niveau").onchange=()=>{if(busy)return;worker?.terminate();worker=null;sauvegarde();etat("Choix modifié : le nouveau modèle sera téléchargé au prochain appel")};
+$("sujet").onchange=sauvegarde;$("niveau").onchange=()=>{
+ if(busy)return;
+ if($("niveau").value==="avance" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  if(!confirm("Le modèle 1.5B utilise beaucoup de mémoire. Il peut faire planter le navigateur mobile. Voulez-vous réellement continuer ?")){$("niveau").value="leger";}
+ }
+ worker?.terminate();worker=null;sauvegarde();
+ etat($("niveau").value==="leger"
+  ?"Mode léger : économie de mémoire, langage limité."
+  :$("niveau").value==="equilibre"
+  ?"Français renforcé sélectionné : téléchargement plus lourd, qualité non garantie."
+  :"Mode avancé sélectionné : réservé aux appareils puissants.");
+};
 window.addEventListener("beforeunload",()=>{auto=false;worker?.terminate()});
 if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){$("niveau").value="leger";etat("Mode téléphone : modèle léger conseillé pour limiter les plantages.");}restaurer();afficheParts();render();controls();
 </script>
