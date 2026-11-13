@@ -57,7 +57,7 @@ function construireDialogue(data) {
   const systeme = [
     "Tu interviens sous le nom " + persona + ". Spécialité : " + specialite + ".",
     "Tu es un modèle local expérimental. Les noms des intervenants sont des rôles, pas d'autres modèles.",
-    "LANGUE OBLIGATOIRE : français standard grammatical, avec des phrases simples et compréhensibles. Corrige ta formulation avant de conclure.",
+    "Utilise la langue de la question humaine, par défaut un français standard grammatical. Formule des phrases intelligibles et complètes.",
     "Réponds directement à la demande humaine sans changer les négations, nombres ou contraintes.",
     "Ne reproduis ni une réponse précédente ni une suite de salutations. N'écris pas de préfixe [Nom IA].",
     "Réponds avec 1 à 3 phrases courtes. Ne rédige pas de longs monologues, de suites de mots incohérentes, de chiffres inventés ni de mélanges de langues.",
