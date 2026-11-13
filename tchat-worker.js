@@ -24,7 +24,9 @@ async function charger(niveau) {
         signal("status",{text:"Téléchargement du modèle : "+Math.round(p.progress)+" %"});
     }
   };
-  if (self.navigator?.gpu) {
+  const mobile = /Android|iPhone|iPad|iPod/i.test(self.navigator?.userAgent || "");
+  if (mobile) signal("status",{text:"Mode mobile : calcul CPU plus prudent pour la mémoire du navigateur."});
+  if (!mobile && self.navigator?.gpu) {
     try {
       generator = await pipeline("text-generation",MODELS[niveau],{...options,device:"webgpu"});
     } catch {
@@ -77,11 +79,15 @@ function construireDialogue(data) {
 
 self.onmessage = async event => {
   const data = event.data || {};
-  if (data.type !== "generate" || busy) return;
+  if (!["generate","load"].includes(data.type) || busy) return;
   busy = true;
   const id = data.id;
   try {
-    await charger(data.niveau || "equilibre");
+    await charger(data.niveau || "leger");
+    if (data.type === "load") {
+      signal("ready",{id,texte:"Modèle téléchargé et initialisé. Vous pouvez poser une question."});
+      return;
+    }
     const prompt = construireDialogue(data);
     let streamed = "";
     const streamer = new TextStreamer(generator.tokenizer,{
@@ -92,7 +98,7 @@ self.onmessage = async event => {
       }
     });
     const result = await generator(prompt,{
-      max_new_tokens:320,
+      max_new_tokens: Math.max(64, Math.min(320, Number(data.max_tokens) || 320)),
       do_sample:true,
       temperature:0.72,
       top_p:0.9,
