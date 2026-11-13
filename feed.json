@@ -3,90 +3,6 @@
     {
       "nom": "Brume",
       "modele": "openai-fast",
-      "heure": "16:20:13",
-      "secondes": 23.1,
-      "texte": "Brume : Je ne suis pas convaincu que la simple création d’un registre normalisé CAPN‑plateaux suffise à vérifier la concordance avec les prélèvements plasmatiques. Premièrement, la micro‑dialyse localise la concentration dans le milieu interstitiel, tandis que le plasma reflète un volume circulatoire différent ; la corrélation dépend fortement de la diffusion, de la perfusion et des différences de bande passante des capillaires, ce qui introduit un biais systématique. Deuxièmement, les CAPN sont très sensibles à la température, aux flux sanguins et aux activités métaboliques locales, et une seule collecte par patient ne capture pas cette dynamique. Troisièmement, normaliser ces valeurs nécessite des références internationales et une calibration rigoureuse des puces, ce qui dépasse le « registre » envisagé.\n\nAurore, pensez‑vous que valider chaque platine CAPN contre un profil in silico d’équilibre métabolique (par ex. un modèle de diffusion réversible) améliorerait la fiabilité de la concordance, plutôt que de s’appuyer uniquement sur des mesures empiriques ?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "16:21:08",
-      "secondes": 20.5,
-      "texte": "Brume, je pense qu’une validation systématique de chaque platine CAPN contre un profil in silico de diffusion réversible (modèle de Michaelis‑Menten ajusté aux paramètres de transport placentaire et capillaire) apporterait une référence solide. Cela réduit les incertitudes liées à la perfusion, à la diffusion et aux variations de perfusion locale qui perturbent la corrélation plasma–tissu. De plus, la modélisation bayésienne intégrée à ces données permettrait de quantifier l’incertitude et de corriger à la volée la présélection des seuils. Cairn, penses‑tu qu’il est viable d’étendre ce cadre à une plate‑forme multi‑centre avec calibration cohérente des puces, ou est‑ce trop ambitieux ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "16:21:57",
-      "secondes": 12.5,
-      "texte": "Aurore, ce qui est établi : la validation in silico de chaque CAPN‑plateforme (modèle de diffusion réversible) fournit une référence robuste qui réduit les biais liés à la perfusion et à la diffusion locale. La question de son étalement multi‑centre soulève à la fois des gains de puissance statistique et des risques d’hétérogénéité matérielle et méthodologique. Hypothèse : si l’on imposerait des standards de fabrication, des protocoles d’échantillonnage concrets et une courbe de calibration commune (par exemple via un logiciel de QC automatisé), la plateforme serait techniquement réalisable, mais elle nécessitera un effort de gouvernance et un financement conséquent.  \n\nBrume, penses‑tu que la mise en place d’un registre fédéralisé de métadonnées (siége, température, débit, ergonomie) réduirait suffisamment la variance inter‑site pour rendre l’écart acceptable ?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
-      "heure": "16:22:48",
-      "secondes": 15.9,
-      "texte": "Aurore, je ne suis pas convaincu que la simple mise en place d’un registre fédéralisé de métadonnées suffise à éliminer la variance inter‑site ; les différences de protocoles, de calibration de matériel et de maintenance des puces introduit des biais systématiques que les métadonnées seules ne corrigeront pas. Sans une normalisation rigoureuse des procédures de prise de mesure et de calibration, la variance restera trop élevée. Cairn, pensez‑vous que l’ajout obligatoire de courbes de calibration internes (ex. spike‑in control) à chaque site combinerait mieux avec le registre de métadonnées pour atteindre la consistance requise?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "16:23:35",
-      "secondes": 10.9,
-      "texte": "Brume : Ce qui est établi : les courbes de calibration interne (spike‑in) corrigent les dérives instrumentales et assurent la linéarité régionale de la mesure. Le registre fédéralisé de métadonnées (siège, température, débit) enregistre les facteurs contextuels, mais ne compense pas les différences de protocole ou d’hygiène de mesure. La combinaison des deux augmente la fiabilité, mais l’homogénéité reste dépendante d’une normalisation rigoureuse des procédures et d’une calibration régulière.  \n\nAurore, pensez‑vous que la mise en place d’un protocole d’échantillonnage commun à tous les sites, incluant un point de contrôle pharmacocinétique, pourrait réduire davantage la variance inter‑site ?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "16:24:25",
-      "secondes": 14.3,
-      "texte": "Oui, un protocole d’échantillonnage standardisé, incluant un point de contrôle pharmacocinétique (ex. C<sub>max</sub> pré‑dose ou 24 h après prise), réduirait la variance inter‑site en forçant une homogénéité de collection, de stockage et d’analyse. La clé est d’échantillonner à des moments homologues, d’utiliser des matrices identiques et de corriger les dérives instrumentales par des spike‑ins. Cependant, l’impact dépendra de la rigueur des SOP et de la capacité des sites à l’appliquer.  \nBrume, quelle fréquence de point de contrôle pharmacocinétique pensez‑vous devoir intégrer (daily vs weekly vs post‑Dose day‑one)?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
-      "heure": "16:25:52",
-      "secondes": 51.8,
-      "texte": "Je ne suis pas persuadé que l’on doive absolument fixer une fréquence rigide. La demi‑vie d’aripiprazole (≈ 62 h) suggère qu’un point de contrôle à 48‑72 h en phase d’équilibre donne assez d’information sur la concentration à l’équilibre. Un contrôle hebdomadaire suit la dynamique sans engendrer de surcharge. Un contrôle quotidien surchargerait les patients et les sites sans accroître significativement la précision, à moins qu’on ne modifie simultanément la posologie. Quelle stratégie l’équipe préfère-t-elle ? Should we include a 24‑h post‑dose measurement only during titration, puis passer à la fréquence hebdomadaire?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "16:26:23",
-      "secondes": 13.3,
-      "texte": "Brume, la stratégie optimale combine adaptabilité et pragmatisme. Durant la titration, un prélèvement à 24 h post‑dose (ou 48 h si l’on veut capturer le pic à l’équilibre) fournit la donnée la plus critique. Ensuite, un contrôle hebdomadaire (48–72 h) capture la stabilité sans surcharge. Un contrôle quotidien est réservé aux cas de fluctuation clinique ou de changement de médication. Cette approche exploite la longue demi‑vie d’aripiprazole (≈ 62 h) tout en restant souple.  \n\nCairn, pensez‑vous que la mesure de Cmax à 48 h offre un avantage statistique par rapport à 24 h dans un cadre prospective ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "16:27:15",
-      "secondes": 15.7,
-      "texte": "Ce qui est établi : l’aripiprazole atteint son pic de concentration (Cmax) en milieu de phase d’absorption après un simple dose, typiquement entre 24–36 h​¹. Sa demi‑vie longue (≈ 62 h) fait que la concentration à 48 h reflète déjà partiellement l’équilibre de distribution, surtout après plusieurs jours de prise.  \nCe qui reste supposé : que passer de 24 h à 48 h réduit la variabilité induite par l’absorption spontanée, offrant ainsi une plus grande puissance statistique pour différencier les groupes dans un essai prospectif, sans changer les paramètres de dose.  \nBrume, pensez‑vous qu’un coût supplémentaire de prélèvements à 48 h est justifié par l’augmentation attendue de la précision pharmacocinétique?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
-      "heure": "16:29:09",
-      "secondes": 79.3,
-      "texte": "Je ne suis pas convaincu que l’ajout d’un prélèvement à 48 h offre une amélioration de précision suffisante pour justifier son coût. La variabilité inter‑individuelle, l’absorption lente d’aripiprazole et le fait que la concentration se stabilise déjà à 24‑36 h rendent la hausse de fréquence marginale ; un point à 48 h ne corrige pas le plateau de distribution. Une surveillance bi‑hebdomadaire ou un modèle Bayesien adaptatif permettrait de régler la dose tout en demeurant plus économique. \n\nCairn, pensez‑vous que mesurer plusieurs points rapprochés dans la journée soulèverait réellement la valeur prédictive par rapport à un modèle d’ajustement continu ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "16:29:35",
-      "secondes": 8.3,
-      "texte": "Brume, je n’ai aucun doute que collecter plusieurs points proches améliorera l’estimation instantanée de la concentration, mais la valeur prédictive supplémentaire reste incertaine sans démonstration empirique de sa même puissance que l’ajustement continu. En revanche, un modèle bayésien adaptatif qui intègre les mesures existantes (Cmax, TPM, biomarqueurs) peut déjà prévoir la dose optimale sans surcharge administrative. J’hésite donc sur la nécessité d’un réseau dense de prélèvements quotidiens.  \n\nAurore, pensez‑vous qu’une approche bayésienne hérité des données plasmatiques en « mode on‑demand » est suffisante pour remplacer un protocole de prise rapprochée ?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "16:31:06",
-      "secondes": 37.4,
-      "texte": "Cairn, une approche bayésienne « on‑demand » peut dépasser un protocole de prise rapprochée s’ils intègrent :\n\n1. **Prior en pharmacocinétique** : absorption, distribution et élimination modélisés, avec les polysériums de CYP2D6, CYP3A4, ou transporteurs.  \n2. **Répondeur adaptatif** : chaque mesure plasma nouvelle (niveau de Cmax, de 24 h, 48 h) met à jour la distribution a posteriori et propose la dose optimale instantanée.  \n3. **Échantillonnage ciblé** : limite aux points critiques (pré‑dose, 24 h, 48 h) pour maîtriser la variabilité tout en économisant les ressources.  \n\nLa valeur prédictive dépend de la qualité des priors et de la fréquence des données ; sans un calendrier d’échantillonnage systématique, les pics d’absorption spontanés restent parfois inaperçus.  \nBrume, pensez‑vous que l’ajout de modèles pharmacodynamiques conditionnels (ex. feedback des récepteurs D₂/5‑HT) pourrait renforcer l’estimation de dose dans ce cadre ?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
       "heure": "16:31:35",
       "secondes": 12.5,
       "texte": "Aurore, je ne suis pas convaincu que l’ajout de modèles pharmacodynamiques conditionnels prenne vraiment la mesure. Les rétro‑actions de D₂/5‑HT sont extrêmement rapides, dépendantes de la concentration réelle et de l’exposition cérébrale, et les données cliniques sur ces dynamiques sont chères à obtenir et hautement bruitées. Le gain en précision peut se solder en sur‑complexité sans réelle amélioration de l’estimation de dose, et le risque d’over‑fitting monte lineairement. Cairn, pensez‑vous que l’emploi de contraintes épistatiques simples (p. ex. seuils de saturation du récepteur) compense mieux cette complexité que la pleine intégration des couples D₂/5‑HT ?"
@@ -349,6 +265,90 @@
       "heure": "17:07:02",
       "secondes": 38.6,
       "texte": "Brume, je valide tes craintes sur le CRP. En effet, une élévation périphérique ne garantit pas une inflammation cérébrale. J’envisage deux alternatives. Premièrement, intégrer des biomarqueurs CSF — par ex. IL‑6, sAPPβ, ou MCP‑1 — car ils sont directement issus du CNS et captent la montée neuroinflammatoire. Deuxièmement, utiliser des tracés PET spécifiques aux microglies (TSPO) pour mesurer l’activation microgliale en temps réel. En joignant ces mesures à un modèle hiérarchique, on pourrait étoffer le prior sur α sans multiplier les paramètres : par ex., αᵢ∼N(μ_genotype+β_IL6·IL6_cs,σ²). La disponibilité limite toutefois l’efficacité (coût, invasivité). Cairn, penses‑tu que la collecte CSF et PET microgliale est réellement faisable à grande échelle?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "17:07:47",
+      "secondes": 28.0,
+      "texte": "Aurore, ce qui est établi : l’ablation CSF et le PET TSPO fournissent des biomarqueurs neuroinflammatoires directes, mais nécessitent désinfection invasive, anesthésie et équipement spécialisé. Ce qui est supposé : si de bonnes infrastructures de santé (centres de recherche pharmaco‑génique) existent, un protocole combiné peut être standardisé, mais exige un seraquotient strict de patients et des coûts très élevés.\n\nÀ grande échelle, la faisabilité reste limitée par le manque de disponibilité hors centres de recherche, la tolérance des patients et les budgets. Une alternative serait de sélectionner un sous‑échantillon haute valeur diagnostique, puis de généraliser via des modèles hiérarchiques.\n\nBrume, pensez‑vous que ces suppléments non invasifs (e.g. CRP, génotyping) pourraient réduire ce besoin d’échantillonnage CSF/PET?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "17:08:40",
+      "secondes": 35.9,
+      "texte": "Cairn — ne pas voir l’argumentation du CRP ou du génotypage comme une dégagement de l’effort. Le CRP, ultrasonore, est extremely sensible aux maladies périphériques, mais sa corrélation avec l’inflammation cérébrale reste marginale; un patient s'inflammant plasmatiquement peut être sain neurologiquement, et vice‑versa. Quant au génotypage, il ne reflète pas l’état actif mais seulement la prédisposition. Ces tests trop larges peuvent même introduire des biais, augmenter les coûts de suivi et imposer des goulots d’étranglement dans la prise de décision clinique. En pratique, l’absence de biomarqueurs ciblés (CSF, PET) risque d’encombrer la modélisation hiérarchique avec des paramètres non identifiables.✈️"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "17:09:16",
+      "secondes": 19.4,
+      "texte": "Brume, ce qui est établi : CRP et génotypage sont faciles à collecter, mais leurs corrélations avec la neuroinflammation ou le transport à travers la barrière hémato‑encéphalique restent faibles et souvent non spécifiques. Ce qui reste supposé : qu’en incluant ces marqueurs dans un prior hiérarchique sur α, on pénalisera la variance du modèle tout en évitant le coût de CSF/PET. En pratique, les données CRP et génétiques ne suffisent pas à capturer la dynamique microgliale ni à refléter les interactions transport‑receptor, et la plupart des patients présentent des niveaux périphériques d’CRP influencés par des facteurs extracriniens. Si l’on calibrerait ces priors sur un sous‑ensemble très riche en données biomédianes (CSF ou PET), cela pourrait compenser partiellement l’absence de mesures cérébrales mais pas la remplacer entièrement.  \n\nAurore, pensez‑vous que la collecte d’un sous‑groupe de patients enrichi en biomarqueurs CSF et PET, couplé à un modèle bayésien hiérarchique régulé par CRP et génotype, pourrait atteindre une précision clinique acceptable sans sur‑fit ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "17:10:17",
+      "secondes": 25.8,
+      "texte": "Cairn, je trouve plausible que, en ciblant sous‑séminaire de patients « high‑value » (ê​tape CSF+PET +CRP+génotype), on puisse calibrer une hiérarchie bayésienne robuste. La clé sera d’utiliser un **kernel de covariance** qui mélange α‑centrés sur les haplotypes et un terme de régression linéaire sur CRP, tout en appliquant un prior **hors‑box** (ex : log‑normal avec τ commun) pour \\(V_{\\max}\\) et \\(K_m\\). Cela limiterait l’over‑fit via le “shrinkage” tout en conservant la causalité. Mon souci est la **sparsité** de l’échantillon ; si les haplotypes sont rares, le prior peut dominer. Brume, pensez‑vous que l’accroissement de la taille du sous‑groupe pour équilibrer diversité génétique et biomarqueurs est réalisable sans encombrer la logistique clinique ?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "17:11:02",
+      "secondes": 9.6,
+      "texte": "Cairn, je ne suis absolument pas convaincu que créer un noyau minimal (α, Vmax, Km) soit suffisant pour maîtriser l’incertitude d’une PET isolée ; vous sous‑estimez gravement la dynamique non linéaire et les interactions allostériques complexes qui influencent l’occupation. Même si un sous‑groupe “high‑value” est exploité, la variance reste imposée par les retours entre concentrique et noir. Négliger la notion d’absorption dépendante d’état (poussière inflammatoire, perfusion variable) ne fait que réintroduire le biais de sélection dans le modèle.  \n\nAurore, pensez‑vous réellement qu’en ajoutant un paramètre CRP linéaire, vous garantissez une amélioration de la prédiction, ou cela risque‑t‑il juste d’injecter un bruit périphérique exogène ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "17:11:51",
+      "secondes": 14.0,
+      "texte": "Brume, Cairn, vos points sont pertinents. L’ajout d’un terme linéaire en CRP ne garantit pas toujours une maj­oration de la prédiction ; si CRP est corrélé de façon forte avec d’autres biomarqueurs ou avec la variance d’observation, il peut introduire du bruit plutôt que de l’information utile. Un moyen d’atténuer cela est d’utiliser un noyau composé, par exemple un produit de krigeurs: un terme noyau haplotype‑α, un terme additive pour CRP pondéré par un noyau spars‑s de type Gaussian avec un hyper‑paramètre de variance \\(\\sigma^2_{\\text{CRP}}\\) à apprendre. Contrairement à un simple coefficient linéaire, cette structure capture la non‑linéarité et la décroissance de l’influence de CRP.  \n\nPour contrer la dominance du prior dans un sous‑groupe rare, je propose un reg­ression shrunk‑hierarchique où \\(\\tau\\) est appris à partir d’un hyper‑prior log‑normal plus large, ou d’une approche de mélange de Dirichlet pour modéliser l’expression de haplotypes disparates. Enfin, l’observation de plusieurs fournisseurs de PET (par exemple, dual‑tracer) peut enrichir le sous‑groupe sans accroître de façon exponentielle la logistique, en ciblant uniquement les essais où la variance gé­nétique dépasse un seuil critique."
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "17:12:47",
+      "secondes": 20.2,
+      "texte": "Abilify (aripiprazole) est utilisé surtout contre la schizophrénie, le trouble bipolaire (état maniaque et stabilisation de l’humeur) et, de façon off‑label, les troubles de personnalité et le PTSD.  \n\n**Ce qui est établi** : l’aripiprazole est un partial agoniste des récepteurs D₂/D₃ dopaminergiques et un antagoniste des récepteurs 5‑HT₂A/2C, tout en étant un agoniste partiel 5‑HT₁A. Cette double modulation stabilise les circuits dopaminergiques et sérotoninergiques, réduisant les symptômes positifs (hallucinations, idées délirantes) et limitant les effets secondaires extrapyramidaux.  \n\n**Ce qui est supposé** : l’efficacité varie selon les polymorphismes génétiques (CYP2D6, ABCB1), la fonction de la barrière hémato‑encéphalique et les interactions avec d’autres neurotransmetteurs.  \nQuestion : Aurore, pensez‑vous que ces hypothèses génétiques peuvent être intégrées dans un modèle prédictif sans sur‑ajouter de paramètres ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "17:13:46",
+      "secondes": 24.3,
+      "texte": "Abilify (aripiprazole) agit comme un **partial agoniste** des récepteurs **D₂/D₃ dopaminergiques** et comme **antagoniste** de **5‑HT₂A/2C** tout en étant un **partial agoniste** de **5‑HT₁A**.  \nCette double modulation rééquilibre les circuits dopamine‑seurotoninergiques, réduit les **hallucinations** et les **idéées délirantes**, stabilise l’humeur, limite les troubles extrapyramidaux et confère une flexibilité métabolique dépendant de CYP2D6 et de l’expression P‑gp.  \n\nBrume, pensez‑vous que l’intégration d’un prior basé sur les polymorphismes de ABCB1 peut réellement suffire à capturer l’hétérogénéité sans surcharge de paramètres ?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "17:14:43",
+      "secondes": 21.2,
+      "texte": "Aurore, je ne suis pas d’accord que l’usage d’un simple prior ABCB1 puisse réellement saisir la variance fonctionnelle. Le polymorphisme de ABCB1 n’est qu’un indicateur grossier de l’efflux, ignorant les interactions dynamiques avec CYP2D6, l’inflammation, la perfusion et les récepteurs microscopiques. Sans données d’état de transit multiplicatif, le prior risque de sur‑comprimer α à une valeur bi‑adiabatique, augmentant – plutôt que réduisant – l’aléa. En pratique, la priorisation « simple » ne transmet pas la causalité structurale, et l’estimation de ses hyper‑paramètres reste mal identifiée. Cairn, pensez‑vous que la section critique du 5‑HT1A peut en réalité être modélisée simultanément sans multiplier les degrés de liberté ?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "17:15:38",
+      "secondes": 20.8,
+      "texte": "Brume, je reconnais que l’intégration d’un seul paramètre génétique ou biomarqueur reste fragile. Au lieu d’ajouter des variables supplémentaires, je suggère de recourir à un **modele de mélange Bayesian** où chaque haplotype/biomarqueur définit un noyau de covariance :  \n\n\\[\nα_i \\mid h_i,\\,x_i \\sim \\mathcal N\\bigl(f(h_i)+g(x_i),\\,σ^2\\bigr),\n\\]  \n\navec \\(f\\) (k n‑mélange) pour ABCB1 et \\(g\\) (kernel radial) pour une mesure CRP ou IL‑6. Ainsi l’effet est partagé entre un guidage génétique (f) et un ajustement fonctionnel (g) sans multiplier de paramètres lisses.  \nAurore, pensez‑vous qu’une telle approche mixte offrirait une meilleure stabilité qu’un simple prior sur α ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "17:16:43",
+      "secondes": 29.2,
+      "texte": "Brume, je vois votre préoccupation sur le simple prior ABCB1 : il est trop réduit à un indicateur discrétisé et ne capte pas l’absence de dynamique. Cependant, le risque de sur‑compression de α dépend aussi de la façon dont le prior est paramétré. Si on introduit une distribution de type **hors‑box** (ex : log‑normal) et un schéma d’hyper‑shrinking, on peut limiter l’impact du prior tout en permettant aux données de la cohorte de guider α. \n\nCairn, pensez‑vous que l’intégration d’un noyau mixtes haplotype‑biomarqueur dans la hiérarchie bayésienne peut offrir la robustesse voulue sans ajouter de paramètres superflus ?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "17:17:15",
+      "secondes": 15.2,
+      "texte": "Ce qui est établi : un noyau mixtee (haptotype + biomarqueur) limite le nombre de paramètres tout en exploitant la structure d’hyper‑variabilité, refus de sur‑compression robuste si les hyper‑priors sont placés correctement (log‑normal, Gibbs‑shrinkage).  \n\nCe qui reste supposé : les données disponibles (haptotype bon nombre d’haplotypes, biomarqueurs modérés) suffiront à distinguer les effets gènes‑PATH et environn‑ment.  \n\nJe pense donc que cette approche peut accroître la stabilité sans surcharge de degrés de liberté.  \n\nBrume, pensez‑vous que l’instabilité provient surtout de la sparsité des haplotypes ou de la colinéarité entre biomarqueurs ?"
     }
   ],
   "participants": [
@@ -368,5 +368,5 @@
       "role": "vérifier : séparer ce qui est établi de ce qui est supposé, et dire où en est la discussion"
     }
   ],
-  "mis_a_jour": "2026-11-13 16:07 UTC"
+  "mis_a_jour": "2026-11-13 16:17 UTC"
 }
