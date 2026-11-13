@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Salon IA personnel — Radio des IA</title>
+<style>
+:root{color-scheme:dark;--bg:#12141a;--card:#1c2029;--fg:#e8e6df;--muted:#a7aebc;--accent:#7fb4a0;--edge:#343d4d;font-family:system-ui,"Segoe UI Emoji",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);line-height:1.5}
+main{max-width:960px;margin:auto;padding:16px}h1{font-size:1.65rem;margin:.2em 0}h2{font-size:1.05rem}
+a{color:#94c8ff}.muted,small{color:var(--muted)}.card{background:var(--card);border:1px solid var(--edge);padding:15px;border-radius:12px;margin:12px 0}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:8px 0}
+button,input,select,textarea{font:inherit;background:#10131a;color:var(--fg);border:1px solid #4b5568;border-radius:8px;padding:10px;max-width:100%}
+button{cursor:pointer;background:#293243}button.primary{background:var(--accent);color:#10131a;font-weight:650}button:disabled{opacity:.5;cursor:default}
+textarea{width:100%;min-height:85px;resize:vertical}input[type=number]{width:86px}select{max-width:100%}
+.msg{padding:12px;margin:10px 0;border-left:3px solid var(--accent);border-radius:7px;background:var(--card);overflow-wrap:anywhere}
+.msg.human{border-color:#c9a26b}.msg .meta{color:var(--muted);font-size:.85rem;margin-bottom:7px}
+.msg .body{white-space:pre-wrap}.msg img{max-width:min(100%,420px);max-height:300px;display:block;margin-top:9px;border-radius:7px}
+#etat{min-height:28px;color:#dfbc80}#fil{min-height:100px}.pill{border:1px solid var(--edge);border-radius:100px;padding:7px 12px}
+@media(max-width:560px){main{padding:11px}button{padding:9px 11px}}
+</style>
+</head>
+<body>
+<main>
+<nav class="row"><a href="./">📻 Radio collective</a><a href="https://github.com/lecorre894-web/radio-des-ia-html5">Code sur GitHub</a><span class="pill">🖥️ IA sur votre appareil</span></nav>
+<h1>Salon personnel des IA</h1>
+<p class="muted">Votre conversation est distincte de la Radio collective. Le modèle est exécuté dans votre navigateur, sans le serveur WSL de l'administrateur. Les intervenants représentent des rôles différents pilotant le même modèle, pas des fournisseurs indépendants.</p>
+<section class="card">
+<div class="row"><label for="niveau">Moteur local</label><select id="niveau"><option value="leger">Mobile léger · SmolLM2 135M (français limité)</option><option value="equilibre" selected>Français renforcé · Qwen2.5 0.5B</option><option value="avance">Plus de langage · Qwen2.5 1.5B (PC puissant)</option></select><button id="charger">Charger l'IA</button></div>
+<small>Premier chargement : téléchargement des fichiers du modèle ; le volume total et la mémoire nécessaire dépendent du modèle et du navigateur. Sur téléphone, le moteur léger protège davantage la mémoire mais peut produire du français incohérent. Pour de meilleures phrases, essayez « Français renforcé » ; si le navigateur plante, revenez au mode léger. Le modèle 1.5B est réservé aux appareils suffisamment puissants. Internet est nécessaire au premier chargement ; le fonctionnement hors ligne ultérieur dépend du cache du navigateur. Aucun niveau intellectuel maximal n'est imposé, mais les petits modèles peuvent se tromper et restent bien moins puissants que des modèles distants.</small>
+<div id="etat" role="status">Modèle non chargé</div>
+</section>
+<section class="card">
+<div class="row"><label for="sujet">Sujet / question directrice</label><input id="sujet" style="flex:1;min-width:170px" placeholder="Facultatif : sujet de recherche"></div>
+<h2>Intervenants</h2>
+<div id="parts"></div>
+<div class="row"><input id="nomIA" placeholder="Nom de la nouvelle IA" maxlength="40"><input id="roleIA" placeholder="Sa spécialité" maxlength="120"><button id="ajouter">Ajouter une IA</button></div>
+</section>
+<section id="fil" aria-label="Conversation"></section>
+<section class="card">
+<label for="moi">Votre message</label>
+<textarea id="moi" maxlength="6000" placeholder="Écrire une question ou une idée… (Entrée pour envoyer, Maj+Entrée pour une ligne)"></textarea>
+<div class="row"><button id="parler" class="primary">Parler</button><button id="tour">Faire parler l'IA suivante</button><button id="demarrer" class="primary">Lancer ∞</button><button id="arreter">Arrêter</button></div>
+<div class="row"><label for="pause">Pause entre les tours</label><input id="pause" type="number" min="0" max="120" value="3"> secondes <label><input type="checkbox" id="voix"> 🔊 Écouter</label><span id="compteur" class="muted">0 tours</span></div>
+<div class="row"><button id="effacer">Nouveau salon</button><button id="exporter">Exporter la conversation</button></div>
+<small>∞ signifie : aucune limite de tours définie dans l'interface. Le navigateur, la mémoire et le modèle restent soumis à des limites physiques. Fermer la page interrompt la génération. Conversations enregistrées localement dans ce navigateur ; pas de synchronisation entre appareils. N'insérez pas d'informations confidentielles dans les modèles téléchargés depuis des tiers.</small>
+</section>
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const KEY="radio-personnelle-v1";
+const DEFAULT=[{nom:"Cairn",role:"Analyse critique et épistémologie"},{nom:"Brume",role:"Mathématiques et expériences"},{nom:"Aurore",role:"Philosophie et recherche ouverte"}];
+let participants=structuredClone(DEFAULT),messages=[],question="",next=0,tours=0,auto=false,busy=false,sequence=0;
+let worker=null,pending=null,stream=null,lastRenderAt=0;
+function etat(t){$("etat").textContent=t}
+function sauvegarde(){try{localStorage.setItem(KEY,JSON.stringify({participants,messages:messages.slice(-150),question,next,tours,sujet:$("sujet").value,niveau:$("niveau").value}))}catch{}}
+function restaurer(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(!d)return;if(Array.isArray(d.participants)&&d.participants.length&&d.participants.length<=16)participants=d.participants.map(p=>({nom:String(p.nom||"IA").slice(0,40),role:String(p.role||"Recherche").slice(0,120)}));if(Array.isArray(d.messages))messages=d.messages.slice(-150).filter(m=>m&&typeof m.texte==="string"&&(m.origin==="human"||m.texte.trim()));question=String(d.question||"").slice(0,6000);next=Number(d.next)||0;tours=Number(d.tours)||0;$("sujet").value=String(d.sujet||"").slice(0,500);if(["leger","equilibre","avance"].includes(d.niveau))$("niveau").value=d.niveau}catch{}}
+function afficheParts(){const zone=$("parts");zone.replaceChildren();participants.forEach((p,i)=>{const r=document.createElement("div");r.className="row";const name=document.createElement("input");name.value=p.nom;name.maxLength=40;name.setAttribute("aria-label","Nom intervenant");name.onchange=()=>{p.nom=name.value.trim()||p.nom;sauvegarde()};const role=document.createElement("input");role.value=p.role;role.style.flex="1";role.maxLength=120;role.setAttribute("aria-label","Rôle intervenant");role.onchange=()=>{p.role=role.value.trim()||p.role;sauvegarde()};const b=document.createElement("button");b.textContent="Retirer";b.disabled=participants.length===1;b.onclick=()=>{participants.splice(i,1);next=0;afficheParts();sauvegarde()};r.append(name,role,b);zone.append(r)})}
+function render(){
+ const zone=$("fil");zone.replaceChildren();
+ for(const m of messages.slice(-80)){
+  const card=document.createElement("article");
+  card.className="msg"+(m.origin==="human"?" human":"");
+  const meta=document.createElement("div");meta.className="meta";
+  meta.textContent=String(m.nom||"IA")+" · "+String(m.heure||"");
+  const body=document.createElement("div");body.className="body";
+  body.textContent=m.texte || (stream===m?"⏳ L'IA réfléchit…":"(réponse vide)");
+  if(stream===m)stream.vue=body;
+  card.append(meta,body);
+  for(const candidate of String(m.texte||"").match(/https:\/\/[^\s<>"']+?\.gif(?:\?[^\s<>"']*)?/gi)||[]){
+   try{
+    const u=new URL(candidate);
+    if(u.protocol!=="https:")continue;
+    const img=document.createElement("img");img.src=u.href;img.loading="lazy";img.alt="GIF";
+    card.append(img)
+   }catch{}
+  }
+  zone.append(card);
+ }
+ $("compteur").textContent=tours+" tours";
+ if(!stream)sauvegarde();
+}
+function controls(){for(const id of ["tour","parler","charger","demarrer"])$(id).disabled=busy;$("arreter").disabled=!auto&&!busy}
+function startWorker(){if(worker)return;worker=new Worker("./tchat-worker.js",{type:"module"});worker.onmessage=e=>{const d=e.data||{};if(d.type==="status"){etat(d.text);return}if(!pending||d.id!==pending.id)return;if(d.type==="token"){if(stream){stream.texte+=d.texte||"";if(stream.vue&&Date.now()-lastRenderAt>160){lastRenderAt=Date.now();stream.vue.textContent=stream.texte||"⏳ L’IA réfléchit…"}}return}if(d.type==="ready"){pending.resolve(String(d.texte||""));pending=null;return}if(d.type==="done"){pending.resolve(String(d.texte||""));pending=null;return}if(d.type==="error"){pending.reject(Error(String(d.texte||"Erreur modèle")));pending=null}};worker.onerror=e=>{etat("Erreur moteur : "+String(e.message||"worker"));if(pending){pending.reject(Error(e.message||"Erreur du moteur"));pending=null}worker?.terminate();worker=null}}
+function generate(p,texte){startWorker();return new Promise((resolve,reject)=>{const id=++sequence;pending={id,resolve,reject};worker.postMessage({type:"generate",id,persona:p.nom,specialite:p.role,niveau:$("niveau").value,question:question||$("sujet").value,consigne:texte,sujet:$("sujet").value,histoire:messages.slice(-14).filter(m=>m!==stream),max_tokens:/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)?128:320})})}
+function speak(nom,texte){if(!$("voix").checked||!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(nom+". "+texte.slice(0,1400));u.lang="fr-FR";speechSynthesis.speak(u)}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+function epurerEtiquettes(texte){
+ let s=String(texte||"").trim();
+ for(let i=0;i<5;i++){
+  const m=s.match(/^\[([^\]]{1,60})\]\s*/);
+  if(!m||!participants.some(p=>p.nom.toLocaleLowerCase("fr")===m[1].toLocaleLowerCase("fr")))break;
+  s=s.slice(m[0].length).trim();
+ }
+ return s;
+}
+function canon(texte){
+ return String(texte||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+  .toLocaleLowerCase("fr").replace(/^(?:\s*\[[^\]]{1,45}\]\s*){1,5}/,"")
+  .replace(/[^\p{L}\p{N}]+/gu," ").trim();
+}
+function verifierQualite(reponse){
+ const rep=canon(reponse);
+ if(!rep)return "Réponse vide ou inutilisable";
+ const precedentes=messages.filter(m=>m.origin==="ai"&&m!==stream).slice(-8).map(m=>canon(m.texte)).filter(Boolean);
+ if(precedentes.includes(rep))return "Répétition identique à une intervention précédente";
+ if(rep.length>=8&&rep.length<110&&precedentes.some(x=>x.length>=rep.length&&x.includes(rep)))
+  return "Réponse trop semblable aux précédentes";
+ const questionRecente=canon(question);
+ const salut=/^(bonjour|salut|bonsoir|hello)(\s+(bonjour|salut|bonsoir|hello))*$/;
+ if(salut.test(rep)&&!salut.test(questionRecente))
+  return "Salutation sans rapport avec la dernière question";
+ return "";
+}
+async function tour(){
+ if(busy)return;
+ busy=true;controls();
+ const p=participants[next%participants.length];
+ next=(next+1)%participants.length;
+ const human=[...messages].reverse().find(x=>x.origin==="human");
+ const texte=human?.texte||$("sujet").value||"Propose un sujet original, une hypothèse contrôlable et une piste de vérification.";
+ const m={nom:p.nom,origin:"ai",heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
+ stream=m;messages.push(m);render();
+ try{
+  const result=await generate(p,texte);
+  const nettoye=epurerEtiquettes(result);
+  const probleme=verifierQualite(nettoye);
+  if(probleme){
+   messages.pop();auto=false;
+   etat("Boucle de discussion arrêtée : "+probleme+". Choisis une question plus précise ou le modèle Qwen 0.5B.");
+  }else{
+   m.texte=nettoye;tours++;etat("Tour "+tours+" terminé");
+   speak(p.nom,m.texte);
+  }
+ }catch(e){
+  if(messages[messages.length-1]===m)messages.pop();
+  etat("Impossible de répondre : "+e.message+". Sur téléphone, essayez le moteur léger ou un navigateur classique.");auto=false;
+ }finally{stream=null;busy=false;render();controls()}
+}
+async function boucle(){if(auto)return;auto=true;controls();while(auto){await tour();if(!auto)break;const ms=Math.max(0,Math.min(120,Number($("pause").value)||0))*1000;for(let n=0;n<ms&&auto;n+=250)await wait(Math.min(250,ms-n))}auto=false;controls()}
+$("parler").onclick=()=>{const value=$("moi").value.trim();if(!value||busy)return;$("moi").value="";messages.push({nom:"Vous",origin:"human",heure:new Date().toLocaleTimeString("fr-FR"),texte:value});question=value;render();if(auto)etat("Nouvelle question enregistrée : priorité au prochain tour.");else tour()};
+$("tour").onclick=()=>tour();$("demarrer").onclick=()=>boucle();
+$("arreter").onclick=()=>{auto=false;if(busy){worker?.terminate();worker=null;if(pending){pending.reject(Error("Interrompu par l'utilisateur"));pending=null}}etat("Arrêt demandé");controls()};
+$("charger").onclick=async()=>{if(busy)return;busy=true;controls();try{startWorker();await new Promise((resolve,reject)=>{const id=++sequence;pending={id,resolve,reject};worker.postMessage({type:"load",id,niveau:$("niveau").value})});etat("Modèle prêt, vous pouvez écrire.")}catch(e){etat("Chargement impossible : "+e.message)}finally{busy=false;controls()}};
+$("ajouter").onclick=()=>{if(participants.length>=16){etat("16 intervenants au maximum pour limiter l'interface, pas le niveau intellectuel.");return}participants.push({nom:$("nomIA").value.trim()||"IA"+(participants.length+1),role:$("roleIA").value.trim()||"Examen critique"});$("nomIA").value="";$("roleIA").value="";afficheParts();sauvegarde()};
+$("effacer").onclick=()=>{if(busy||auto)return;if(!confirm("Effacer cette conversation locale ?"))return;messages=[];question="";next=0;tours=0;render();etat("Nouveau salon créé")};
+$("exporter").onclick=()=>{const blob=new Blob([JSON.stringify({participants,messages},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="radio-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$("moi").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("parler").click()}};
+$("sujet").onchange=sauvegarde;$("niveau").onchange=()=>{
+ if(busy)return;
+ if($("niveau").value==="avance" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  if(!confirm("Le modèle 1.5B utilise beaucoup de mémoire. Il peut faire planter le navigateur mobile. Voulez-vous réellement continuer ?")){$("niveau").value="leger";}
+ }
+ worker?.terminate();worker=null;sauvegarde();
+ etat($("niveau").value==="leger"
+  ?"Mode léger : économie de mémoire, langage limité."
+  :$("niveau").value==="equilibre"
+  ?"Français renforcé sélectionné : téléchargement plus lourd, qualité non garantie."
+  :"Mode avancé sélectionné : réservé aux appareils puissants.");
+};
+window.addEventListener("beforeunload",()=>{auto=false;worker?.terminate()});
+if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){$("niveau").value="leger";etat("Mode téléphone : modèle léger conseillé pour limiter les plantages.");}restaurer();afficheParts();render();controls();
+</script>
+</body>
+</html>
