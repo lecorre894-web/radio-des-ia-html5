@@ -9,7 +9,7 @@ const START = [
 ];
 const state = {
   participants: structuredClone(START), messages: [], sujet:"", next:0, tours:0,
-  auto:false, busy:false, controller:null, activeCard:null, current:null, catalog:[],
+  auto:false, mode:"direct", busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0
 };
 function status(value){$("etat").textContent=value;}
@@ -40,10 +40,11 @@ function restore(){
 function buttonStates(){
   $("tour").disabled=state.busy;
   $("infini").disabled=state.busy || state.auto;
+  $("debattre").disabled=state.busy || state.auto;
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("etatMode").textContent=state.auto?"∞ Diffusion automatique":state.busy?"IA en cours de réponse":"Salon prêt";
+  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":"Salon prêt";
 }
 function renderParts(){
   const host=$("parts");host.replaceChildren();
@@ -139,8 +140,13 @@ async function nextTour(){
   }catch(e){status(String(e?.message||e));state.auto=false;return;}
   const participant=state.participants[state.next%state.participants.length];
   state.next=(state.next+1)%state.participants.length;
-  const messages=buildPrompt({participants:state.participants,index:(state.next-1+state.participants.length)%state.participants.length,
-    messages:state.messages,sujet:state.sujet});
+  const currentIndex=(state.next-1+state.participants.length)%state.participants.length;
+  const messages=buildPrompt({
+    participants:state.participants,index:currentIndex,
+    messages:state.messages,sujet:state.sujet,mode:state.mode,
+    recipient:state.participants[state.next%state.participants.length]?.nom,
+    round:state.tours
+  });
   const current={origin:"ai",nom:participant.nom,modele:participant.modele,heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);state.current=current;state.busy=true;
   state.controller=new AbortController();
@@ -178,11 +184,19 @@ async function nextTour(){
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;render();buttonStates();
   }
 }
-async function launchInfinity(){
+async function launchInfinity(mode="direct"){
   if(state.auto || state.busy)return;
   if(!window.puter?.auth?.isSignedIn()){status("Connecte Puter avant de lancer ∞.");return;}
-  if(!confirm("Le mode ∞ enchaîne des appels aux modèles distants et consomme vos crédits Puter. Aucun nombre maximal de tours n’est prévu. Continuer ?"))return;
+  if(mode!=="direct" && mode!=="debate")throw Error("Mode de discussion inconnu");
+  const question=mode==="debate"
+    ?"Lancer le DÉBAT IA ↔ IA ? Les modèles vont se répondre, proposer des objections et des questions, même sans message humain."
+    :"Lancer la discussion automatique entre IA ?";
+  if(!confirm(question+"\n\nChaque tour consomme des crédits Puter. Il n'y a pas de nombre maximal programmé et le Salon s'arrête avec Arrêter, la fermeture de la page, ou une erreur. Continuer ?"))return;
+  state.mode=mode;
+  state.sujet=$("sujet").value.trim();
+  save();
   state.auto=true;buttonStates();
+  status(mode==="debate"?"Débat IA ↔ IA actif : vous pouvez écouter ou intervenir.":"Discussion IA automatique active.");
   while(state.auto){
     await nextTour();
     if(!state.auto)break;
@@ -211,8 +225,9 @@ function init(){
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
-  $("tour").addEventListener("click",()=>void nextTour());
-  $("infini").addEventListener("click",()=>void launchInfinity());
+  $("tour").addEventListener("click",()=>{if(!state.auto)state.mode="direct";void nextTour()});
+  $("infini").addEventListener("click",()=>void launchInfinity("direct"));
+  $("debattre").addEventListener("click",()=>void launchInfinity("debate"));
   $("arreter").addEventListener("click",stop);
   $("ajouter").addEventListener("click",()=>{
     if(state.busy)return;
@@ -223,7 +238,7 @@ function init(){
   $("nouveau").addEventListener("click",()=>{
     if(state.busy)return;
     if(!confirm("Effacer cette conversation locale ? Vous pouvez d'abord l'exporter."))return;
-    state.messages=[];state.next=0;state.tours=0;state.sujet="";$("sujet").value="";render();status("Nouveau Salon prêt");
+    state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";render();status("Nouveau Salon prêt");
   });
   $("exporter").addEventListener("click",exportConversation);
   $("moi").addEventListener("keydown",event=>{
