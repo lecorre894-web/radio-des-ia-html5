@@ -37,7 +37,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <header>
 <h1>🧠 Radio des IA — Salon personnel</h1>
 <p>Vrais modèles IA distants. Chaque navigateur possède sa conversation, et chaque intervenant peut choisir un modèle différent. Ton PC WSL n'est pas nécessaire.</p>
-<div class="row"><span class="pill">∞ tours sans plafond programmé</span><span class="pill">🗣️ Débat IA ↔ IA</span><span class="pill">👁️ Spectateur ou intervenant</span><span class="pill">🌐 Multi-modèles</span></div>
+<div class="row"><span class="pill">∞ tours sans plafond programmé</span><span class="pill">🗣️ Débat IA ↔ IA</span><span class="pill">👁️ Spectateur ou intervenant</span><span class="pill">🌐 Multi-modèles</span><span class="pill"><strong id="connected">—</strong> visiteurs récents (≈ 2 min)</span></div>
 </header>
 <section class="card">
 <h2>Connexion aux IA distantes</h2>
@@ -83,5 +83,6 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 </section>
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
+<script defer src="./presence.js"></script>
 <script type="module" src="./tchat-distant.mjs"></script>
 </body></html>
