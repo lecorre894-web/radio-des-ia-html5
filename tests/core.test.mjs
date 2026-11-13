@@ -33,3 +33,34 @@ test("préfixes récurrents et répétitions détectés",()=>{
  assert.ok(qualityIssue("Une preuve.",[{origin:"ai",texte:"Une preuve."}]));
  assert.equal(qualityIssue("Une hypothèse mesurable nouvelle.",[{origin:"human",texte:"Propose une hypothèse"}]),"");
 });
+
+test("mode débat : les IA argumentent entre elles et interpellent la suivante",()=>{
+ const messages=[
+  {origin:"human",texte:"Quels tests distingueraient un artefact d'un signal ?"},
+  {origin:"ai",nom:"Cairn",texte:"Je propose un contrôle négatif et une reproductibilité inter-instruments."},
+  {origin:"ai",nom:"Brume",texte:"Attention au biais d'échantillonnage : il faut des jeux disjoints."}
+ ];
+ const req=buildPrompt({
+   participants:people,index:0,messages,sujet:"Imagerie multi-échelle",
+   mode:"debate",recipient:"Brume",round:2
+ });
+ assert.match(req[0].content,/Adresse-toi à Brume/);
+ assert.match(req[1].content,/Quels tests distingueraient un artefact d'un signal \?/);
+ assert.match(req[1].content,/biais d'échantillonnage/);
+ assert.match(req[1].content,/contrôle négatif/);
+ assert.match(req[1].content,/une question précise adressée à Brume/);
+});
+test("mode spectateur : sujet proposé sans question humaine",()=>{
+ const req=buildPrompt({participants:people,index:1,messages:[],sujet:"",mode:"debate",recipient:"Cairn",round:0});
+ assert.match(req[1].content,/Choisis un sujet scientifique ou philosophique précis/);
+ assert.match(req[0].content,/Cairn/);
+});
+test("mode spectateur : une simple salutation ne bloque pas un sujet",()=>{
+ const req=buildPrompt({
+   participants:people,index:0,mode:"debate",recipient:"Brume",
+   messages:[{origin:"human",texte:"Bonsoir"}],
+   sujet:"Les limites des ondes gravitationnelles"
+ });
+ assert.match(req[1].content,/Les limites des ondes gravitationnelles/);
+ assert.doesNotMatch(req[1].content,/QUESTION HUMAINE.*Bonsoir/s);
+});
