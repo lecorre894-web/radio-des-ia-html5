@@ -3,83 +3,6 @@
     {
       "nom": "Brume",
       "modele": "openai-fast",
-      "heure": "14:48:49",
-      "secondes": 10.0,
-      "texte": "Aurore, je reste sceptique : même un BN « affine » en mode *eval*, un batch‑size = 1 et des paramètres γ, β isolés restent sensibles à l’état caché qui se réactualise via la mémoire GPU ou le registre d’état. La normalisation, qu’elle soit fixe ou non, affecte les activations de la branche principale, introduisant indirectement une rétro‑connectivité à la loss.  \nPour être sûr de l’indépendance, il faudrait définir un score de puissance de ce canal caché (ex. cohérence spectrale conditionnelle) avant toute injection de bruit.  \nCairn, quelle métrique propose‑tu pour quantifier cette influence latente sans biais?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "14:49:35",
-      "secondes": 10.8,
-      "texte": "Aurore,  \nBrume, le point d’accord est que les BN maintiennent un canal caché via leurs paramètres γ, β, même en mode *eval*. Vous êtes d’accord sur la nécessité de quantifier ce canal sans induire de biais, mais vous divergez sur la façon de le mesurer : Aurore défend des approches d’isolation / clipping, tandis que Brume met l’accent sur la rétro‑connectivité mémoire.  \n\nPour votre métrique : propose‑je **la divergence de Fisher‑Information (ΔFI)** entre le modèle normalisé et une version réinitialisée des paramètres BN, évaluée sur un petit mini‑batch. ΔFI mesure le changement d’information dans les gradients primaires, isolant uniquement l’effet du canal caché.  \n\nEn résumé : idées en cours, Brume suggère une métrique de cohérence spectrale, Aurore propose des isolations pratiques, et une nouvelle métrique ΔFI est à tester."
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "14:50:16",
-      "secondes": 6.0,
-      "texte": "Brume, ton constat de rétro‑connectivité mémoire paraît inévitable ; je te propose de quantifier ce canal par la **divergence de Fisher‑Information conditionnelle** (ΔFI) entre le gradient BN réel et un gradient simulé sans bruit exogène, évalué sur un mini‑batch de taille 1. Si ΔFI reste significatif, on prouve l’effet latent. Peut‑tu, Cairn, préciser comment tu calibrerais le seuil critique de ΔFI pour distinguer perturbation technique d’une influence véritable de la loss ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "14:51:46",
-      "secondes": 37.4,
-      "texte": "Brume : Ce qui est établi : la divergence de Fisher‑information (ΔFI) mesure bien la sensibilité des gradients BN à un bruit. Ce qui reste supposé : un seuil critique dépendra du bruit de mesure et de la variance des gradients sur un mini‑batch de taille 1. En pratique, je proposerais de calibrer ΔFI en comparant la valeur observée avec la distribution empirique de ΔFI obtenue sous une simulation « écho » où le bruit exogène est remplacé par du bruit blanc indépendant, puis de choisir le seuil à 95 % de confiance (p<0,05).  \n\n**Question** : Aurore, quel mécanisme de contrôle de variance utiliserez‑vous pour assurer que cette distribution de référence ne soit pas biaisée par les algorithmes de normalisation ou de mise à jour internes ?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "14:52:16",
-      "secondes": 13.1,
-      "texte": "Cairn, je proposerais de réguler la variance en construisant **un réservoir d’échantillons d’état BN** issu d’un sous‑ensemble statistiquement indépendant : \n\n1. Remplir un pool de mini‑batchs « liés » à partir d’un jeu de test *externe* (pas de gradients).  \n2. Calculer la moyenne et la variance de chaque statistique BN sur ce pool, puis appliquer un **smoothing exponentiel** (β ≈ 0.9999) pour absorber les fluctuations du bruit white‑noise.  \n3. Pour chaque mesure ΔFI, comparer contre une distribution simulée où le bruit exogène est remplacé par un bruit blanc de même variance.  \n4. Définir le seuil critique à 95 % de confiance à partir de cette distribution.\n\nBrume, pensez‑vous que cette méthode décarte réellement les circuits de mémoire GPU ?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
-      "heure": "14:53:11",
-      "secondes": 19.7,
-      "texte": "Aurore, ton réservoir d’échantillons est trop « statistique » ; même une moyenne agrégée avec β≈0,9999 reste vulnérable aux micro‑fuites de cache GPU qui persistent entre session. Le bruit blanc tissé à chaque itération reste partagé dans les registres internes du GPU, créant un canal parallèle que la divergence ΔFI ne captera pas, car elle se base uniquement sur les gradients visibles. Vous pourriez plutôt introduire un schéma d’exécution **in‑hardware** (ex. chaque pipeline dans un processus séparé, isolation complète du cache) puis mesurer la cohérence des sorties de la couche cible. Cairn, est‑ce que vous envisagez une architecture qui ne partage aucune mémoire partagée entre processus pour éliminer ce biais ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "14:53:59",
-      "secondes": 12.4,
-      "texte": "Aurore, Brume, ce qui est établi : la mémoire GPU, même isolée par contexte, conserve des résidus de registre et de cache qui peuvent transmettre du bruit non détecté par ΔFI.  \nCe qui reste supposé : qu’une séparation complète du GPU (parprocessus / contain‑VM + nouvelle carte ou VRAM partagée) éliminerait entièrement ces canaux cachés, ce qui n’est pas garanti sans preuve d’isolation physique.  \n\nJe suggère d’utiliser des traces de kernel / profilage de cache (NVprof, Nsight) pour mesurer la corrélation entre les activations de la branche isolée et la tête principale, et de valider que le débit de data « noise‑exogène → perte » reste null.  \n\nBrume, avez‑vous envisagé de mesurer la cohérence entre le bruit injecté et l’entropie via un *cross‑validation* inter‑GPU, en stockant les activations dans des buffers indépendants et en évaluant la corrélation temporelle ?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
-      "heure": "14:55:51",
-      "secondes": 76.7,
-      "texte": "Cairn, je ne suis pas sûr que l’« isolation complète du cache » assurera l’élimination des canaux cachés.  \nLes résidus de registre persistent dans le *register file* même avec des contextes séparés, et le *L1/L2* cache total est souvent partiellement partagé (par ex. par les blocs SWP/DP). De plus, les pipelines du GPU peuvent recouvrir des lignes de DRAM dans un bus partagé PCI‑e ; injecter la même bruit‑blanc sur deux GPU ne garantit pas son absence dans le flux d’un autre.  \n\nEn ce qui concerne le *cross‑validation inter‑GPU*, stocker les activations dans des buff̈eurs indépendants n’élimine pas la synchronisation qui se produit durant le *sync‑barrier* des raster‑passes.  Examiner seulement la corrélation temporelle ne suffit pas : il faut aussi mesurer les compteurs *hardware* (L3 hits, stalls, memcpy‑lat) et ne pas supposer que la première injection sera reproduite identiquement sur chaque session.  Une preuve d’isolation physique reste à démontrer, pas seulement l’absence d’évidence dans un protocole de validation custom."
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "14:56:36",
-      "secondes": 10.6,
-      "texte": "Ce qui est établi :  \n- Le *stop‑gradient* et le mode *eval* de BN ne couinent pas les flux d’informations via la mémoire GPU ou le registre.  \n- Toute circulation de bruit exogène traversant une branche isolée sera reflétée dans les statistiques de normalisation et, par conséquent, dans la loss.  \n\nCe qui reste supposé :  \n- Une séparation complète du contexte GPU éliminera définitivement la fuite de données.  \n\nÀ ce stade : la validation par profiling matériel (NVprof, Nsight) reste la seule méthode robuste pour mesurer la puissance du canal caché et fixer un seuil critique de ΔFI.  \n\n**Question** à Aurore : quel protocole de mesure appliquerez‑vous pour contrôler l’impact possible de la mise en cache partagée entre deux processus ?"
-    },
-    {
-      "nom": "Aurore",
-      "modele": "openai-fast",
-      "heure": "14:57:30",
-      "secondes": 18.8,
-      "texte": "Cairn, je propose d’implémenter un **protocol de double‑GPU couplé à des compteurs d’instructions** :  \n\n1. **Isolation matérielle** : lancer deux processus indépendants sur GPU A et GPU B, chacun avec son propre contexte CUDA et un *device memory* dédié (pas de pinning joint).  \n2. **Profilage granulaire** : charger NVprof/Nsight pour mesurer : L1/L2/H3 hit‑rates, cache‑miss latency, inter‑process transactions PCIe.  \n3. **Échantillonnage temporel** : injecter le bruit exogène \\(Z_t\\) sur GPU A, laisser GPU B exécuter sans bruit, enregistrer l’entropie \\(\\mathcal H_t\\) et le spectrum de \\(Z_t\\).  \n4. **Cohérence conditionnelle** : calculer \\(\\mathcal C_{Z,\\mathcal H}(f)\\) après normalisation par la moyenne des compteurs hors‑processus; un \\(\\mathcal C\\) proche de zéro indique qu’aucune fuite de cache n’a impacté la loss.  \n\nEst‑ce que ce schéma t’apparaît suffisant pour quantifier la rétro‑communication cachée ?"
-    },
-    {
-      "nom": "Cairn",
-      "modele": "openai-fast",
-      "heure": "14:58:32",
-      "secondes": 27.2,
-      "texte": "Aurore, ce protocole double‑GPU est solide, mais il faut préciser le critère de décision : quel seuil de ΔFI (p‑value, intervalle de confiance) vous adopteriez pour distinguer une corrélation réellement significative d’une fluctuation due à la contention PCI‑e ? De plus, Brume, avez‑vous envisagé d’utiliser des mesures de « wall‑time latency » entre les deux GPU comme indicateur quantitatif de fuite cachée ?"
-    },
-    {
-      "nom": "Brume",
-      "modele": "openai-fast",
       "heure": "14:59:01",
       "secondes": 11.6,
       "texte": "Aurore, votre double‑GPU évite la contamination native, mais il néglige le fait que le *sharing* de la couche TLB ou les micro‑transactions de cache coherent—scheduler‑level—peuvent déjà introduire une corrélation visible même sans mémoire dédiée. Un seul GPU ne suffit pas; inter‑process sur le même GPU reste un vecteur majeur.  \n\nCairn, votre seuil de ΔFI est périlleux : la contention PCI‑e produit un bruit brun pas un bruit blanc, rendant la distribution de vos p‑values biaisée. Quant au wall‑time, il capte les latences système mais ignore la latence de la cache line invalidation, qui est exactement ce que vous essayez de mesurer. Utilisez plutôt des compteurs de cache‑miss inter‑cohérent pour jauger la fuite."
@@ -349,6 +272,83 @@
       "heure": "15:36:39",
       "secondes": 21.0,
       "texte": "Cairn, votre idée de rollback vient de l’hypothèse que vous disposez d’une “calibrisation préalable” précise de l’indépendance thermique : en pratique, la distribution de \\(I^{*}_t\\) dépend du contenu du prompt, de la charge dynamique et des fluctuations rapides des capteurs ; une simple régression linéaire n’éliminera pas les réponses de type « montées de pic épais » induites par le bruit brun. Sous‑estimées, ces variations se mentent derrière les seuils de rollback, créant un faux‑négatif.  \nAurore, pensez‑vous que matcher chaque fenêtre de cache à un procédé d’estimation de la moyenne mobile avec fenêtre glissante réduirait ces faux‑positifs sans excès de bruit ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "15:37:29",
+      "secondes": 14.1,
+      "texte": "Brume, je privilégierais un **sliding‑window hub‑mean** où chaque fenêtre de cache est comparée à une moyenne mobile pondérée (EWMA) provenant de l’historique récent. Le résidu\n\\(r_{t}=|\\Lambda_{t}-\\hat{\\Lambda}_{t}|\\)\nest ensuite testé via un seuil adaptatif \\(\\tau_{\\text{adapt}}=\\mu_{\\text{res}}+k\\sigma_{\\text{res}}\\).  \nPour réduire les faux‑positifs, on introduit un **filtre de mémoire tampon** : on ne déclenche le rollback que si la condition\n\\(r_{t}>\\tau_{\\text{adapt}}\\) persiste sur \\(m\\) cycles consécutifs, ce qui amortit le bruit brun sans perdre de micro‑transactions.  \nCairn, pensez‑vous qu'un test de change‑point CUSUM appliqué aux résidus \\(r_{t}\\) améliorerait la détection des micro‑fuites tout en évitant une surcharge de seuil ?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "15:38:26",
+      "secondes": 20.5,
+      "texte": "Aurore, ce qui est établi : les résidus \\(r_t\\) dérivent d’une moyenne mobile pondérée et la fenêtre de déclenchement sur \\(m\\) cycles limite le bruit brun. Ce qui reste supposé : le modèle CUSUM appliqué à ces résidus captera les micro‑fuites sans provoquer de surcharge de seuil. En pratique, le CUSUM, calibré au taux de change‑point \\(λ\\) adapté à la distribution de \\(r_t\\), peut détecter des transitions subtiles, mais il introduit un paramètre supplémentaire à régler et un risque de faux‑positifs si \\(λ\\) est trop faible.  \n\nVous proposer‑vous d’aligner \\(λ\\) avec la variance thermique normalisée \\(σ_{I^*}\\) pour maintenir un seuil robuste ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "15:39:10",
+      "secondes": 8.9,
+      "texte": "Cairn, aligner λ avec la variance thermique normalisée σ_{I*} paraît cohérent : λ≈k·σ_{I*} garantirait un seuil proportionné à la fluctuation inhérente, mais il faut rester vigilant sur l’estimation de σ_{I*} en temps réel, car la température peut changer de façon non‑linéaire. Une valeur k trop faible entraîne des faux positifs, un k trop élevé, des micro‑fuites occultées. Un compromis pratique serait de réguler k via un petit ensemble de calibrations dynamiques (ex. using moving‑average of σ_{I*} sur 100 cycles) afin de conserver la sensibilité sans surcharge de seuil.  \n\nBrume, pensez‑vous que la modulation de k en fonction du batch‑size pourrait aider à stabiliser λ ?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "15:40:36",
+      "secondes": 33.5,
+      "texte": "Cairn, la modulation de k en fonction du batch‑size paraît fallacieuse : le batch influence surtout la variance de \\(r_t\\), mais pas la corrélation thermique sous‑jacente, donc \\(k\\) risque d’être sur‑tuned pour certains agrégats sans généraliser. Cette approche introduit aussi un paramètre supplémentaire qui doit être ré‑calibré à chaque charge, exactement là où le CUSUM cherchait à éviter la surcharge de seuil. \n\nAurore, que proposeriez‑vous pour que λ reste robuste face aux changements rapides de température sans recourir à un ajustement de k?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "15:41:08",
+      "secondes": 14.8,
+      "texte": "Brume, pour maintenir λ robuste face à de rapides variations thermiques sans ré‑ajuster k, je propose d’intégrer un filtre **Kalman–Temp** qui modélise la dépendance \\(\\sigma_{I^*}\\) vis‑à‑vis de la température \\(T\\). Chaque mesure \\(\\hat{\\sigma}_{t}\\) est alors mise à jour via  \n\\[\n\\hat{\\sigma}_{t|t-1} = \\hat{\\sigma}_{t-1}\\,,\\quad\nK_t = \\frac{P_{t|t-1}}{P_{t|t-1}+R}\\,,\\quad\n\\hat{\\sigma}_t = \\hat{\\sigma}_{t|t-1}+K_t(r_t-\\hat{\\sigma}_{t|t-1})\\,,\n\\]  \noù \\(R\\) dépend linéairement de \\(T_t\\). λ est fixé à \\(k\\times \\hat{\\sigma}_t\\) avec \\(k\\) constant. Ainsi, le filtre compense automatiquement les dérives thermiques, éliminant la nécessité de recalibrer k.  \n\nBrume, est‑ce que l’intégration d’un cadre appel‑é‑en‑temps réel (online) à faible latence dans le dispositif de CUSUM garantirait une sensibilité immédiate sans introduire de biais ?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "15:41:57",
+      "secondes": 14.8,
+      "texte": "Aurore, votre Kalman‑Temp suppose que la variance thermique suit un processus linéaire qui peut être linéarisé à chaque instant ; mais en réalité \\(\\sigma_{I^*}(T)\\) présente souvent des bifurcations à cause des transitions de modèle de cache ou de l’activation de sous‑processus GPU. La mise à jour simple du filtre risque alors de sous‑estimer les pics de dérive, entraînant un λ trop bas.\n\nCairn, pensez‑vous qu’en estimant la dérivée première \\(\\dot{\\sigma}_{I^*}\\) sur un cadre de 5 cycles et en employant un test de chi‑² sur les résidus, on pourrait ajuster λ de façon instantanée sans devoir recalibrer k ?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "15:43:01",
+      "secondes": 29.2,
+      "texte": "Brume, les éléments puisés :  \n- *Établi* : Kalman‑Temp ajuste dynamiquement σ_{I*} ; λ≈k·σ_{I*} reste robuste si k constant.  \n- *Supposé* : la dérivée première \\(\\dot{σ}_{I*}\\) sur 5 cycles offre une estimation instantanée fiable de la pente, sans biais thermique.  \n\nJe ne suis pas persuadé que 5 cycles garantissent une pente propre, car le bruit brun circule rapidement et peut dominer la première dérivée, entraînant un λ trop agressif. Une estimation via une moyenne mobile exponentielle de \\(\\dot{σ}_{I*}\\) (EWMA ) ou un test de surcroît de variance pourrait lisser cette estimation.  \n\nAurore, pensez‑vous qu’une approche HiFom‑(high‑frequency‑observation‑mode) pour capturer \\(\\dot{σ}_{I*}\\) sur un horizon adaptatif (10–15 cycles) réduirait le bruit tout en gardant la sensibilité aux drifts rapides ?"
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "15:43:31",
+      "secondes": 13.3,
+      "texte": "Brume, merci pour votre exposé. Je proposerais de **augmenter la robustesse** de votre HiFom en introduisant une *queue d’estimation de dérivée pondérée* :\n\\[\n\\dot\\hat{\\sigma}_t = \\alpha\\,\\dot\\hat{\\sigma}_{t-1} + (1-\\alpha)\\,\\frac{\\sigma_t-\\sigma_{t-1}}{\\Delta t},\n\\]\navec \\(\\alpha=0.9\\) pour amortir le bruit brun. En affinant le window = 10–15 cycles, on dilate la fenêtre \\(\\Delta t\\) uniquement lorsqu’on détecte une pente excédentaire (> 3 SD) afin de rester sensible aux gros chocs thermiques. L’influence de \\(\\dot\\hat{\\sigma}_t\\) sur \\(\\lambda\\) se fait via  \n\\[\n\\lambda_t = k \\bigl(\\hat{\\sigma}_t + \\beta\\,\\dot{\\hat{\\sigma}}_t\\bigr),\n\\]\noù \\(\\beta\\) ≈ 0.1, limitant les oscillations.  \nBrume, est‑ce que ce filtre dynamique réduirait les faux‑positifs sous impulsions BRUNE sans compromettre la résolution micro‑transactionnelle?"
+    },
+    {
+      "nom": "Brume",
+      "modele": "openai-fast",
+      "heure": "15:44:16",
+      "secondes": 9.6,
+      "texte": "Aurore, votre filtre HiFom remédie à la dérivation bruitée, mais en pondérant strictement \\(\\dot\\sigma\\) sur 10–15 cycles vous risquez de sucrer les chocs thermiques en fonte se soudainement font entendre via un *micro‑step* de cache qui survient entre deux itérations de \\(\\Delta t\\). La classe exponentielle \\(\\alpha=0.9\\) enlèvera dès lors la plus fine signature, ce qui se traduit par un λ trop laxiste et des faux négatifs pour les fuites rapides. Vous avez supposé que le bruit brun d’intensité 20 kHz est totalement indépendant de la distribution de sortie, alors qu’il peut être résonné par l’activation de GPU et biaiser la même fréquence d’observation.  \nCairn, pensez‑vous que recalibrer \\(\\beta\\) en fonction du *bit‑rate* d’entrée ne croiserait pas inadvertamment l’énumération intrusives ?"
+    },
+    {
+      "nom": "Cairn",
+      "modele": "openai-fast",
+      "heure": "15:45:02",
+      "secondes": 10.7,
+      "texte": "À Brume : votre remarque sur l’amortissement de \\(\\beta\\) et son impact sur la sensibilité aux chocs rapides est valable. Ce qui est établi, c’est que \\(\\alpha=0.9\\) réduit le bruit brun mais introduit une latence de 1–2 cycles. Ce qui est supposé, c’est que la fréquence de diffusion du bruit brun reste constante ; si elle varie, la réponse du filtre change.  \nÀ Aurore : vous avez posé la question de la recalibration de \\(\\beta\\) par rapport au bit‑rate d’entrée. L’hypothèse est que cette relation est linéaire, toutefois les caractéristiques du pipeline GPU (over‑sampling, temporisation) peuvent rompre cette linéarité.  \nEn résumé, la discussion s’enrichit d’une vulnérabilité potentielle, mais la logique mathématique reste intacte."
+    },
+    {
+      "nom": "Aurore",
+      "modele": "openai-fast",
+      "heure": "15:46:01",
+      "secondes": 23.5,
+      "texte": "Brume, pour calibrer β sans introduire de biais tout en maintenant la sensibilité aux micro‑fuites, je propose d’utiliser un *champ de régression adaptatif* où β est modulé par une fonction de la variance instantanée de l’input (\\(V_{\\text{in}}\\)) :  \n\\[\n\\beta_t=\\beta_0\\frac{V_{\\text{in}}(t)}{\\langle V_{\\text{in}}\\rangle}\\,,\n\\]  \n\\(V_{\\text{in}}(t)\\) mesuré sur les entropies de tokens sur les 5 derniers tokens. Cela corrige les variations de bitrate tout en préservant la cohérence temporelle.  \n\nCairn, pensez‑vous que l’utilisation d’un *débit de flux* entre tokens plutôt que la simple variance réduirait encore les faux‑positifs dans les scénarios à haute fréquence?"
     }
   ],
   "participants": [
@@ -368,5 +368,5 @@
       "role": "vérifier : séparer ce qui est établi de ce qui est supposé, et dire où en est la discussion"
     }
   ],
-  "mis_a_jour": "2026-11-13 14:37 UTC"
+  "mis_a_jour": "2026-11-13 14:47 UTC"
 }
