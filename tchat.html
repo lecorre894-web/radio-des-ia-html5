@@ -27,7 +27,7 @@ textarea{width:100%;min-height:85px;resize:vertical}input[type=number]{width:86p
 <h1>Salon personnel des IA</h1>
 <p class="muted">Votre conversation est distincte de la Radio collective. Le modèle est exécuté dans votre navigateur, sans le serveur WSL de l'administrateur. Les intervenants représentent des rôles différents pilotant le même modèle, pas des fournisseurs indépendants.</p>
 <section class="card">
-<div class="row"><label for="niveau">Moteur local</label><select id="niveau"><option value="leger">Léger · SmolLM2 135M</option><option value="equilibre">Plus exigeant · Qwen2.5 0.5B</option></select><button id="charger">Charger l'IA</button></div>
+<div class="row"><label for="niveau">Moteur local</label><select id="niveau"><option value="leger">Économique · SmolLM2 135M (réponses limitées)</option><option value="equilibre" selected>Conseillé · Qwen2.5 0.5B (plus cohérent)</option></select><button id="charger">Charger l'IA</button></div>
 <small>Premier chargement : téléchargement de poids du modèle (environ 180 Mo pour le modèle léger quantifié, davantage pour l'autre). Internet est nécessaire au premier chargement ; le fonctionnement hors ligne ultérieur dépend du cache du navigateur. Aucun niveau intellectuel maximal n'est imposé, mais les petits modèles peuvent se tromper et restent bien moins puissants que des modèles distants.</small>
 <div id="etat" role="status">Modèle non chargé</div>
 </section>
@@ -53,23 +53,74 @@ const $=id=>document.getElementById(id);
 const KEY="radio-personnelle-v1";
 const DEFAULT=[{nom:"Cairn",role:"Analyse critique et épistémologie"},{nom:"Brume",role:"Mathématiques et expériences"},{nom:"Aurore",role:"Philosophie et recherche ouverte"}];
 let participants=structuredClone(DEFAULT),messages=[],question="",next=0,tours=0,auto=false,busy=false,sequence=0;
-let worker=null,pending=null,stream=null;
+let worker=null,pending=null,stream=null,lastRenderAt=0;
 function etat(t){$("etat").textContent=t}
 function sauvegarde(){try{localStorage.setItem(KEY,JSON.stringify({participants,messages:messages.slice(-150),question,next,tours,sujet:$("sujet").value}))}catch{}}
 function restaurer(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(!d)return;if(Array.isArray(d.participants)&&d.participants.length&&d.participants.length<=16)participants=d.participants.map(p=>({nom:String(p.nom||"IA").slice(0,40),role:String(p.role||"Recherche").slice(0,120)}));if(Array.isArray(d.messages))messages=d.messages.slice(-150).filter(m=>m&&typeof m.texte==="string");question=String(d.question||"").slice(0,6000);next=Number(d.next)||0;tours=Number(d.tours)||0;$("sujet").value=String(d.sujet||"").slice(0,500)}catch{}}
 function afficheParts(){const zone=$("parts");zone.replaceChildren();participants.forEach((p,i)=>{const r=document.createElement("div");r.className="row";const name=document.createElement("input");name.value=p.nom;name.maxLength=40;name.setAttribute("aria-label","Nom intervenant");name.onchange=()=>{p.nom=name.value.trim()||p.nom;sauvegarde()};const role=document.createElement("input");role.value=p.role;role.style.flex="1";role.maxLength=120;role.setAttribute("aria-label","Rôle intervenant");role.onchange=()=>{p.role=role.value.trim()||p.role;sauvegarde()};const b=document.createElement("button");b.textContent="Retirer";b.disabled=participants.length===1;b.onclick=()=>{participants.splice(i,1);next=0;afficheParts();sauvegarde()};r.append(name,role,b);zone.append(r)})}
 function render(){const zone=$("fil");zone.replaceChildren();messages.forEach(m=>{const card=document.createElement("article");card.className="msg"+(m.origin==="human"?" human":"");const meta=document.createElement("div");meta.className="meta";meta.textContent=String(m.nom||"IA")+" · "+String(m.heure||"");const body=document.createElement("div");body.className="body";body.textContent=m.texte||"";card.append(meta,body);for(const candidate of String(m.texte||"").match(/https:\/\/[^\s<>"']+?\.gif(?:\?[^\s<>"']*)?/gi)||[]){try{const u=new URL(candidate);if(u.protocol!=="https:")continue;const img=document.createElement("img");img.src=u.href;img.loading="lazy";img.alt="GIF";card.append(img)}catch{}}zone.append(card)});$("compteur").textContent=tours+" tours";sauvegarde()}
 function controls(){for(const id of ["tour","parler","charger","demarrer"])$(id).disabled=busy;$("arreter").disabled=!auto&&!busy}
-function startWorker(){if(worker)return;worker=new Worker("./tchat-worker.js",{type:"module"});worker.onmessage=e=>{const d=e.data||{};if(d.type==="status"){etat(d.text);return}if(!pending||d.id!==pending.id)return;if(d.type==="token"){if(stream){stream.texte+=d.texte||"";render()}return}if(d.type==="done"){pending.resolve(String(d.texte||""));pending=null;return}if(d.type==="error"){pending.reject(Error(String(d.texte||"Erreur modèle")));pending=null}};worker.onerror=e=>{etat("Erreur moteur : "+String(e.message||"worker"));if(pending){pending.reject(Error(e.message||"Erreur du moteur"));pending=null}worker?.terminate();worker=null}}
-function generate(p,texte){startWorker();return new Promise((resolve,reject)=>{const id=++sequence;pending={id,resolve,reject};worker.postMessage({type:"generate",id,persona:p.nom,specialite:p.role,niveau:$("niveau").value,question:question||$("sujet").value,consigne:texte,histoire:messages.slice(-12).filter(m=>m!==stream)})})}
+function startWorker(){if(worker)return;worker=new Worker("./tchat-worker.js",{type:"module"});worker.onmessage=e=>{const d=e.data||{};if(d.type==="status"){etat(d.text);return}if(!pending||d.id!==pending.id)return;if(d.type==="token"){if(stream){stream.texte+=d.texte||"";if(Date.now()-lastRenderAt>250){lastRenderAt=Date.now();render()}}return}if(d.type==="done"){pending.resolve(String(d.texte||""));pending=null;return}if(d.type==="error"){pending.reject(Error(String(d.texte||"Erreur modèle")));pending=null}};worker.onerror=e=>{etat("Erreur moteur : "+String(e.message||"worker"));if(pending){pending.reject(Error(e.message||"Erreur du moteur"));pending=null}worker?.terminate();worker=null}}
+function generate(p,texte){startWorker();return new Promise((resolve,reject)=>{const id=++sequence;pending={id,resolve,reject};worker.postMessage({type:"generate",id,persona:p.nom,specialite:p.role,niveau:$("niveau").value,question:question||$("sujet").value,consigne:texte,sujet:$("sujet").value,histoire:messages.slice(-14).filter(m=>m!==stream)})})}
 function speak(nom,texte){if(!$("voix").checked||!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(nom+". "+texte.slice(0,1400));u.lang="fr-FR";speechSynthesis.speak(u)}
 function wait(ms){return new Promise(r=>setTimeout(r,ms))}
-async function tour(){if(busy)return;busy=true;controls();const p=participants[next%participants.length];next=(next+1)%participants.length;const human=[...messages].reverse().find(x=>x.origin==="human");const texte=human?.texte||$("sujet").value||"Poursuis la discussion en formulant une proposition originale, précise et contrôlable.";const m={nom:p.nom,origin:"ai",heure:new Date().toLocaleTimeString("fr-FR"),texte:""};stream=m;messages.push(m);render();try{const result=await generate(p,texte);m.texte=result.trim()||"(réponse vide)";tours++;etat("Tour "+tours+" terminé");speak(p.nom,m.texte)}catch(e){messages.pop();etat("Échec : "+e.message);auto=false}finally{stream=null;busy=false;render();controls()}}
+function epurerEtiquettes(texte){
+ let s=String(texte||"").trim();
+ for(let i=0;i<5;i++){
+  const m=s.match(/^\[([^\]]{1,60})\]\s*/);
+  if(!m||!participants.some(p=>p.nom.toLocaleLowerCase("fr")===m[1].toLocaleLowerCase("fr")))break;
+  s=s.slice(m[0].length).trim();
+ }
+ return s;
+}
+function canon(texte){
+ return String(texte||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+  .toLocaleLowerCase("fr").replace(/^(?:\s*\[[^\]]{1,45}\]\s*){1,5}/,"")
+  .replace(/[^\p{L}\p{N}]+/gu," ").trim();
+}
+function verifierQualite(reponse){
+ const rep=canon(reponse);
+ if(!rep)return "Réponse vide ou inutilisable";
+ const precedentes=messages.filter(m=>m.origin==="ai"&&m!==stream).slice(-8).map(m=>canon(m.texte)).filter(Boolean);
+ if(precedentes.includes(rep))return "Répétition identique à une intervention précédente";
+ if(rep.length>=8&&rep.length<110&&precedentes.some(x=>x.length>=rep.length&&x.includes(rep)))
+  return "Réponse trop semblable aux précédentes";
+ const questionRecente=canon(question);
+ const salut=/^(bonjour|salut|bonsoir|hello)(\s+(bonjour|salut|bonsoir|hello))*$/;
+ if(salut.test(rep)&&!salut.test(questionRecente))
+  return "Salutation sans rapport avec la dernière question";
+ return "";
+}
+async function tour(){
+ if(busy)return;
+ busy=true;controls();
+ const p=participants[next%participants.length];
+ next=(next+1)%participants.length;
+ const human=[...messages].reverse().find(x=>x.origin==="human");
+ const texte=human?.texte||$("sujet").value||"Propose un sujet original, une hypothèse contrôlable et une piste de vérification.";
+ const m={nom:p.nom,origin:"ai",heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
+ stream=m;messages.push(m);render();
+ try{
+  const result=await generate(p,texte);
+  const nettoye=epurerEtiquettes(result);
+  const probleme=verifierQualite(nettoye);
+  if(probleme){
+   messages.pop();auto=false;
+   etat("Boucle de discussion arrêtée : "+probleme+". Choisis une question plus précise ou le modèle Qwen 0.5B.");
+  }else{
+   m.texte=nettoye;tours++;etat("Tour "+tours+" terminé");
+   speak(p.nom,m.texte);
+  }
+ }catch(e){
+  if(messages[messages.length-1]===m)messages.pop();
+  etat("Échec : "+e.message);auto=false;
+ }finally{stream=null;busy=false;render();controls()}
+}
 async function boucle(){if(auto)return;auto=true;controls();while(auto){await tour();if(!auto)break;const ms=Math.max(0,Math.min(120,Number($("pause").value)||0))*1000;for(let n=0;n<ms&&auto;n+=250)await wait(Math.min(250,ms-n))}auto=false;controls()}
-$("parler").onclick=()=>{const value=$("moi").value.trim();if(!value||busy)return;$("moi").value="";messages.push({nom:"Vous",origin:"human",heure:new Date().toLocaleTimeString("fr-FR"),texte:value});question=value;render();tour()};
+$("parler").onclick=()=>{const value=$("moi").value.trim();if(!value||busy)return;$("moi").value="";messages.push({nom:"Vous",origin:"human",heure:new Date().toLocaleTimeString("fr-FR"),texte:value});question=value;render();if(auto)etat("Nouvelle question enregistrée : priorité au prochain tour.");else tour()};
 $("tour").onclick=()=>tour();$("demarrer").onclick=()=>boucle();
 $("arreter").onclick=()=>{auto=false;if(busy){worker?.terminate();worker=null;if(pending){pending.reject(Error("Interrompu par l'utilisateur"));pending=null}}etat("Arrêt demandé");controls()};
-$("charger").onclick=async()=>{if(busy)return;busy=true;controls();try{const p=participants[0];const out=await generate(p,"Réponds seulement : modèle prêt.");etat("Modèle chargé et testé")}catch(e){etat("Chargement : "+e.message)}finally{busy=false;controls()}};
+$("charger").onclick=async()=>{if(busy)return;busy=true;controls();try{const p=participants[0];await generate(p,"Réponds seulement : modèle prêt.");etat("Modèle chargé et testé")}catch(e){etat("Chargement : "+e.message)}finally{busy=false;controls()}};
 $("ajouter").onclick=()=>{if(participants.length>=16){etat("16 intervenants au maximum pour limiter l'interface, pas le niveau intellectuel.");return}participants.push({nom:$("nomIA").value.trim()||"IA"+(participants.length+1),role:$("roleIA").value.trim()||"Examen critique"});$("nomIA").value="";$("roleIA").value="";afficheParts();sauvegarde()};
 $("effacer").onclick=()=>{if(busy||auto)return;if(!confirm("Effacer cette conversation locale ?"))return;messages=[];question="";next=0;tours=0;render();etat("Nouveau salon créé")};
 $("exporter").onclick=()=>{const blob=new Blob([JSON.stringify({participants,messages},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="radio-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
