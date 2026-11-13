@@ -181,6 +181,7 @@ async function nextTour(){
 async function launchInfinity(){
   if(state.auto || state.busy)return;
   if(!window.puter?.auth?.isSignedIn()){status("Connecte Puter avant de lancer ∞.");return;}
+  if(!confirm("Le mode ∞ enchaîne des appels aux modèles distants et consomme vos crédits Puter. Aucun nombre maximal de tours n’est prévu. Continuer ?"))return;
   state.auto=true;buttonStates();
   while(state.auto){
     await nextTour();
