@@ -3,7 +3,8 @@ import { pipeline, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingfac
 // Un seul moteur physique dans chaque navigateur : les noms IA sont des rôles, pas des fournisseurs distincts.
 const MODELS = {
   leger: "onnx-community/SmolLM2-135M-Instruct-ONNX-MHA",
-  equilibre: "onnx-community/Qwen2.5-0.5B-Instruct"
+  equilibre: "onnx-community/Qwen2.5-0.5B-Instruct",
+  avance: "onnx-community/Qwen2.5-1.5B-Instruct"
 };
 let generator = null, current = "", busy = false;
 function signal(type, extra = {}) { self.postMessage({type, ...extra}); }
@@ -36,7 +37,7 @@ async function charger(niveau) {
   if (!generator)
     generator = await pipeline("text-generation",MODELS[niveau],{...options,device:"wasm"});
   current = niveau;
-  signal("status",{text:"Modèle local prêt"});
+  signal("status",{text:"Modèle local prêt : "+({leger:"SmolLM2 135M",equilibre:"Qwen2.5 0.5B",avance:"Qwen2.5 1.5B"}[niveau]||niveau)});
 }
 
 function construireDialogue(data) {
@@ -56,9 +57,12 @@ function construireDialogue(data) {
   const systeme = [
     "Tu interviens sous le nom " + persona + ". Spécialité : " + specialite + ".",
     "Tu es un modèle local expérimental. Les noms des intervenants sont des rôles, pas d'autres modèles.",
-    "Réponds en français, directement à la demande humaine, sans changer les négations, nombres ou contraintes.",
+    "LANGUE OBLIGATOIRE : français standard grammatical, avec des phrases simples et compréhensibles. Corrige ta formulation avant de conclure.",
+    "Réponds directement à la demande humaine sans changer les négations, nombres ou contraintes.",
     "Ne reproduis ni une réponse précédente ni une suite de salutations. N'écris pas de préfixe [Nom IA].",
-    "Fais une contribution nouvelle, précise et courte, en distinguant preuves, hypothèses et inconnus.",
+    "Réponds avec 1 à 3 phrases courtes. Ne rédige pas de longs monologues, de suites de mots incohérentes, de chiffres inventés ni de mélanges de langues.",
+    "Si la demande est imprécise ou si tu ne peux pas répondre, pose une question brève plutôt que d'inventer.",
+    "Fais une contribution nouvelle et précise, en distinguant preuves, hypothèses et inconnus.",
     "Aucun plafond académique : les sujets avancés sont permis, mais n'invente pas de résultat scientifique."
   ].join(" ");
   const etapes = [];
@@ -98,12 +102,10 @@ self.onmessage = async event => {
       }
     });
     const result = await generator(prompt,{
-      max_new_tokens: Math.max(64, Math.min(320, Number(data.max_tokens) || 320)),
-      do_sample:true,
-      temperature:0.72,
-      top_p:0.9,
-      repetition_penalty:1.15,
-      no_repeat_ngram_size:4,
+      max_new_tokens: Math.max(48, Math.min(192, Number(data.max_tokens) || 128)),
+      do_sample:false,
+      repetition_penalty:1.08,
+      no_repeat_ngram_size:3,
       streamer
     });
     let answer=streamed.trim();
