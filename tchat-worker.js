@@ -1,100 +1,110 @@
 import { pipeline, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0";
 
+// Un seul moteur physique dans chaque navigateur : les noms IA sont des rôles, pas des fournisseurs distincts.
 const MODELS = {
   leger: "onnx-community/SmolLM2-135M-Instruct-ONNX-MHA",
   equilibre: "onnx-community/Qwen2.5-0.5B-Instruct"
 };
-let generator = null;
-let current = "";
-let busy = false;
-
-function signal(type, extra = {}) {
-  self.postMessage({type, ...extra});
-}
+let generator = null, current = "", busy = false;
+function signal(type, extra = {}) { self.postMessage({type, ...extra}); }
 
 async function charger(niveau) {
-  if (!MODELS[niveau]) throw new Error("Modèle non reconnu");
+  if (!MODELS[niveau]) throw Error("Modèle inconnu");
   if (generator && current === niveau) return;
   if (generator) {
     await generator.dispose();
     generator = null;
   }
   current = "";
-  signal("status", {text:"Téléchargement initial du modèle. Cette opération peut prendre plusieurs minutes…"});
+  signal("status", {text:"Chargement du modèle local…"});
   const options = {
-    dtype: "q4",
-    progress_callback: p => {
-      if (p && (p.status === "progress" || p.status === "initiate")) {
-        const pct = Number.isFinite(Number(p.progress)) ? " · " + Math.round(Number(p.progress)) + "%" : "";
-        signal("status", {text:"Chargement du modèle" + pct + (p.file ? " · " + String(p.file).split("/").pop() : "")});
-      }
+    dtype:"q4",
+    progress_callback:p => {
+      if (p?.status === "progress" && Number.isFinite(p.progress))
+        signal("status",{text:"Téléchargement du modèle : "+Math.round(p.progress)+" %"});
     }
   };
-  const useGPU = Boolean(self.navigator && self.navigator.gpu);
-  if (useGPU) {
+  if (self.navigator?.gpu) {
     try {
-      generator = await pipeline("text-generation", MODELS[niveau], {...options, device:"webgpu"});
-    } catch (error) {
-      signal("status", {text:"WebGPU indisponible : essai sur le processeur…"});
-      generator = null;
+      generator = await pipeline("text-generation",MODELS[niveau],{...options,device:"webgpu"});
+    } catch {
+      signal("status",{text:"WebGPU indisponible : passage au processeur…"});
     }
   }
-  if (!generator) generator = await pipeline("text-generation", MODELS[niveau], {...options, device:"wasm"});
+  if (!generator)
+    generator = await pipeline("text-generation",MODELS[niveau],{...options,device:"wasm"});
   current = niveau;
-  signal("status", {text:"Modèle prêt — calcul local dans ce navigateur"});
+  signal("status",{text:"Modèle local prêt"});
+}
+
+function construireDialogue(data) {
+  const persona = String(data.persona || "Cairn").slice(0,60);
+  const specialite = String(data.specialite || "Analyse critique").slice(0,160);
+  const historique = Array.isArray(data.histoire) ? data.histoire.filter(m=>m && typeof m.texte==="string").slice(-14) : [];
+  const dernierHumain = [...historique].reverse().find(m=>m.origin==="human" && m.texte.trim());
+  const question = String(data.question || dernierHumain?.texte || "").trim().slice(0,4000);
+  const sujet = String(data.sujet || "").trim().slice(0,400);
+  const derniereContribution = [...historique].reverse().find(m=>m.origin==="ai" && m.texte.trim());
+  const precedent = derniereContribution
+    ? String(derniereContribution.texte).slice(0,700) : "";
+  const systeme = [
+    "Tu interviens sous le nom " + persona + ". Spécialité : " + specialite + ".",
+    "Tu es un modèle local expérimental. Les noms des intervenants sont des rôles, pas d'autres modèles.",
+    "Réponds en français, directement à la demande humaine, sans changer les négations, nombres ou contraintes.",
+    "Ne reproduis ni une réponse précédente ni une suite de salutations. N'écris pas de préfixe [Nom IA].",
+    "Fais une contribution nouvelle, précise et courte, en distinguant preuves, hypothèses et inconnus.",
+    "Aucun plafond académique : les sujets avancés sont permis, mais n'invente pas de résultat scientifique."
+  ].join(" ");
+  const etapes = [];
+  if (sujet) etapes.push("Sujet général : " + sujet);
+  if (question) etapes.push("DERNIÈRE DEMANDE HUMAINE (texte exact) :\n" + question);
+  else etapes.push("Il n'y a pas de demande humaine. Propose un sujet concret et justifie son intérêt.");
+  if (precedent) {
+    etapes.push("Dernière contribution à examiner (ne pas recopier) :\n" + precedent);
+    etapes.push("Ta mission : apporter un argument nouveau, répondre à la question et, si pertinent, contredire le point précédent avec raison.");
+  } else {
+    etapes.push("Ta mission : répondre d'abord à la demande humaine, sans préambule.");
+  }
+  return [
+    {role:"system",content:systeme},
+    {role:"user",content:etapes.join("\n\n")}
+  ];
 }
 
 self.onmessage = async event => {
   const data = event.data || {};
   if (data.type !== "generate" || busy) return;
   busy = true;
-  const identifiant = data.id;
+  const id = data.id;
   try {
-    await charger(data.niveau || "leger");
-    const persona = String(data.persona || "Cairn").slice(0, 100);
-    const specialite = String(data.specialite || "Analyse critique").slice(0, 400);
-    const question = String(data.question || "").slice(0, 6000);
-    const contexte = Array.isArray(data.histoire) ? data.histoire.slice(-10) : [];
-    const prompt = String(data.consigne || "").slice(0, 3000);
-    const systeme =
-      "Tu es " + persona + ", intervenant de la Radio des IA. Spécialité : " + specialite +
-      ". Réponds en français, traite la question humaine originale exactement selon son sens, sans changer les négations ni les chiffres. " +
-      "Tu peux explorer des idées mathématiques et scientifiques complexes sans plafond académique. " +
-      "Distingue le mesuré, la démonstration, l'hypothèse et l'inconnu. N'invente pas de preuves. " +
-      "Tu emploies un modèle local partagé avec les autres intervenants ; ne prétends pas être un autre modèle indépendant.";
-    const messages = [{role:"system",content:systeme + (question ? "\nQuestion humaine originale : « " + question + " »" : "")}];
-    for (const m of contexte) {
-      const role = m && m.origin === "human" ? "user" : "assistant";
-      const prefix = role === "assistant" ? "[" + String(m.nom || "IA").slice(0,40) + "] " : "";
-      messages.push({role, content:prefix + String(m.texte || "").slice(0,1500)});
-    }
-    messages.push({role:"user",content:prompt || question || "Propose une réflexion précise et vérifiable."});
+    await charger(data.niveau || "equilibre");
+    const prompt = construireDialogue(data);
     let streamed = "";
-    const streamer = new TextStreamer(generator.tokenizer, {
-      skip_prompt:true,
-      skip_special_tokens:true,
-      callback_function(token) {
-        streamed += token;
-        signal("token", {id:identifiant, texte:token});
+    const streamer = new TextStreamer(generator.tokenizer,{
+      skip_prompt:true,skip_special_tokens:true,
+      callback_function(t) {
+        streamed += t;
+        signal("token",{id,texte:t});
       }
     });
-    const result = await generator(messages, {
-      max_new_tokens:256,
+    const result = await generator(prompt,{
+      max_new_tokens:320,
       do_sample:true,
-      temperature:0.7,
-      top_p:0.92,
+      temperature:0.72,
+      top_p:0.9,
+      repetition_penalty:1.15,
+      no_repeat_ngram_size:4,
       streamer
     });
-    const output = result && result[0] && result[0].generated_text;
-    let finalText = streamed.trim();
-    if (!finalText) {
-      if (Array.isArray(output)) finalText = String(output[output.length - 1]?.content || "");
-      else finalText = String(output || "");
+    let answer=streamed.trim();
+    if (!answer) {
+      const v=result?.[0]?.generated_text;
+      answer=Array.isArray(v) ? String(v.at(-1)?.content || "") : String(v || "");
     }
-    signal("done", {id:identifiant, texte:finalText.trim() || "(aucune réponse)"});
-  } catch (error) {
-    signal("error", {id:identifiant, texte:String(error && error.message || error)});
+    signal("done",{id,texte:answer.trim()});
+  } catch(error) {
+    signal("error",{id,texte:String(error?.message || error)});
   } finally {
-    busy = false;
+    busy=false;
   }
 };
