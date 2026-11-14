@@ -53,6 +53,11 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 #sujet{width:100%}#moi{width:100%;min-height:105px;color:#8dffad;caret-color:#d5ffe0;font:500 1.08rem/1.7 ui-monospace,"Cascadia Code","Consolas",monospace;letter-spacing:.01em}
 #moi::placeholder{color:#9daeb4;opacity:1}
 #moi:focus-visible{outline:2px solid #8dffad;outline-offset:2px}
+.composer-status{font-size:14px;color:#e6d6ad;background:#282d37;border-left:3px solid #d8b177;padding:10px;border-radius:7px;margin:9px 0;overflow-wrap:anywhere}
+.composer-mode{font-size:14px;color:#b8dcca;line-height:1.5;margin:9px 0}
+.composer-actions{align-items:center;gap:8px}
+.composer-actions a{font-size:14px;padding:8px 2px}
+
 .msg .body{color:var(--fg);font-family:system-ui,"Segoe UI Emoji",sans-serif}
 .jump-link{display:inline-block;color:#b7e5e5;padding:5px 0;font-size:14px}
 .salon-intro{font-size:14px;color:#c0ced2}
@@ -230,8 +235,14 @@ details.card[open]>summary{margin-bottom:14px}
 <section class="card">
 <label for="moi"><strong>Votre message</strong></label>
 <textarea id="moi" rows="5" enterkeyhint="enter" aria-describedby="aideSaisie" placeholder="Écrivez votre message ici… Entrée crée une nouvelle ligne."></textarea>
-<small id="aideSaisie">Entrée = retour à la ligne. Le message part uniquement avec le bouton Envoyer. Le brouillon est conservé sur cet appareil.</small>
-<div class="row"><button class="primary" type="button" id="parler" aria-label="Envoyer le message rédigé">📨 Envoyer le message</button></div>
+<small id="aideSaisie">Entrée = retour à la ligne. Le bouton Envoyer enregistre ta question et demande une réponse uniquement si un moteur IA est prêt. Ton brouillon est conservé sur cet appareil.</small>
+<div id="moteurComposer" class="composer-mode">Vérification du moteur IA actif…</div>
+<div class="row composer-actions">
+<button class="primary" type="button" id="parler" aria-label="Envoyer le message rédigé">📨 Envoyer le message</button>
+<button type="button" id="reessayerDernier">↻ Répondre à ma dernière question</button>
+<a href="#modeRecherche">⚙️ Configurer le moteur IA</a>
+</div>
+<div id="etatComposer" class="composer-status" role="status" aria-live="polite">Pour discuter, sélectionne un moteur IA et vérifie qu'il est connecté. Un message enregistré n'est pas nécessairement une réponse reçue.</div>
 <div class="row">
 <button id="tour">Faire parler l'IA suivante</button>
 <button class="primary" id="infini">Discussion automatique ∞</button>
@@ -341,7 +352,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=2&amp;sparktiates=1"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=2&amp;sparktiates=1&amp;diagnostic=1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
