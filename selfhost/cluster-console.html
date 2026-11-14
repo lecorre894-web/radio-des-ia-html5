@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#101822">
+<title>Radio des IA — Cluster additif privé</title>
+<link rel="stylesheet" href="./node-ui.css">
+</head>
+<body><main>
+<header>
+<p class="eyebrow">RADIO DES IA · INFRASTRUCTURE EXPÉRIMENTALE</p>
+<h1>📻 Cluster additif WSL</h1>
+<p>Plusieurs machines, un seul ordonnanceur. Les capacités affichées sont celles des nœuds réellement joignables, et non des cœurs logiciels inventés.</p>
+<div class="status" id="condition" role="status">Recherche des nœuds…</div>
+</header>
+<section class="panel">
+<h2>Capacité et santé des nœuds</h2>
+<div id="metrics" class="row" aria-live="polite">Aucune mesure effectuée.</div>
+<div class="row">
+<button id="refresh" type="button">🔄 Actualiser les mesures</button>
+</div>
+<div id="nodes" class="conversation" aria-label="Liste des nœuds réellement disponibles"></div>
+<p class="hint">Un slot signifie une requête en parallèle autorisée sur un véritable nœud. Ce n'est pas un cœur physique supplémentaire. L'extension se fait en ajoutant des machines autorisées à la configuration.</p>
+</section>
+<section class="panel">
+<h2>Dialogue avec les ressources disponibles</h2>
+<label for="profile">Spécialisation du modèle local</label>
+<select id="profile">
+<option value="analyste">Analyse critique</option>
+<option value="mathematique">Mathématiques</option>
+<option value="explorateur">Exploration</option>
+</select>
+<div class="conversation" id="transcript" role="log" aria-live="polite"><p class="hint">Aucune conversation démarrée.</p></div>
+<label for="question">Ton message</label>
+<textarea id="question" maxlength="2600" rows="4" placeholder="Écris une question…"></textarea>
+<label class="checkbox"><input type="checkbox" id="web"> 🌐 Chercher de nouvelles informations sur Internet (facultatif)</label>
+<p class="hint">Le Web est désactivé par défaut. Si tu l'actives, la requête peut consulter Wikipedia et, si configuré, SearXNG. Les pages trouvées ne sont pas des preuves indépendantes.</p>
+<div class="row">
+<button class="primary" type="button" id="send">📨 Envoyer à un nœud libre</button>
+<button type="button" id="clear">Effacer ce dialogue local</button>
+</div>
+<p id="progress" role="status">En attente.</p>
+</section>
+<footer>
+<p>Serveur privé, accessible sur le PC où WSL fonctionne. L'interface Radio des IA publique, Puter et ses conversations restent intacts.</p>
+<p><strong>ChatGPT et René Le Corre®</strong></p>
+</footer>
+</main>
+<script type="module" src="./cluster-console.mjs"></script>
+</body>
+</html>
