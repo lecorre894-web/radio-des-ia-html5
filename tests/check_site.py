@@ -74,7 +74,7 @@ svg = (root / "favicon.svg").read_text(encoding="utf-8")
 assert '<svg ' in svg and 'Radio des IA' in svg
 for dimension in (32, 180, 192, 512):
     raw = (root / f"icon-{dimension}.png").read_bytes()
-    assert raw[:8] == b"\\x89PNG\\r\\n\\x1a\\n", "Signature PNG incorrecte"
+    assert raw[:8] == bytes.fromhex("89504e470d0a1a0a"), "Signature PNG incorrecte"
     assert int.from_bytes(raw[16:20], "big") == dimension
     assert int.from_bytes(raw[20:24], "big") == dimension
 
