@@ -130,9 +130,10 @@ details.card[open]>summary{margin-bottom:14px}
 </section>
 <section class="card">
 <label for="moi"><strong>Votre message</strong></label>
-<textarea id="moi" placeholder="Pose une question exacte… (Entrée pour envoyer ; Maj+Entrée pour un saut de ligne)"></textarea>
+<textarea id="moi" rows="5" enterkeyhint="enter" aria-describedby="aideSaisie" placeholder="Écrivez votre message ici… Entrée crée une nouvelle ligne."></textarea>
+<small id="aideSaisie">Entrée = retour à la ligne. Le message part uniquement avec le bouton Envoyer. Le brouillon est conservé sur cet appareil.</small>
+<div class="row"><button class="primary" type="button" id="parler" aria-label="Envoyer le message rédigé">📨 Envoyer le message</button></div>
 <div class="row">
-<button class="primary" id="parler">Parler</button>
 <button id="tour">Faire parler l'IA suivante</button>
 <button class="primary" id="infini">Discussion automatique ∞</button>
 <button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
