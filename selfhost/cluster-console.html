@@ -27,6 +27,12 @@
 <p class="hint"><strong>Attention :</strong> les machines affichées ici sont un scénario de dimensionnement. Aucun DGX Spark ni serveur EPYC ne devient réel par sa présence dans ce programme.</p>
 <div id="planned" class="conversation" aria-live="polite">Calcul du scénario de capacité…</div>
 </section>
+<section class="panel" id="sparktiates-panel">
+<h2>⚙️ SPARKTIATES — émulateur de charges du cluster</h2>
+<p class="hint">Mode <strong>SIMULÉ / NON MESURÉ</strong>. Les calculs portent sur des événements logiciels, pas sur des GPU, processeurs EPYC ou VM réellement créés.</p>
+<button type="button" id="sparktiates-demo">Lancer le scénario simulé</button>
+<pre id="sparktiates-output" class="conversation" role="status" aria-live="polite">Simulation non lancée.</pre>
+</section>
 <section class="panel">
 <h2>Dialogue avec les ressources disponibles</h2>
 <label for="profile">Spécialisation du modèle local</label>
