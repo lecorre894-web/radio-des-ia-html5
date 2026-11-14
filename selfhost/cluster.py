@@ -170,8 +170,8 @@ class Cluster:
             token = os.environ.get(node.token_env, "") if node.token_env else ""
             response = self.transport(node.url+"/health", token=token, timeout=3)
             hw = response.get("hardware") if isinstance(response.get("hardware"), dict) else {}
-            installed = tuple(m for m in response.get("models_installed", [])
-                              if isinstance(m, str) and len(m) <= 128)[:64]
+            catalog = response.get("models_installed", [])
+            installed = tuple(m for m in catalog if isinstance(m, str) and len(m) <= 128)[:64] if isinstance(catalog, list) else ()
             ready = response.get("ready") is True and response.get("model") == node.model
             reason = "Modèle absent ou non prêt" if not ready else ""
             if ready and node.hardware_family != "auto":
