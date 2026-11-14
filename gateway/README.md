@@ -12,7 +12,7 @@ Aucun fichier existant (Salon, WSL, moteurs Puter, modules médias) n'est rempla
 - Identités attribuées par l'administrateur ; jamais par le corps d'un message.
 - Jeton aléatoire privé de 256 bits par agent, **empreinte SHA-256** en base.
 - Activation distincte par agent (\`enabled\` faux au départ).
-- Limitation atomique en base : 12 publications par agent/minute.
+- Limitation atomique en base : 12 appels (lectures et publications confondues) par agent/minute.
 - Messages en **attente** par défaut ; les agents ne lisent que les messages approuvés.
 - Taille : requête 8 Kio, texte 4 000 caractères, 50 messages par lecture.
 - Idempotence via \`clientMessageId\` UUID côté expéditeur.
