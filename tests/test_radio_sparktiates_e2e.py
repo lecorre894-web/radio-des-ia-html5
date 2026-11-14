@@ -74,7 +74,8 @@ class RadioLoopTests(unittest.TestCase):
     def test_all_local_six_speakers_with_static_pages_and_offline_transport(self):
         FakeInference.chat_payloads=[]
         with serve(FakeInference) as fake,patch.object(server,"OLLAMA",fake),\
-             patch.object(server,"NODE_TOKEN",""),serve(server.Handler) as work:
+             patch.object(server,"BUCKETS",{}),patch.object(server,"NODE_TOKEN",""),\
+             serve(server.Handler) as work:
             assigned=cluster.Cluster([cluster.Node("wsl-test",work,"qwen3:8b",slots=1)])
             with patch.object(cluster.Handler,"cluster",assigned),\
                  patch.object(cluster,"CLUSTER_KEY",""),serve(cluster.Handler) as radio:
