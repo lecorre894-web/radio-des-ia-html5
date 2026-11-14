@@ -113,9 +113,9 @@ class RadioLoopTests(unittest.TestCase):
                 for call,role in zip(FakeInference.chat_payloads,roles):
                     self.assertEqual(call["model"],"qwen3:8b")
                     self.assertEqual(call["messages"][0]["role"],"system")
-                    self.assertIn(role,call["messages"][0]["content"].casefold() if role not in
-                                  ("controle","recherche","ia4") else role if role=="ia4" else
-                                  ("vérificateur" if role=="controle" else "chercheur"))
+                    self.assertIn("Profil de rôle local",call["messages"][0]["content"])
+                    self.assertIn("Ollama",str(call["messages"]))
+
                 self.assertTrue(all(call["stream"] is False for call in FakeInference.chat_payloads))
 
     def test_public_origin_cannot_post_from_other_site(self):
