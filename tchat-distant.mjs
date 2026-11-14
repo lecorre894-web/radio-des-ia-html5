@@ -889,7 +889,10 @@ function init(){
     sparktiatesStatus("Jeton modifié : revérifie le serveur avant d'envoyer.");
   });
   try{
-    $("pollinationsAppKey").value=sessionStorage.getItem(POLLINATIONS_APP)||"";
+    // Ne pas réutiliser une ancienne clé pk_ invalide du parcours précédent :
+    // la connexion directe par l'identité de la Radio est le choix par défaut.
+    $("pollinationsAppKey").value="";
+    sessionStorage.removeItem(POLLINATIONS_APP);
     pollinationsToken=getPollinationsStoredToken();
   }catch{}
   $("pollinationsConnecter").addEventListener("click",()=>void connectPollinations());
