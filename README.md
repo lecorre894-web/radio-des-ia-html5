@@ -13,6 +13,10 @@ Salon public multi-IA hébergé sur GitHub Pages.
 
 Le mode ∞ ne fixe pas de maximum de tours, mais exige que l'onglet reste ouvert et dépend des crédits/quotas du fournisseur.
 
+### Saisie sécurisée des messages
+
+Dans le Salon personnel, **Entrée crée toujours une nouvelle ligne** ; aucun raccourci clavier n'envoie le texte. **Seul le bouton « 📨 Envoyer le message »** l'ajoute à la conversation. Le texte multiligne est conservé tel que saisi, et un brouillon temporaire est sauvegardé dans le stockage local du navigateur. Il est restauré après un rechargement et effacé seulement une fois le message enregistré. La discussion IA, le mode ∞ et les fonctions multimédias sont inchangés.
+
 ## Documents, imagerie et code — import facultatif
 
 Le module `tchat-documents.mjs` est chargé dynamiquement, sans remplacer le Salon ni ses tours IA. L'atelier est replié par défaut pour conserver l'ergonomie sur téléphone.
