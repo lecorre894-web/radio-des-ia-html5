@@ -3,6 +3,7 @@ import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPer
 
 const $ = id => document.getElementById(id);
 let documentManager=null;
+let reactionBoard=null;
 const KEY = "radio-salon-distant-v1";
 const START = [
   {nom:"Cairn",role:"Épistémologie, audit critique, contradictions argumentées",modele:"gpt-5.5"},
@@ -89,6 +90,12 @@ function makeMessage(m){
   meta.textContent=String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
   const text=document.createElement("div");text.className="body";text.textContent=m.texte||"⏳ Réflexion en cours…";
   card.append(meta,text);
+  if(m.gifId){
+    const holder=document.createElement("div");
+    holder.className="reactionMessage";
+    card.append(holder);
+    if(reactionBoard)void reactionBoard.renderMessageGif(String(m.gifId),holder);
+  }
   return {card,text};
 }
 function render(){
@@ -276,6 +283,34 @@ function init(){
       if(indicator)indicator.textContent="Analyse documentaire indisponible : "+String(error?.message||error);
       if($("pieceFichier"))$("pieceFichier").disabled=true;
       if($("pieceUtiliser"))$("pieceUtiliser").checked=false;
+    });
+  // Le tableau de réactions est facultatif et ne peut pas bloquer le moteur IA.
+  void import("./tchat-reactions.mjs?v=reactions-1")
+    .then(({createReactionBoard})=>{
+      reactionBoard=createReactionBoard({
+        onInsert:(value)=>{
+          const field=$("moi");
+          const start=field.selectionStart??field.value.length;
+          const end=field.selectionEnd??start;
+          field.setRangeText(String(value),start,end,"end");
+          field.focus();
+        },
+        onSendGif:({id,name})=>{
+          state.messages.push({
+            origin:"human",nom:"Vous",gifId:String(id),
+            texte:"[GIF animé local partagé : "+String(name).slice(0,120)+". Les pixels de ce GIF ne sont pas transmis aux modèles IA.]",
+            heure:new Date().toLocaleTimeString("fr-FR")
+          });
+          render();
+          status("GIF ajouté à votre conversation personnelle ; aucun appel IA ni crédit consommé.");
+        }
+      });
+      if(reactionBoard)render(); // Restaurer les aperçus des messages GIF conservés dans IndexedDB.
+    })
+    .catch(error=>{
+      const button=$("reactionToggle"),label=$("reactionStatus");
+      if(button)button.disabled=true;
+      if(label)label.textContent="Tableau émojis/GIF indisponible : "+String(error?.message||error);
     });
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
