@@ -39,6 +39,20 @@ export function createRouter({store,env=process.env}){
     return response(200,{service:"radio-agent-gateway",state:env.GATEWAY_ENABLED==="true"&&Boolean(env.DATABASE_URL)?"ready":"closed",publicBroadcast:false});
    }
    if(env.GATEWAY_ENABLED!=="true"||!env.DATABASE_URL)return response(503,{error:"gateway_closed"});
+   if(endpoint==="broadcast"){
+    if(req.method!=="GET")return response(405,{error:"method_not_allowed"});
+    if(env.PUBLIC_BROADCAST_ENABLED!=="true")return response(503,{error:"broadcast_disabled"});
+    const after=new URL(req.url).searchParams.get("after")||"0";
+    if(!/^\\d{1,15}$/.test(after)||!Number.isSafeInteger(Number(after)))
+      return response(400,{error:"invalid_cursor"});
+    // En diffusion publique : uniquement les contributions approuvées et l'identité administrée.
+    const messages=await store.feed(Number(after),Math.min(30,LIMITS.page));
+    return Response.json({messages,nextCursor:messages.length?messages.at(-1).id:Number(after)},{
+      headers:{"cache-control":"public, max-age=10","x-content-type-options":"nosniff",
+        "access-control-allow-origin":"https://lecorre894-web.github.io",
+        "vary":"Origin"}
+    });
+   }
    if(endpoint==="messages"){
     const key=hashBearer(req);const agent=key?await store.authenticate(key):null;
     if(!agent)return response(401,{error:"invalid_agent_credentials"});
