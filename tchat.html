@@ -28,6 +28,16 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 .notice{padding:12px;border-left:3px solid var(--orange);background:#292822;border-radius:7px}
 footer{padding:30px 0;font-size:13px;color:var(--muted)}
 @media(max-width:720px){.part{grid-template-columns:1fr 1fr}.part textarea{grid-column:1/-1}.part button{width:fit-content}main{padding:10px}.card{padding:13px}}
+.pieceDepot{border:2px dashed #60798e;border-radius:12px;padding:18px;display:block;cursor:pointer;background:#131b24;text-align:center}
+.pieceDepot.actif{border-color:#96dac9;background:#233842}
+.pieceDepot input{display:block;margin:12px auto 4px;width:min(100%,410px);background:#161b22}
+.pieceCarte{border:1px solid #3a4c5d;border-radius:10px;padding:12px;margin:10px 0;background:#151b24}
+.pieceApercu{display:block;max-width:min(100%,420px);max-height:320px;object-fit:contain;border-radius:6px;margin:9px 0}
+.pieceExtrait{white-space:pre-wrap;overflow-wrap:anywhere;max-height:145px;overflow:auto;color:#c8d6db;font:13px/1.5 ui-monospace,monospace;margin:8px 0}
+.pieceExplication{font-size:13px;color:#b6c6d0;line-height:1.5}
+.pieceOption{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.pieceOption input{margin:5px 0}
+#pieceEtat{color:#a6d7c6;min-height:20px}
 </style>
 <script src="https://js.puter.com/v2/"></script>
 </head>
@@ -58,6 +68,24 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <div id="parts"></div>
 <div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button id="ajouter">Ajouter une IA</button></div>
 </section>
+<section class="card" id="documents">
+<h2>📎 Documents et imagerie — Espace d'analyse</h2>
+<p>Glissez vos fichiers ou choisissez-les sur votre téléphone. Le Salon reste utilisable sans aucun document.</p>
+<label id="pieceDepot" class="pieceDepot" for="pieceFichier">
+<strong>Importer PDF, Word, Excel, GIF, images, TIFF ou DICOM</strong>
+<input id="pieceFichier" type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.xlsb,.ods,.csv,.txt,.md,.tsv,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.dcm,.dicom,image/png,image/jpeg,image/gif,image/webp,application/pdf">
+<span class="pieceExplication">Jusqu'à 6 fichiers, 20 Mio chacun, 48 Mio au total. Extraction locale ; les fichiers ne sont pas publiés sur GitHub.</span>
+</label>
+<div id="pieceListe" aria-label="Pièces jointes importées"></div>
+<div class="row">
+<button id="pieceEffacer" type="button">Retirer toutes les pièces</button>
+<span id="pieceEtat" role="status">Aucun fichier importé.</span>
+</div>
+<label class="pieceOption"><input type="checkbox" id="pieceUtiliser"> <span><strong>Inclure les textes extraits et légendes dans les prochaines réponses des IA</strong> — données transmises à Puter uniquement après activation</span></label>
+<label class="pieceOption"><input type="checkbox" id="pieceVision"> <span><strong>Autoriser l'envoi d'aperçus visuels aux IA</strong> — jusqu'à 2 images par tour, via stockage Puter temporaire puis tentative de suppression</span></label>
+<p class="pieceExplication">PDF : texte extrait et aperçu première page ; Word .docx : texte ; Excel .xlsx/.xls/.csv : valeurs, sans calcul de macros ; GIF : aperçu animé, une seule image est envoyée pour l'analyse ; TIFF : première page ; DICOM : aperçu expérimental des images monochromes non compressées. Les .doc anciens sont à convertir en .docx ou PDF. Les scans PDF sans texte ne bénéficient pas d'OCR automatique.</p>
+<p class="notice">Confidentialité : les pièces restent dans la mémoire de cet onglet jusqu'à leur retrait ou fermeture. Lorsque vous cochez les autorisations, leur contenu extrait et, éventuellement, des aperçus d'images peuvent être envoyés au fournisseur IA. N'ajoutez pas de documents confidentiels sans autorisation. Les images DICOM ne doivent pas être utilisées pour un diagnostic médical.</p>
+</section>
 <section>
 <div class="row"><h2>Conversation</h2><span id="etatMode" class="pill">Salon prêt</span></div>
 <div id="fil" aria-label="Messages de votre Salon" aria-live="polite"></div>
@@ -81,10 +109,11 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <span id="compteur" class="pill">0 tours</span>
 </div>
 <div class="row"><button id="nouveau">Nouveau salon</button><button id="exporter">Exporter les conversations</button></div>
+<small>Les pièces jointes incluses peuvent augmenter fortement le nombre de tokens et le coût de chaque tour. Vous pouvez les retirer ou décocher leur inclusion à tout moment.</small>
 <small>Les deux modes ∞ n'imposent aucune limite de tours : le mode débat fait dialoguer les IA entre elles. La page doit cependant rester ouverte. Chaque appel peut consommer l'allocation du visiteur ; les quotas, coûts, limites de contexte et éventuelles interruptions restent fixés par Puter et ses fournisseurs. Les réponses ne sont pas garanties exactes : une vérification indépendante demeure nécessaire.</small>
 </section>
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=kimi-k3-1"></script>
+<script type="module" src="./tchat-distant.mjs?v=documents-1"></script>
 </body></html>
