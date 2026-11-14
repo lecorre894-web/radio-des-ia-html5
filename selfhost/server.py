@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
+from resources import detect_resources
 
 APP = Path(__file__).resolve().parent
 MODEL = os.environ.get("RADIO_LOCAL_MODEL", "qwen3:8b").strip()
@@ -32,6 +33,8 @@ MAX_REPLY_TOKENS = 320
 REQUEST_LOCK = threading.BoundedSemaphore(1)
 BUCKET_LOCK = threading.Lock()
 BUCKETS = {}
+HARDWARE_CACHE = {"at": 0.0, "data": None}
+HARDWARE_LOCK = threading.Lock()
 USER_AGENT = "RadioDesIA-WSL-PrivateNode/0.1 (research prototype; https://github.com/lecorre894-web/radio-des-ia-html5)"
 PROFILES = {
     "analyste": "Analyse les affirmations, distingue preuves, hypotheses et questions ouvertes.",
@@ -238,6 +241,16 @@ def rate_limit(key: str) -> bool:
         return True
 
 
+def measured_hardware():
+    # Les nœuds fournissent des chiffres OS instrumentés, pas des matériels virtualisés.
+    now=time.monotonic()
+    with HARDWARE_LOCK:
+        if HARDWARE_CACHE["data"] is None or now-HARDWARE_CACHE["at"]>30:
+            HARDWARE_CACHE["data"]=detect_resources()
+            HARDWARE_CACHE["at"]=now
+        return HARDWARE_CACHE["data"]
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -269,16 +282,21 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?", 1)[0]
         if path == "/health":
+            if NODE_TOKEN and not hmac.compare_digest(
+                    self.headers.get("Authorization", ""), "Bearer " + NODE_TOKEN):
+                self.send_json(403, {"error": "Jeton du noeud requis."})
+                return
             try:
                 tags = fetch_json(OLLAMA + "/api/tags", timeout=3)
                 available = any(x.get("name") == MODEL or x.get("model") == MODEL
                     for x in tags.get("models", []) if isinstance(x, dict))
                 self.send_json(200, {"ready": available, "ollama": True, "model": MODEL,
                     "web": "Wikipedia + SearXNG facultatif" if SEARXNG else "Wikipedia",
-                    "exposure": "localhost_only"})
+                    "exposure": "localhost_only", "hardware": measured_hardware()})
             except Exception:
                 self.send_json(503, {"ready": False, "ollama": False,
-                    "model": MODEL, "exposure": "localhost_only"})
+                    "model": MODEL, "exposure": "localhost_only",
+                    "hardware": measured_hardware()})
             return
         if path in ("/", "/radio"):
             file = APP / "node-ui.html"
