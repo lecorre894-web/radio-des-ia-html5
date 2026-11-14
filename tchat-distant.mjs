@@ -5,7 +5,7 @@ import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMat
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
-import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,createPollinationsAuthorization,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations} from "./tchat-pollinations.mjs?v=1";
+import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations} from "./tchat-pollinations.mjs?v=2";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
@@ -534,17 +534,24 @@ function getPollinationsStoredToken(){
 }
 async function connectPollinations(){
   if(state.busy || pollinationsLoading)return;
-  const clientId=$("pollinationsAppKey").value.trim();
+  const customId=$("pollinationsAppKey").value.trim();
+  const clientId=customId||POLLINATIONS_CLIENT_ID;
   pollinationsLoading=true;buttonStates();
   try{
+    pollinationsStatus(customId
+      ?"Vérification de la clé d'application et de l'URL OAuth déclarée chez Pollinations…"
+      :"Vérification de l'identité OAuth publique de la Radio des IA…");
+    const verified=await verifyPollinationsClient({clientId});
     const prepared=await createPollinationsAuthorization({clientId});
     sessionStorage.setItem(POLLINATIONS_PENDING,JSON.stringify(prepared.pending));
-    sessionStorage.setItem(POLLINATIONS_APP,clientId); // Identifiant PUBLIC, jamais le secret sk_.
-    pollinationsStatus("Ouverture de l'autorisation Pollinations. Le fournisseur demande un accord explicite et un plafond de Pollen.");
+    if(customId)sessionStorage.setItem(POLLINATIONS_APP,customId);
+    else sessionStorage.removeItem(POLLINATIONS_APP);
+    pollinationsStatus("Application vérifiée : "+verified.appName+
+      ". Ouverture du consentement Pollinations avec un plafond Pollen de 1 prérempli.");
     window.location.assign(prepared.url);
   }catch(e){
-    pollinationsStatus("Connexion impossible : "+String(e?.message||e)+
-      ". Crée une App Key pk_ et déclare exactement l'URL de retour indiquée.");
+    pollinationsStatus("Connexion bloquée avant redirection : "+String(e?.message||e)+
+      ". Pour la connexion la plus simple, laisse vide le champ pk_ dans « Option avancée ».");
   }finally{pollinationsLoading=false;buttonStates();}
 }
 async function finishPollinationsCallback(){
@@ -946,7 +953,7 @@ function init(){
   if(isSparktiatesMode())sparktiatesStatus("Mode SPARKTIATES sélectionné, serveur non encore vérifié : renseigne l'adresse et le jeton.");
   if(isPollinationsMode())pollinationsStatus(pollinationsToken
     ?"Session Pollinations disponible : actualise les modèles et choisis-en un."
-    :"Crée une App Key pk_ puis autorise la connexion. Pollinations peut dépenser du Pollen.");
+    :"Connexion directe disponible sans clé pk_. Vérifie le compte et le plafond Pollen sur l'écran de consentement.");
   $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
     const button=$("quotaVoir"),node=$("quotaEtat");
     if(!node||!button)return;
