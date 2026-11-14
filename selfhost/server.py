@@ -31,6 +31,7 @@ MAX_INPUT_BYTES = 24000
 MAX_TEXT = 2600
 MAX_HISTORY = 12
 MAX_REPLY_TOKENS = 320
+MAX_CALLS_PER_MINUTE = 12  # Deux tours de six roles, avec limite de charge.
 REQUEST_LOCK = threading.BoundedSemaphore(1)
 BUCKET_LOCK = threading.Lock()
 BUCKETS = {}
@@ -231,7 +232,7 @@ def rate_limit(key: str) -> bool:
         stamp, count = BUCKETS.get(key, (now, 0))
         if now - stamp >= 60:
             stamp, count = now, 0
-        if count >= 4:
+        if count >= MAX_CALLS_PER_MINUTE:
             return False
         BUCKETS[key] = (stamp, count + 1)
         return True
@@ -332,7 +333,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(413, {"error": "Requete trop volumineuse."})
             return
         if not rate_limit(self.client_address[0]):
-            self.send_json(429, {"error": "Maximum 4 requetes par minute pour ce prototype."})
+            self.send_json(429, {"error": "Limite de "+str(MAX_CALLS_PER_MINUTE)+" requetes par minute atteinte."})
             return
         if not REQUEST_LOCK.acquire(blocking=False):
             self.send_json(429, {"error": "Le GPU est deja utilise par une autre inference."})
