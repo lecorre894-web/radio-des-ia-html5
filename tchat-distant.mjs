@@ -8,6 +8,7 @@ import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
 import {initScientificCoordinator} from "./science-panel.mjs?v=1";
+import {initNoaaValidation} from "./science-noaa-panel.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -1057,6 +1058,7 @@ function init(){
       token:$("sparktiatesToken")?.value.trim()||""
     }
   })});
+  initNoaaValidation(); // Chargement passif : aucune requête NOAA avant clic.
   const selection=$("modeleRecherche");
   for(const model of RESEARCH_MODELS){
     const option=document.createElement("option");
