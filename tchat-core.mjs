@@ -92,11 +92,15 @@ export function buildPrompt({participants, index, messages, sujet, mode="direct"
     return [{role:"system",content:base.join(" ")},{role:"user",content:task.join("\n\n")}];
   }
   const guidance = [...base, "Apporte une contribution nouvelle et pertinente. Ne répète pas la réponse précédente."].join(" ");
-  let task = question
-    ? "QUESTION HUMAINE ORIGINALE (NE PAS REFORMULER) :\n" + question
-    : (topic ? "SUJET DIRECTEUR :\n" + topic : "Aucune question humaine précise. Propose une réflexion concrète et vérifiable.");
-  if (context) task += "\n\nDERNIÈRE CONTRIBUTION D'UNE AUTRE IA (à critiquer ou compléter sans la recopier) :\n" + context;
-  task += "\n\nRéponds directement et utilement. Si l'information manque, reconnais-le.";
+  const salut= /^(bonjour|salut|bonsoir|hello|coucou|merci)[!?.\\s]*$/i.test(question);
+  let task = salut
+    ? ("SALUTATION HUMAINE : "+question+"\nRéponds naturellement en une ou deux phrases. N'exige ni formulaire, ni thème, ni contraintes pour simplement saluer."+
+       (context?" Puis, si une conversation existe déjà, poursuis-la sans répéter les salutations.":""))
+    : (question
+       ? "QUESTION HUMAINE ORIGINALE (NE PAS REFORMULER) :\n" + question
+       : (topic ? "SUJET DIRECTEUR :\n" + topic : "Aucune question humaine précise. Propose une réflexion concrète et vérifiable."));
+  if (context && !salut) task += "\n\nDERNIÈRE CONTRIBUTION D'UNE AUTRE IA (à critiquer ou compléter sans la recopier) :\n" + context;
+  if (!salut) task += "\n\nRéponds directement et utilement. Si l'information manque, reconnais-le.";
   return [{role:"system",content:guidance},{role:"user",content:task}];
 }
 export function responseText(resp) {

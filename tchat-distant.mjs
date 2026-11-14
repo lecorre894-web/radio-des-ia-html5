@@ -1,4 +1,5 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=kimi-k3-1";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=qualite-2";
+import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -98,7 +99,15 @@ function renderParts(){
     });
     const supprimer=document.createElement("button");supprimer.textContent="Retirer";supprimer.disabled=state.participants.length===1;
     supprimer.addEventListener("click",()=>{if(state.busy)return;state.participants.splice(index,1);state.next=0;renderParts();save()});
-    row.append(nom,role,modele,supprimer);host.append(row);
+    row.append(nom,role,modele,supprimer);
+    if(state.validModels.size){
+      const note=document.createElement("small");
+      note.style.gridColumn="1 / -1";
+      const valid=state.validModels.has(p.modele);
+      note.textContent=valid?"✓ Modèle présent dans le catalogue Puter.":"⚠ Modèle absent du catalogue Puter : son tour sera ignoré sans modifier son identité.";
+      row.append(note);
+    }
+    host.append(row);
   }
 }
 function makeMessage(m){
@@ -166,27 +175,33 @@ async function loadCatalog(){
       listNode.append(op);
     }
     const names=new Set(state.catalog.map(m=>m.id));
-    // Ne jamais substituer GPT/Claude à Perplexity en conservant son étiquette.
+    // Le catalogue réel de cette session fait autorité.
     const warnings=[];
+    const audit=[];
     for(const speaker of state.participants){
-      if(names.has(speaker.modele))continue;
-      if(speaker.nom.trim().toLowerCase()==="perplexity" || speaker.modele.startsWith("perplexity/")){
-        const alternative=["perplexity/sonar-pro","perplexity/sonar","perplexity/sonar-reasoning-pro"].find(id=>names.has(id));
-        if(alternative)speaker.modele=alternative;
-        else warnings.push("Perplexity indisponible dans ce catalogue : aucun remplacement par une autre IA.");
-        continue;
+      const result=resolveParticipantModel(speaker,state.catalog);
+      if(result.selected && result.changed)speaker.modele=result.selected;
+      if(!result.available){
+        warnings.push(speaker.nom+" indisponible : tour ignoré, pas de faux modèle.");
       }
-      if(speaker.nom.trim().toLowerCase()==="kimi" || speaker.modele.startsWith("moonshotai/kimi-")){
-        const alternative=["moonshotai/kimi-k3.1-pro","moonshotai/kimi-k3.1-pro-highspeed","moonshotai/kimi-k3","moonshotai/kimi-k2.6"].find(id=>names.has(id));
-        if(alternative)speaker.modele=alternative;
-        else warnings.push("Kimi indisponible dans ce catalogue : aucun remplacement par une autre IA.");
-        continue;
-      }
-      const fallback=["gpt-5.5","gpt-5.4-nano","claude-sonnet-4-6"].find(id=>names.has(id));
-      if(fallback)speaker.modele=fallback;
+      audit.push(speaker.nom+" : "+(result.available?"disponible (« "+speaker.modele+" »)":"indisponible"));
     }
     renderParts();
-    $("catalogue").textContent=state.catalog.length+" modèles distants référencés ; disponibilité, tarifs et capacités variables."+ (warnings.length?" "+warnings.join(" "):"");
+    $("catalogue").textContent=state.catalog.length+" modèles distants référencés ; disponibilité, tarifs et capacités variables."+
+      (warnings.length?" "+warnings.join(" "):" Tous les intervenants ont un modèle référencé.");
+    const diag=$("diagnosticModeles");
+    if(diag){
+      diag.replaceChildren();
+      const details=document.createElement("details"),summary=document.createElement("summary");
+      summary.textContent="Diagnostic des modèles et fournisseurs (catalogue réel)";
+      const report=document.createElement("pre");report.className="pieceExtrait";
+      const providerInfo=["perplexity","kimi"].map(provider=>{
+        const ids=catalogOptions(state.catalog,provider);
+        return provider+" : "+(ids.length?ids.join(", "):"aucun identifiant reconnu");
+      });
+      report.textContent=audit.join("\n")+"\n\n"+providerInfo.join("\n");
+      details.append(summary,report);diag.append(details);
+    }
     save();
   }catch(e){$("catalogue").textContent="Catalogue non accessible : "+String(e?.message||e);}
 }
@@ -205,13 +220,19 @@ async function nextTour(){
       state.auto=false;buttonStates();return;
     }
   }catch(e){status(String(e?.message||e));state.auto=false;return;}
-  const participant=state.participants[state.next%state.participants.length];
-  state.next=(state.next+1)%state.participants.length;
-  const currentIndex=(state.next-1+state.participants.length)%state.participants.length;
+  const currentIndex=nextEligibleIndex(state.participants,state.validModels,state.next);
+  if(currentIndex<0){
+    state.auto=false;
+    status("Aucun modèle du Salon n'est disponible dans le catalogue Puter : aucun appel inutile.");
+    buttonStates();return;
+  }
+  const participant=state.participants[currentIndex];
+  const nextIndex=nextEligibleIndex(state.participants,state.validModels,currentIndex+1);
+  state.next=(currentIndex+1)%state.participants.length;
   const messages=buildPrompt({
     participants:state.participants,index:currentIndex,
     messages:state.messages,sujet:state.sujet,mode:state.mode,
-    recipient:state.participants[state.next%state.participants.length]?.nom,
+    recipient:state.participants[nextIndex<0?currentIndex:nextIndex]?.nom,
     round:state.tours
   });
   const current={origin:"ai",nom:participant.nom,modele:participant.modele,heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
@@ -296,7 +317,7 @@ function exportConversation(){
 function init(){
   restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
-  void import("./tchat-documents.mjs?v=documents-3")
+  void import("./tchat-documents.mjs?v=document-audit-1")
     .then(({createDocumentManager})=>{
       documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
     })

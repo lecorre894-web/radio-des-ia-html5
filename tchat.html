@@ -66,6 +66,7 @@ details.card[open]>summary{margin-bottom:14px}
 <p class="notice">Ce tchat utilise Puter.js. Chaque visiteur se connecte à son propre compte Puter et bénéficie d'une allocation d'usage gratuite. Au-delà, Puter peut proposer une offre payante. Il n'existe pas de gratuité illimitée garantie. Aucun paiement ni clé d'API n'est demandé par ce site.</p>
 <div class="row"><button id="connecter" class="primary">Se connecter à Puter</button><button id="catalogueBouton">Actualiser les modèles</button><span id="connexion" class="pill">Non connecté</span></div>
 <small id="catalogue">Le catalogue des modèles disponibles sera chargé depuis le service.</small>
+<div id="diagnosticModeles" aria-live="polite"></div>
 <div id="etat" role="status"></div>
 <small>Les requêtes sont envoyées à Puter et à ses fournisseurs de modèles ; n'entre pas de données confidentielles. L'historique du Salon est enregistré dans ce navigateur seulement, hors des appels effectués aux modèles.</small>
 </section>
@@ -88,6 +89,8 @@ details.card[open]>summary{margin-bottom:14px}
 <input id="pieceFichier" type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.xlsb,.ods,.csv,.json,.jsonl,.ndjson,.geojson,.ipynb,.txt,.md,.tsv,.log,.js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.c,.h,.cpp,.cc,.cxx,.hpp,.rs,.go,.java,.kt,.swift,.cs,.php,.rb,.sh,.bash,.ps1,.bat,.cmd,.sql,.r,.lua,.dart,.scala,.pl,.asm,.gradle,.toml,.yaml,.yml,.xml,.html,.htm,.css,.scss,.vue,.svelte,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.dcm,.dicom,image/png,image/jpeg,image/gif,image/webp,application/pdf">
 <span class="pieceExplication">Jusqu'à 6 fichiers, 20 Mio chacun, 48 Mio au total. Extraction locale ; les fichiers ne sont pas publiés sur GitHub.</span>
 </label>
+<div class="row"><button id="pieceAutoTest" type="button">🔍 Vérifier les 5 bibliothèques de documents</button></div>
+<pre id="pieceAutoResult" class="pieceExtrait" aria-live="polite"></pre>
 <div id="pieceListe" aria-label="Pièces jointes importées"></div>
 <div class="row">
 <button id="pieceEffacer" type="button">Retirer toutes les pièces</button>
@@ -106,9 +109,9 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row">
 <label for="imageModele">Modèle</label>
 <select id="imageModele">
-<option value="gpt-image-2.6-flare">GPT Image 2.6 Flare</option>
-<option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
-<option value="@cf/black-forest-labs/flux-1-schnell">FLUX.1 Schnell</option>
+<option value="openai/gpt-image-2.6-flare">GPT Image 2.6 Flare</option>
+<option value="google/gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
+<option value="black-forest-labs/flux-schnell">FLUX.1 Schnell</option>
 </select>
 <label for="imageRatio">Format</label>
 <select id="imageRatio">
@@ -182,6 +185,6 @@ details.card[open]>summary{margin-bottom:14px}
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=envoi-explicite-1"></script>
-<script type="module" src="./tchat-images.mjs?v=images-2"></script>
+<script type="module" src="./tchat-distant.mjs?v=diagnostic-1"></script>
+<script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 </body></html>

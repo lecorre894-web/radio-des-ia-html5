@@ -199,9 +199,10 @@ async function readTIFF(file){
   const bytes=await file.arrayBuffer(),ifds=T.decode(bytes);
   if(!ifds?.length)throw new Error("Aucune page TIFF lisible");
   const first=ifds[0];
-  T.decodeImage(bytes,first);
   const w=first.width,h=first.height;
+  // Vérifier dimensions AVANT décompression RGBA pour éviter une explosion de mémoire.
   const canvas=scaledCanvas(w,h);
+  T.decodeImage(bytes,first);
   const original=document.createElement("canvas");
   original.width=w;original.height=h;
   const rgba=T.toRGBA8(first);
@@ -309,6 +310,21 @@ export async function decodeDocument(file,kind=classifyDocument(file?.name)){
   if(kind==="dicom")return readDicom(file);
   return {kind:"text",text:await file.text()};
 }
+export async function documentSelfTest(onProgress=()=>{}){
+  const checks=[
+    ["PDF",()=>loadPDF()],
+    ["Word DOCX",()=>loadGlobal(MAMMOTH_URL,"mammoth")],
+    ["Excel / ODS",()=>loadSheet()],
+    ["TIFF",()=>loadGlobal(UTIF_URL,"UTIF")],
+    ["DICOM",()=>loadGlobal(DICOM_URL,"dicomParser")]
+  ];
+  const results=[];
+  for(const [label,run] of checks){
+    try{await run();results.push({label,ok:true});onProgress(label+" : bibliothèque chargée");}
+    catch(e){results.push({label,ok:false,error:String(e?.message||e)});onProgress(label+" : échec");}
+  }
+  return results;
+}
 export function createDocumentManager({getPuter,onStatus}={}){
   const input=document.getElementById("pieceFichier");
   const zone=document.getElementById("pieceDepot");
@@ -404,6 +420,20 @@ export function createDocumentManager({getPuter,onStatus}={}){
       last.content=parts;
       return {messages:attached,cleanup};
     }catch(error){await cleanup();throw error;}
+  }
+  const autoTest=document.getElementById("pieceAutoTest");
+  const autoResult=document.getElementById("pieceAutoResult");
+  if(autoTest && autoResult){
+    autoTest.addEventListener("click",()=>void(async()=>{
+      autoTest.disabled=true;
+      autoResult.textContent="Vérification locale des bibliothèques…";
+      try{
+        const summary=await documentSelfTest(msg=>{autoResult.textContent=msg;});
+        autoResult.textContent=summary.map(x=>(x.ok?"✓ ":"✗ ")+x.label+
+          (x.error?" — "+x.error:"")).join("\n")+
+          "\nContrôle du chargement seulement : l'analyse des fichiers réels reste à tester.";
+      }finally{autoTest.disabled=false;}
+    })());
   }
   zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("actif");});
   zone.addEventListener("dragleave",()=>zone.classList.remove("actif"));
