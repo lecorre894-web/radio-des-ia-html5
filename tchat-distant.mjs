@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 let documentManager=null;
 let reactionBoard=null;
 const KEY = "radio-salon-distant-v1";
+const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
   {nom:"Cairn",role:"Épistémologie, audit critique, contradictions argumentées",modele:"gpt-5.5"},
   {nom:"Brume",role:"Mathématiques, physique et méthodologie expérimentale",modele:"claude-sonnet-4-6"},
@@ -18,6 +19,22 @@ const state = {
   validModels:new Set(), lastRender:0
 };
 function status(value){$("etat").textContent=value;}
+function saveDraft(){
+  // Le brouillon ne doit jamais dépendre du succès de la génération IA.
+  try{
+    const value=$("moi")?.value||"";
+    if(value)localStorage.setItem(DRAFT_KEY,value);
+    else localStorage.removeItem(DRAFT_KEY);
+  }catch{
+    status("Stockage local du brouillon indisponible : gardez une copie de votre texte.");
+  }
+}
+function restoreDraft(){
+  try{
+    const saved=localStorage.getItem(DRAFT_KEY);
+    if(saved!==null && $("moi"))$("moi").value=saved;
+  }catch{}
+}
 function available(){if(!window.puter?.ai?.chat)throw Error("Puter.js indisponible. Vérifie Internet et les bloqueurs de scripts.");return window.puter;}
 function save(){
   try{
@@ -109,15 +126,20 @@ function render(){
   save();
 }
 function addHuman(){
-  let value=$("moi").value.trim();
-  if(!value && documentManager?.hasAttachments() && $("pieceUtiliser")?.checked){
+  const raw=$("moi").value;
+  // Ne jamais retirer les retours à la ligne : trim() sert uniquement à détecter un message vide.
+  let value=raw;
+  if(!raw.trim() && documentManager?.hasAttachments() && $("pieceUtiliser")?.checked){
     value="Analyse les documents et images joints : précise les éléments vérifiables, les informations manquantes et les limites de leur interprétation.";
   }
-  if(!value)return;
+  if(!value.trim())return;
   if(documentManager?.isReading()){status("Lecture du document en cours : réessayer lorsque l'import est terminé.");return;}
-  $("moi").value="";
+  // Le message est d'abord enregistré ; le brouillon ne disparaît qu'après affichage.
   state.messages.push({origin:"human",nom:"Vous",texte:value,heure:new Date().toLocaleTimeString("fr-FR")});
-  render();status("Question enregistrée exactement : réponse prioritaire au prochain tour.");
+  render();
+  $("moi").value="";
+  saveDraft();
+  status("Message enregistré avec ses retours à la ligne. Réponse prioritaire au prochain tour.");
   if(!state.busy&&!state.auto)void nextTour();
 }
 async function signIn(){
@@ -272,7 +294,7 @@ function exportConversation(){
   setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
 function init(){
-  restore();$("sujet").value=state.sujet;renderParts();render();buttonStates();
+  restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
   void import("./tchat-documents.mjs?v=documents-3")
     .then(({createDocumentManager})=>{
@@ -293,6 +315,7 @@ function init(){
           const start=field.selectionStart??field.value.length;
           const end=field.selectionEnd??start;
           field.setRangeText(String(value),start,end,"end");
+          saveDraft();
           field.focus();
         },
         onSendGif:({id,name})=>{
@@ -316,6 +339,7 @@ function init(){
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
+  $("moi").addEventListener("input",saveDraft);
   $("tour").addEventListener("click",()=>{if(!state.auto)state.mode="direct";void nextTour()});
   $("infini").addEventListener("click",()=>void launchInfinity("direct"));
   $("debattre").addEventListener("click",()=>void launchInfinity("debate"));
@@ -337,11 +361,11 @@ function init(){
     state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";documentManager?.clear();render();status("Nouveau Salon prêt");
   });
   $("exporter").addEventListener("click",exportConversation);
-  $("moi").addEventListener("keydown",event=>{
-    if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();addHuman();}
-  });
+  // Aucun gestionnaire de touche Entrée : le navigateur insère naturellement une nouvelle ligne.
+  // Seul le bouton Envoyer déclenche addHuman().
   $("sujet").addEventListener("change",()=>{state.sujet=$("sujet").value;save();});
   window.addEventListener("pagehide",()=>{
+    saveDraft();
     state.auto=false;
     if(state.controller)state.controller.abort();
   });
