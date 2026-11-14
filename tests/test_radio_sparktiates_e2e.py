@@ -83,7 +83,8 @@ class RadioLoopTests(unittest.TestCase):
                     ("/radio",b"Radio des IA locale"),
                     ("/radio-sparktiates.mjs",b"/api/v1/chat"),
                     ("/radio-sparktiates-core.mjs",b"LOCAL_SPEAKERS"),
-                    ("/node-ui.css",b"font:")):
+                    ("/node-ui.css",b"font:"),
+                    ("/radio-sparktiates.css",b".hero")):
                     code,body,_=http(radio+path)
                     self.assertEqual(code,200,path)
                     self.assertIn(expected,body,path)
