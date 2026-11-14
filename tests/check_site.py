@@ -3,6 +3,7 @@
 from pathlib import Path
 from html.parser import HTMLParser
 import json
+import zlib
 import re
 
 root = Path(__file__).resolve().parents[1]
@@ -53,6 +54,53 @@ assert 'intelligence artificielle' in index_page.lower()
 assert '<meta name="description"' in index_page and '<link rel="canonical"' in index_page
 sitemap = (root / "sitemap.xml").read_text(encoding="utf-8")
 assert "tchat.html</loc>" in sitemap and "radio-des-ia-html5/</loc>" in sitemap
+# Favoris : icones dédiées, manifeste et bouton sans dépendance au tchat.
+manifest = json.loads((root / "manifest.webmanifest").read_text(encoding="utf-8"))
+assert manifest["short_name"] == "Radio des IA"
+assert manifest["start_url"] == "./tchat.html"
+assert manifest["scope"] == "./"
+icons = manifest["icons"]
+assert any(icon.get("sizes") == "192x192" for icon in icons)
+assert any(icon.get("sizes") == "512x512" for icon in icons)
+for page_name in ("index.html", "tchat.html"):
+    document = (root / page_name).read_text(encoding="utf-8")
+    for control in ("favorisToggle", "favorisPanneau", "favorisInstructions", "favorisAdresse", "favorisCopier", "favorisStatut"):
+        assert f'id="{control}"' in document, f"Bouton favori manquant : {control}"
+    assert 'rel="manifest" href="./manifest.webmanifest"' in document
+    assert 'href="./favicon.svg"' in document
+    assert 'href="./icon-32.png"' in document
+    assert 'href="./icon-180.png"' in document
+    assert './bookmark.mjs?v=favoris-1' in document
+svg = (root / "favicon.svg").read_text(encoding="utf-8")
+assert '<svg ' in svg and 'Radio des IA' in svg
+for dimension in (32, 180, 192, 512):
+    raw = (root / f"icon-{dimension}.png").read_bytes()
+    assert raw[:8] == bytes.fromhex("89504e470d0a1a0a"), "Signature PNG incorrecte"
+    assert int.from_bytes(raw[16:20], "big") == dimension
+    assert int.from_bytes(raw[20:24], "big") == dimension
+    # Vérifier aussi la décompression et les sommes CRC, pas seulement l'en-tête.
+    position = 8
+    picture = bytearray()
+    ended = False
+    while position < len(raw):
+        assert position + 12 <= len(raw), "Bloc PNG tronqué"
+        size = int.from_bytes(raw[position:position+4], "big")
+        kind = raw[position+4:position+8]
+        payload = raw[position+8:position+8+size]
+        checksum = raw[position+8+size:position+12+size]
+        assert len(payload) == size and len(checksum) == 4
+        assert (zlib.crc32(kind+payload) & 0xffffffff) == int.from_bytes(checksum, "big"), "CRC PNG invalide"
+        if kind == b"IDAT":
+            picture.extend(payload)
+        if kind == b"IEND":
+            ended = True
+            break
+        position += 12 + size
+    assert ended and picture, "Image PNG incomplète"
+    decoded = zlib.decompress(bytes(picture))
+    assert len(decoded) == dimension*(dimension+1), "Pixels de l'icône PNG invalides"
+
+
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
 assert "enterkeyhint=\"enter\"" in page

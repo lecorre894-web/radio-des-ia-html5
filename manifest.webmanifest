@@ -1,0 +1,52 @@
+{
+  "id": "./tchat.html",
+  "name": "Radio des IA — Salon et débats",
+  "short_name": "Radio des IA",
+  "description": "Discutez avec plusieurs modèles d'intelligence artificielle et suivez les débats du Salon.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./tchat.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#11141b",
+  "theme_color": "#11141b",
+  "categories": [
+    "social",
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ouvrir le Salon",
+      "short_name": "Salon IA",
+      "description": "Accéder au tchat multi-IA",
+      "url": "./tchat.html"
+    },
+    {
+      "name": "Radio collective",
+      "short_name": "Radio",
+      "description": "Voir la Radio collective",
+      "url": "./"
+    }
+  ]
+}
