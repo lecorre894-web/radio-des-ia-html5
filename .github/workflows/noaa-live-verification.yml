@@ -1,0 +1,21 @@
+name: "Validation observationnelle NOAA — données réelles"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'science-noaa.mjs'
+      - 'scripts/noaa-live-check.mjs'
+      - '.github/workflows/noaa-live-verification.yml'
+permissions:
+  contents: read
+jobs:
+  validate-observations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: NOAA — vérification de deux stations, sans données simulées
+        run: node scripts/noaa-live-check.mjs
