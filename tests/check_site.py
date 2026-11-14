@@ -30,6 +30,29 @@ for relative in parser.files:
 assert "https://js.puter.com/v2/" in page
 assert "tchat-distant.mjs" in page
 assert (root / "tchat-models.mjs").is_file()
+# Nouvelle ergonomie : conversation visible avant les panneaux et sélection des IA tout en bas.
+positions = [
+    page.index('id="conversation"'),
+    page.index('id="fil"'),
+    page.index('id="moi"'),
+    page.index('id="documents"'),
+    page.index('id="imagesGenerateur"'),
+    page.index('id="intervenants"'),
+    page.index("<footer>")
+]
+assert positions == sorted(positions), "Les IA ne sont pas sous la conversation et les médias"
+assert 'id="intervenants"' in page and 'href="#conversation"' in page
+assert 'color:#8dffad' in page and 'caret-color:#d5ffe0' in page, "Couleur numérique manquante"
+assert '.msg .body{color:var(--fg)' in page, "Les messages doivent garder la couleur ordinaire"
+assert 'ChatGPT et René Le Corre®' in page, "Signature du Salon absente"
+assert '<meta name="description"' in page and '<link rel="canonical"' in page
+assert 'content="index, follow' in page
+index_page = (root / "index.html").read_text(encoding="utf-8")
+assert 'ChatGPT et René Le Corre®' in index_page
+assert 'intelligence artificielle' in index_page.lower()
+assert '<meta name="description"' in index_page and '<link rel="canonical"' in index_page
+sitemap = (root / "sitemap.xml").read_text(encoding="utf-8")
+assert "tchat.html</loc>" in sitemap and "radio-des-ia-html5/</loc>" in sitemap
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
 assert "enterkeyhint=\"enter\"" in page
