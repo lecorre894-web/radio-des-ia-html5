@@ -17,6 +17,13 @@ export function validatedImageRequest({prompt,model,ratio,testMode}){
   const dims=w>=h?{w:edge,h:Math.round(edge*h/w)}:{w:Math.round(edge*w/h),h:edge};
   return {prompt:text,options:{model,ratio:dims,test_mode:Boolean(testMode)}};
 }
+export async function runImageGeneration(puter,request){
+  // Le booléen true est le mode test documenté ; il est prioritaire sur tout identifiant payant.
+  if(request.options.test_mode)return puter.ai.txt2img(request.prompt,true);
+  return puter.ai.txt2img(request.prompt,{
+    model:request.options.model,ratio:request.options.ratio
+  });
+}
 export function createImageGenerator(){
   if(typeof document==="undefined")return null;
   const prompt=$("imagePrompt"),model=$("imageModele"),ratio=$("imageRatio"),btn=$("imageGenerer");
@@ -41,12 +48,7 @@ export function createImageGenerator(){
     busy=true;btn.disabled=true;clearPrevious();
     say(request.options.test_mode?"Création d'une image de démonstration (mode test)…":"Génération distante en cours ; les crédits du fournisseur peuvent être débités…");
     try{
-      // Puter documente le mode d'essai comme deuxième argument booléen.
-      const output=request.options.test_mode
-        ? await puter.ai.txt2img(request.prompt,true)
-        : await puter.ai.txt2img(request.prompt,{
-            model:request.options.model,ratio:request.options.ratio
-          });
+      const output=await runImageGeneration(puter,request);
       const url=String(output?.src||"");
       if(!/^(https:\/\/|http:\/\/|data:image\/|blob:)/i.test(url))throw new Error("Le fournisseur n'a retourné aucune image exploitable.");
       src=url;
