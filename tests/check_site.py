@@ -29,6 +29,9 @@ for relative in parser.files:
     assert (root / relative).is_file(), f"Script absent: {relative}"
 assert "https://js.puter.com/v2/" in page
 assert "tchat-distant.mjs" in page
+assert "Entrée = retour à la ligne" in page
+assert "Envoyer le message" in page
+assert "enterkeyhint=\"enter\"" in page
 assert "tchat-images.mjs" in page
 assert "video/" not in page
 assert (root / "tchat-documents.mjs").is_file()
