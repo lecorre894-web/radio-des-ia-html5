@@ -28,6 +28,8 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 .notice{padding:12px;border-left:3px solid var(--orange);background:#292822;border-radius:7px}
 footer{padding:30px 0;font-size:13px;color:var(--muted)}
 @media(max-width:720px){.part{grid-template-columns:1fr 1fr}.part textarea{grid-column:1/-1}.part button{width:fit-content}main{padding:10px}.card{padding:13px}}
+details.card>summary{cursor:pointer;font-weight:700;font-size:18px;line-height:1.4;list-style-position:inside}
+details.card[open]>summary{margin-bottom:14px}
 .pieceDepot{border:2px dashed #60798e;border-radius:12px;padding:18px;display:block;cursor:pointer;background:#131b24;text-align:center}
 .pieceDepot.actif{border-color:#96dac9;background:#233842}
 .pieceDepot input{display:block;margin:12px auto 4px;width:min(100%,410px);background:#161b22}
@@ -68,8 +70,8 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <div id="parts"></div>
 <div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button id="ajouter">Ajouter une IA</button></div>
 </section>
-<section class="card" id="documents">
-<h2>📎 Documents et imagerie — Espace d'analyse</h2>
+<details class="card" id="documents">
+<summary>📎 Documents et imagerie — Espace d’analyse (ouvrir)</summary>
 <p>Glissez vos fichiers ou choisissez-les sur votre téléphone. Le Salon reste utilisable sans aucun document.</p>
 <label id="pieceDepot" class="pieceDepot" for="pieceFichier">
 <strong>Importer PDF, Word, Excel, JSON, codes sources, GIF, images, TIFF ou DICOM</strong>
@@ -85,9 +87,9 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <label class="pieceOption"><input type="checkbox" id="pieceVision"> <span><strong>Autoriser l'envoi d'aperçus visuels aux IA</strong> — jusqu'à 2 images par tour, via stockage Puter temporaire puis tentative de suppression</span></label>
 <p class="pieceExplication">PDF : texte extrait et aperçu première page ; Word .docx : texte ; Excel .xlsx/.xls/.csv : valeurs, sans calcul de macros ; JSON/JSONL et notebooks Jupyter : lecture structurée ; code Python, JavaScript, C/C++, Rust, Java, SQL, HTML/CSS et autres : analyse textuelle sans exécution ; JPEG/PNG/WebP/GIF : aperçus ; TIFF : première page ; DICOM : aperçu expérimental des images monochromes non compressées. Les .doc anciens sont à convertir en .docx ou PDF. Les vidéos ne sont pas acceptées. Pas d’OCR automatique pour les scans PDF.</p>
 <p class="notice">Confidentialité : les pièces restent dans la mémoire de cet onglet jusqu'à leur retrait ou fermeture. Lorsque vous cochez les autorisations, leur contenu extrait et, éventuellement, des aperçus d'images peuvent être envoyés au fournisseur IA. N'ajoutez pas de documents confidentiels sans autorisation. Les images DICOM ne doivent pas être utilisées pour un diagnostic médical.</p>
-</section>
-<section class="card" id="imagesGenerateur">
-<h2>🎨 Atelier de génération d'images</h2>
+</details>
+<details class="card" id="imagesGenerateur">
+<summary>🎨 Générateur d’images (ouvrir)</summary>
 <p>Décrivez une image et demandez sa création à Puter. L'atelier est indépendant des conversations des IA. <strong>Aucune vidéo n'est générée.</strong></p>
 <label for="imagePrompt"><strong>Description de l'image</strong></label>
 <textarea id="imagePrompt" rows="3" maxlength="1500" style="width:100%" placeholder="Exemple : représentation scientifique de la face cachée de la Lune, style illustration réaliste, légendes absentes…"></textarea>
@@ -111,7 +113,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <div id="imageEtat" role="status"></div>
 <div id="imageResult"></div>
 <p class="pieceExplication">Les descriptions sont envoyées à Puter uniquement lorsque vous lancez la génération. Les images réelles peuvent consommer des crédits Puter ; un accord explicite vous sera demandé. Sauvegardez les images obtenues, car certains liens sont temporaires.</p>
-</section>
+</details>
 <section>
 <div class="row"><h2>Conversation</h2><span id="etatMode" class="pill">Salon prêt</span></div>
 <div id="fil" aria-label="Messages de votre Salon" aria-live="polite"></div>
