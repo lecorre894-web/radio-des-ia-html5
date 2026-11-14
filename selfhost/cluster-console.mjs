@@ -62,6 +62,20 @@ $("send").addEventListener("click",async()=>{
   add("assistant",data.answer, "Nœud "+data.node_id+" · "+data.model);
   turns.push({role:"user",content:message},{role:"assistant",content:data.answer});
   if(turns.length>12)turns.splice(0,turns.length-12);
+  const sourceBox=$("web-sources");
+  sourceBox.replaceChildren();
+  for(const source of (Array.isArray(data.sources)?data.sources.slice(0,8):[])){
+    try{
+      const uri=new URL(source.url);
+      if(uri.protocol!=="https:")continue;
+      const p=document.createElement("p"),link=document.createElement("a");
+      link.href=uri.href;link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent=String(source.title||uri.hostname);
+      const context=document.createElement("span");
+      context.textContent=" — "+String(source.snippet||"").slice(0,380);
+      p.append(link,context);sourceBox.append(p);
+    }catch{}
+  }
   $("question").value="";
   phrase("Réponse reçue en "+Math.round((Date.now()-start)/1000)+" s. Aucun appel en boucle.");
   void refresh();
