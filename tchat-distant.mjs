@@ -4,6 +4,7 @@ import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
+import {loadPuter} from "./puter-lazy.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -47,7 +48,7 @@ function restoreDraft(){
     if(saved!==null && $("moi"))$("moi").value=saved;
   }catch{}
 }
-function available(){if(!window.puter?.ai?.chat)throw Error("Puter.js indisponible. Vérifie Internet et les bloqueurs de scripts.");return window.puter;}
+async function available(){return await loadPuter();}
 function save(){
   state.memory=updateLineageMemory(state.memory,state.messages);
   try{
@@ -202,7 +203,7 @@ function addHuman(){
 }
 async function signIn(){
   try{
-    const p=available();
+    const p=await available();
     if(!p.auth.isSignedIn())await p.auth.signIn();
     const user=await p.auth.getUser().catch(()=>null);
     $("connexion").textContent="Connecté"+(user?.username?" : "+user.username:"");
@@ -212,7 +213,7 @@ async function signIn(){
 }
 async function loadCatalog(){
   try{
-    const p=available();
+    const p=await available();
     const list=await p.ai.listModels();
     if(!Array.isArray(list)||!list.length)throw Error("Catalogue vide");
     state.catalog=list.filter(m=>m&&typeof m.id==="string");
@@ -265,7 +266,7 @@ async function nextTour(){
   if(isResearchMode())return nextResearchTurn();
   if(isHordeMode())return nextHordeTurn();
   try{
-    const p=available();
+    const p=await available();
     if(!p.auth.isSignedIn()){
       status("Connecte ton compte Puter avant de parler. Cette action ne publie aucune clé.");
       state.auto=false;buttonStates();return;
@@ -601,7 +602,9 @@ function init(){
   $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
     const button=$("quotaVoir"),node=$("quotaEtat");
     if(!node||!button)return;
-    const puter=window.puter;
+    let puter;
+    try{puter=await available();}
+    catch(e){node.textContent="Chargement Puter impossible : "+String(e?.message||e);return;}
     if(!puter?.auth?.isSignedIn?.()||typeof puter.auth.getMonthlyUsage!=="function"){
       node.textContent="Connectez-vous à Puter pour consulter l’usage de cette application.";return;
     }
@@ -704,8 +707,8 @@ function init(){
   if(!window.puter){
     status(isResearchMode()
       ?"Mode local disponible : charge le modèle scientifique. Puter n'est pas requis."
-      :isHordeMode()?"AI Horde disponible indépendamment de Puter : actualise son catalogue."
-      :"Bibliothèque Puter.js indisponible. Un bloqueur de script ou le réseau peut être en cause.");
+      :isHordeMode()?"AI Horde est disponible sans Puter : actualise son catalogue."
+      :"Mode mobile allégé : Puter sera chargé uniquement si tu cliques sur « Se connecter à Puter ». AI Horde fonctionne sans lui.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
     void loadCatalog();
