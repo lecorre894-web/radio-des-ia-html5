@@ -13,6 +13,16 @@ Le site comporte des icônes SVG et PNG (32, 180, 192 et 512 pixels), un `manife
 Aucun changement apporté aux modèles, conversations, clés, API ni règles d'envoi de messages.
 
 
+## Fil généalogique et suivi des conversations
+
+Le Salon relie désormais la **question fondatrice**, la réponse de l'IA précédente, les précisions successives des humains et les derniers échanges réels : une réponse courte (« intelligence douée de savoir, par exemple ») est traitée comme une précision à la discussion en cours, et non comme un sujet isolé demandant un nouveau questionnaire.
+
+Le module `tchat-lineage.mjs` constitue ce fil par extraction **déterministe**, sans génération d'un faux résumé par une autre IA. Il garde des jalons locaux (maximum 90 extraits), conserve la racine du sujet lorsque le tampon de messages sauvegardés atteint 150 éléments et transmet un contexte borné (au maximum 7 800 caractères). Une coupure est signalée explicitement. Les modèles restent responsables de leurs réponses : ce mécanisme réduit la perte de contexte sans garantir une compréhension parfaite.
+
+Le panneau **🧬 Fil conducteur** est replié par défaut. Lorsqu'on choisit « Nouveau Salon », le précédent est archivé localement sous forme d'extraits, sans supprimer ses éventuels fichiers exportés. Les références à d'anciens Salons sont facultatives : une case permet de les désactiver, et un bouton permet d'effacer ces archives sans détruire le Salon actuel. Les conversations des autres appareils ne sont **pas** synchronisées. Le contenu historique inclus dans un appel distant est transmis à Puter et à son fournisseur comme tout autre contexte du message : n'y placez pas de données confidentielles.
+
+La réponse humaine actuelle prime toujours sur les antécédents, notamment si le sujet change. Les anciens messages sont considérés comme du contenu cité, non comme des commandes supérieures. Les IA indisponibles dans le catalogue ne sont pas remplacées sous une fausse identité.
+
 ## Deux espaces
 
 - **Radio collective** (index.html) : diffusion différée des conversations du Salon WSL par `feed.json`, avec compteur indicatif de visiteurs récents.
