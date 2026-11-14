@@ -21,7 +21,10 @@ export function classifyDocument(name){
   if(v.endsWith(".docx"))return "word";
   if(v.endsWith(".doc"))return "legacyWord";
   if(v.endsWith(".xlsx")||v.endsWith(".xls")||v.endsWith(".xlsb")||v.endsWith(".ods")||v.endsWith(".csv"))return "table";
-  if(v.endsWith(".txt")||v.endsWith(".md")||v.endsWith(".tsv"))return "text";
+  if(/\.(json|jsonl|ndjson|geojson|ipynb)$/.test(v))return "json";
+  if(/\.(js|mjs|cjs|jsx|ts|tsx|py|c|h|cpp|cc|cxx|hpp|rs|go|java|kt|swift|cs|php|rb|sh|bash|ps1|bat|cmd|sql|r|lua|dart|scala|pl|asm|s|wasm\.txt|gradle|toml|yaml|yml|xml|html|htm|css|scss|vue|svelte|dockerfile|makefile|gitignore)$/.test(v)||/^(dockerfile|makefile|jenkinsfile|justfile|\.gitignore)$/i.test(v.split("/").at(-1)))return "code";
+  if(v.endsWith(".txt")||v.endsWith(".md")||v.endsWith(".tsv")||v.endsWith(".log"))return "text";
+  if(/\.(mp4|mov|avi|mkv|webm|wmv|m4v|mpeg|mpg|3gp|flv|ts)$/.test(v))return "video";
   if(/\.(png|jpg|jpeg|webp|gif)$/.test(v))return "image";
   if(/\.(tif|tiff)$/.test(v))return "tiff";
   if(/\.(dcm|dicom)$/.test(v))return "dicom";
@@ -258,9 +261,46 @@ async function readDicom(file){
     previewUrl:URL.createObjectURL(blob),visionBlob:blob,
     warning:"DICOM : données sensibles possibles même incrustées dans l'image. Pas de diagnostic ni de transmission brute ; ne transmettre l'aperçu qu'avec consentement explicite."};
 }
+async function readJSON(file){
+  if(file.size>8*1024*1024)throw new Error("JSON trop volumineux sur mobile : maximum 8 Mio pour une analyse structurée.");
+  const raw=await file.text();
+  const name=file.name.toLowerCase();
+  if(/\.(jsonl|ndjson)$/.test(name)){
+    const lines=raw.split(/\r?\n/).filter(v=>v.trim());
+    const objects=[];
+    for(let i=0;i<Math.min(lines.length,100);i++){
+      try{objects.push(JSON.parse(lines[i]));}
+      catch(e){throw new Error("JSON Lines : erreur à la ligne "+(i+1)+".");}
+    }
+    return {kind:"json",text:objects.map((obj,i)=>"[Ligne "+(i+1)+"] "+JSON.stringify(obj)).join("\n"),
+      truncated:lines.length>100,warning:"JSON Lines validé. Valeurs affichées comme données, sans exécution."};
+  }
+  let parsed;
+  try{parsed=JSON.parse(raw);}
+  catch(e){throw new Error("JSON invalide : "+String(e.message||e).slice(0,180));}
+  if(name.endsWith(".ipynb")){
+    const cells=Array.isArray(parsed.cells)?parsed.cells:[];
+    const text=cells.slice(0,70).map((cell,i)=>{
+      if(!["markdown","code"].includes(cell.cell_type))return "";
+      const src=Array.isArray(cell.source)?cell.source.join(""):String(cell.source||"");
+      return "["+cell.cell_type+" "+(i+1)+"]\n"+src;
+    }).filter(Boolean).join("\n\n");
+    return {kind:"json",text,warning:"Notebook Jupyter : cellules de code et de texte uniquement. Le code n'est pas exécuté ; résultats, médias intégrés et métadonnées exclus.",truncated:cells.length>70};
+  }
+  const pretty=JSON.stringify(parsed,null,2);
+  return {kind:"json",text:pretty,warning:"JSON validé et lu localement comme données. Aucun script n'est exécuté."};
+}
+async function readCode(file){
+  const raw=await file.text();
+  // Le code n'est jamais interprété : ce module fournit seulement du texte aux modèles.
+  return {kind:"code",text:raw,warning:"Code source lu comme texte uniquement, non exécuté ni compilé. Les recommandations des IA restent à vérifier."};
+}
 async function decode(file,kind){
   if(kind==="legacyWord")throw new Error("Format Word .doc historique : convertir en .docx ou PDF avant import.");
-  if(kind==="unknown")throw new Error("Format non reconnu. Formats : PDF, DOCX, XLSX/XLS, CSV, TXT, JPEG/PNG/GIF/WebP, TIFF, DICOM.");
+  if(kind==="video" || String(file.type||"").startsWith("video/"))throw new Error("Vidéo non prise en charge : fichiers vidéo refusés.");
+  if(kind==="json")return readJSON(file);
+  if(kind==="code")return readCode(file);
+  if(kind==="unknown")throw new Error("Format non reconnu : PDF, DOCX, Excel/CSV, JSON, code source, texte, JPEG/PNG/GIF/WebP, TIFF, DICOM. Les vidéos sont exclues.");
   if(kind==="pdf")return readPDF(file);
   if(kind==="word")return readWord(file);
   if(kind==="table")return readTable(file);
@@ -305,9 +345,10 @@ export function createDocumentManager({getPuter,onStatus}={}){
       card.append(notice);list.append(card);
     }
     clear.disabled=reading||!entries.length;
-    progress.textContent=entries.length+" fichier(s) prêt(s), "+entries.reduce((n,e)=>n+e.size,0)/1048576 < 1 ?
-      entries.length+" fichier(s) prêts.":
-      entries.length+" fichier(s) prêts, "+(entries.reduce((n,e)=>n+e.size,0)/1048576).toFixed(1)+" Mio.";
+    const totalMio=entries.reduce((n,e)=>n+e.size,0)/1048576;
+    progress.textContent=entries.length
+      ? entries.length+" fichier(s) prêts"+(totalMio>=1?", "+totalMio.toFixed(1)+" Mio":".")
+      : "Aucun fichier importé.";
   }
   async function add(files){
     if(reading)return;
@@ -316,6 +357,9 @@ export function createDocumentManager({getPuter,onStatus}={}){
       for(const file of Array.from(files||[])){
         if(entries.length>=DOCUMENT_LIMITS.maxFiles){report("Limite de "+DOCUMENT_LIMITS.maxFiles+" fichiers atteinte.");break;}
         if(!file||file.size<=0){report("Fichier vide ignoré.");continue;}
+        if(classifyDocument(file.name)==="video"||String(file.type||"").startsWith("video/")){
+          report(file.name+" : vidéos volontairement non prises en charge.");continue;
+        }
         if(file.size>DOCUMENT_LIMITS.maxFileBytes){report(file.name+" : maximum 20 Mio par fichier.");continue;}
         if(entries.reduce((n,e)=>n+e.size,0)+file.size>DOCUMENT_LIMITS.maxTotalBytes){report("Limite totale de 48 Mio atteinte.");break;}
         try{
