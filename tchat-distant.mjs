@@ -6,6 +6,7 @@ import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,createPollinationsAuthorization,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations} from "./tchat-pollinations.mjs?v=1";
+import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -19,6 +20,8 @@ let pollinationsModels=[];
 let pollinationsToken="";
 let pollinationsLoading=false;
 let pollinationsApproved=false;
+let sparktiatesModelsReady=[];
+let sparktiatesLoading=false;
 const KEY = "radio-salon-distant-v1";
 const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
@@ -34,7 +37,8 @@ const state = {
   validModels:new Set(), lastRender:0,
   memory:{root:"",events:[]},archives:[],includeArchives:true,
   researchIndex:0,engineChoice:"puter",researchModelChoice:"Qwen3.5-9B-q4f16_1-MLC",
-  hordeModel:"",hordeIndex:0,pollinationsModel:"",pollinationsIndex:0
+  hordeModel:"",hordeIndex:0,pollinationsModel:"",pollinationsIndex:0,
+  sparktiatesModel:"",sparktiatesIndex:0
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
@@ -66,7 +70,8 @@ function save(){
       researchIndex:state.researchIndex,engineChoice:state.engineChoice,
       researchModelChoice:state.researchModelChoice,
       hordeModel:state.hordeModel,hordeIndex:state.hordeIndex,
-      pollinationsModel:state.pollinationsModel,pollinationsIndex:state.pollinationsIndex
+      pollinationsModel:state.pollinationsModel,pollinationsIndex:state.pollinationsIndex,
+      sparktiatesModel:state.sparktiatesModel,sparktiatesIndex:state.sparktiatesIndex
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
   renderLineageStatus();
@@ -93,9 +98,11 @@ function restore(){
     state.archives=Array.isArray(d.archives)?d.archives.slice(-8).filter(x=>x&&typeof x.root==="string"):[];
     state.includeArchives=d.includeArchives!==false;
     state.researchIndex=Math.max(0,Number(d.researchIndex)||0);
-    state.engineChoice=["puter","research-local","horde","pollinations"].includes(d.engineChoice)?d.engineChoice:"puter";
+    state.engineChoice=["puter","research-local","horde","pollinations","sparktiates"].includes(d.engineChoice)?d.engineChoice:"puter";
     state.pollinationsModel=String(d.pollinationsModel||"").slice(0,220);
     state.pollinationsIndex=Math.max(0,Number(d.pollinationsIndex)||0);
+    state.sparktiatesModel=String(d.sparktiatesModel||"").slice(0,160);
+    state.sparktiatesIndex=Math.max(0,Number(d.sparktiatesIndex)||0);
     state.hordeModel=String(d.hordeModel||"").slice(0,200);
     state.hordeIndex=Math.max(0,Number(d.hordeIndex)||0);
     state.researchModelChoice=RESEARCH_MODELS.some(m=>m.id===d.researchModelChoice)
@@ -117,6 +124,10 @@ function renderLineageStatus(){
 function isResearchMode(){return state.engineChoice==="research-local";}
 function isHordeMode(){return state.engineChoice==="horde";}
 function isPollinationsMode(){return state.engineChoice==="pollinations";}
+function isSparktiatesMode(){return state.engineChoice==="sparktiates";}
+function sparktiatesStatus(value){
+  const el=$("sparktiatesEtat");if(el)el.textContent=value;
+}
 function pollinationsStatus(message){
   const node=$("pollinationsEtat");
   if(node)node.textContent=message;
@@ -130,7 +141,10 @@ function buttonStates(){
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading || hordeLoading || pollinationsLoading;
+  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading || hordeLoading || pollinationsLoading || sparktiatesLoading;
+  for(const id of ["sparktiatesAdresse","sparktiatesToken","sparktiatesModele","sparktiatesActualiser","sparktiatesPartagerContexte"]){
+    const el=$(id);if(el)el.disabled=state.busy || state.auto || sparktiatesLoading;
+  }
   for(const id of ["pollinationsAppKey","pollinationsConnecter","pollinationsDeconnecter","pollinationsActualiser","pollinationsModele","pollinationsPartagerContexte"]){
     const el=$(id);if(el)el.disabled=state.busy || state.auto || pollinationsLoading;
   }
@@ -140,7 +154,7 @@ function buttonStates(){
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
   $("dechargerRecherche").disabled=state.busy || researchLoading || !researchEngine;
-  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":isHordeMode()?"Salon AI Horde":isPollinationsMode()?"Salon Pollinations":"Salon prêt";
+  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":isHordeMode()?"Salon AI Horde":isPollinationsMode()?"Salon Pollinations":isSparktiatesMode()?"Salon SPARKTIATES":"Salon prêt";
 }
 function renderParts(){
   const host=$("parts");host.replaceChildren();
@@ -282,6 +296,7 @@ async function nextTour(){
   if(isResearchMode())return nextResearchTurn();
   if(isHordeMode())return nextHordeTurn();
   if(isPollinationsMode())return nextPollinationsTurn();
+  if(isSparktiatesMode())return nextSparktiatesTurn();
   try{
     const p=await available();
     if(!p.auth.isSignedIn()){
@@ -666,12 +681,103 @@ async function nextPollinationsTurn(){
     state.busy=false;state.current=null;state.activeCard=null;state.controller=null;render();buttonStates();
   }
 }
+async function refreshSparktiatesModels(){
+  if(state.busy || state.auto || sparktiatesLoading)return;
+  sparktiatesLoading=true;buttonStates();
+  sparktiatesStatus("Vérification de la passerelle SPARKTIATES et de ses modèles Ollama…");
+  try{
+    const endpoint=sparktiatesEndpoint($("sparktiatesAdresse").value);
+    const token=$("sparktiatesToken").value.trim();
+    const result=await sparktiatesModels({endpoint,token});
+    sparktiatesModelsReady=result;
+    const select=$("sparktiatesModele");
+    select.replaceChildren();
+    const empty=document.createElement("option");
+    empty.value="";empty.textContent="Choisir un modèle local réellement installé";
+    select.append(empty);
+    for(const model of result){
+      const option=document.createElement("option");
+      option.value=model.id;option.textContent=model.id;
+      select.append(option);
+    }
+    if(result.some(x=>x.id===state.sparktiatesModel))select.value=state.sparktiatesModel;
+    else{select.value="";state.sparktiatesModel="";}
+    save();
+    sparktiatesStatus(result.length
+      ?result.length+" modèle(s) Ollama disponibles sur ce serveur. Sélectionne le modèle à utiliser. Tours sans plafond logiciel."
+      :"SPARKTIATES répond, mais aucun modèle Ollama n'est installé. Aucun faux modèle ne sera proposé.");
+  }catch(e){
+    sparktiatesModelsReady=[];
+    state.sparktiatesModel="";
+    const select=$("sparktiatesModele");select.replaceChildren();
+    const empty=document.createElement("option");
+    empty.value="";empty.textContent="Serveur non vérifié";select.append(empty);
+    sparktiatesStatus("SPARKTIATES indisponible : "+String(e?.message||e)+
+      ". Sur téléphone, 127.0.0.1 n'est pas le PC ; il faut un point d'accès HTTPS sécurisé. Aucun tour lancé.");
+  }finally{sparktiatesLoading=false;buttonStates();}
+}
+async function nextSparktiatesTurn(){
+  if(state.busy)return;
+  const model=state.sparktiatesModel;
+  if(sparktiatesLoading || !model || !sparktiatesModelsReady.some(x=>x.id===model)){
+    state.auto=false;buttonStates();
+    status("SPARKTIATES : vérifie la connexion et choisis un modèle Ollama installé avant de discuter.");return;
+  }
+  if($("pieceUtiliser")?.checked && documentManager?.hasAttachments?.()){
+    state.auto=false;buttonStates();
+    status("SPARKTIATES n'analyse pas les pièces jointes dans ce mode texte ; désactive leur inclusion.");return;
+  }
+  const endpoint=$("sparktiatesAdresse").value.trim();
+  const token=$("sparktiatesToken").value.trim();
+  const role=RESEARCH_ROLES[state.sparktiatesIndex%RESEARCH_ROLES.length];
+  const messages=buildSparktiatesMessages({
+    history:state.messages,topic:$("sujet").value||state.sujet,
+    role:role.nom+" — "+role.specialite,
+    shareHistory:Boolean($("sparktiatesPartagerContexte").checked)
+  });
+  const current={origin:"ai",nom:"SPARKTIATES · "+role.nom,modele:model,
+    heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
+  state.messages.push(current);state.current=current;state.busy=true;
+  state.controller=new AbortController();
+  render();buttonStates();
+  status("SPARKTIATES : calcul réel dans Ollama (« "+model+" »). Sans crédits Pollinations ou Puter.");
+  try{
+    const response=await sparktiatesChat({
+      endpoint,token,model,messages,
+      maxTokens:boundedTokens($("longueur").value),signal:state.controller.signal
+    });
+    const normalized=cleanAnswer(response.text,state.participants);
+    const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
+    if(issue)throw Error("Réponse rejetée : "+issue);
+    current.texte=normalized;current.modele=response.model;
+    state.sparktiatesIndex++;state.tours++;
+    status("SPARKTIATES : réponse de "+response.model+" — tour "+state.tours+
+      ". Le prochain tour n'est pas plafonné par le logiciel.");
+    speech(current.nom,current.texte);
+  }catch(e){
+    state.messages=state.messages.filter(m=>m!==current);
+    state.auto=false;
+    status("SPARKTIATES : "+String(e?.name==="AbortError"?"requête interrompue":e?.message||e)+
+      ". Aucun réessai automatique ; les messages sont conservés.");
+  }finally{
+    state.busy=false;state.current=null;state.activeCard=null;state.controller=null;
+    render();buttonStates();
+  }
+}
 async function launchInfinity(mode="direct"){
   if(state.auto || state.busy)return;
-  if(researchLoading || hordeLoading || pollinationsLoading){status("Un catalogue ou moteur est en cours de chargement.");return;}
+  if(researchLoading || hordeLoading || pollinationsLoading || sparktiatesLoading){status("Un catalogue ou moteur est en cours de chargement.");return;}
   if(isResearchMode()){
     if(!researchEngine){status("Charge le modèle scientifique local avant de lancer un débat.");return;}
     if(!confirm("Lancer les tours scientifiques locaux ? Un unique modèle réel animera différents rôles méthodologiques : cela ne constitue pas une validation indépendante. Les calculs utilisent le GPU tant que l'onglet reste ouvert ; aucune facturation Puter."))return;
+  }else if(isSparktiatesMode()){
+    if(!state.sparktiatesModel || !sparktiatesModelsReady.some(x=>x.id===state.sparktiatesModel)){
+      status("SPARKTIATES : vérifie le serveur et son modèle Ollama avant de lancer le débat.");return;
+    }
+    if(!$("sparktiatesPartagerContexte").checked){
+      status("Pour un débat continu, coche d'abord le partage des extraits récents avec ton propre serveur.");return;
+    }
+    if(!confirm("Lancer les tours scientifiques SPARKTIATES sans plafond programmé ? Ton PC doit rester allumé, et chaque tour consommera du calcul et de l'énergie. Un seul modèle Ollama assurera plusieurs rôles, sans garantie de niveau doctorat. Arrêter interrompt la boucle."))return;
   }else if(isPollinationsMode()){
     if(!pollinationsToken)pollinationsToken=getPollinationsStoredToken();
     if(!pollinationsToken || !state.pollinationsModel || !pollinationsModels.some(m=>m.id===state.pollinationsModel)){
@@ -727,6 +833,7 @@ function stop(){
     ?"Arrêt du débat local demandé. Le calcul GPU peut encore se terminer."
     :isHordeMode()?"AI Horde : arrêt demandé. Une requête acceptée peut se poursuivre chez le travailleur."
     :isPollinationsMode()?"Pollinations : arrêt demandé. Une requête déjà acceptée peut avoir utilisé du Pollen."
+    :isSparktiatesMode()?"SPARKTIATES : arrêt demandé. Le modèle Ollama pourra achever le calcul en cours."
     :"Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
   buttonStates();
 }
@@ -752,7 +859,28 @@ function init(){
   $("moteurDialogue").value=state.engineChoice;
   $("hordeControls").hidden=!isHordeMode();
   $("pollinationsControls").hidden=!isPollinationsMode();
+  $("sparktiatesControls").hidden=!isSparktiatesMode();
   $("pollinationsPartagerContexte").checked=false; // Ne jamais conserver le consentement entre sessions.
+  $("sparktiatesPartagerContexte").checked=false;
+  $("sparktiatesActualiser").addEventListener("click",()=>void refreshSparktiatesModels());
+  $("sparktiatesModele").addEventListener("change",()=>{
+    const chosen=$("sparktiatesModele").value;
+    state.sparktiatesModel=sparktiatesModelsReady.some(x=>x.id===chosen)?chosen:"";
+    save();
+    sparktiatesStatus(state.sparktiatesModel
+      ?"Modèle local choisi : "+state.sparktiatesModel+". Les tours seront exécutés sur le serveur réellement connecté."
+      :"Choisis un modèle installé.");
+  });
+  $("sparktiatesAdresse").addEventListener("input",()=>{
+    sparktiatesModelsReady=[];state.sparktiatesModel="";
+    $("sparktiatesModele").replaceChildren();
+    sparktiatesStatus("Adresse modifiée : revérifie le serveur avant d'envoyer.");
+  });
+  $("sparktiatesToken").addEventListener("input",()=>{
+    sparktiatesModelsReady=[];state.sparktiatesModel="";
+    $("sparktiatesModele").replaceChildren();
+    sparktiatesStatus("Jeton modifié : revérifie le serveur avant d'envoyer.");
+  });
   try{
     $("pollinationsAppKey").value=sessionStorage.getItem(POLLINATIONS_APP)||"";
     pollinationsToken=getPollinationsStoredToken();
@@ -791,7 +919,8 @@ function init(){
   });
   $("moteurDialogue").addEventListener("change",()=>{
     const requested=$("moteurDialogue").value;
-    state.engineChoice=["puter","research-local","horde","pollinations"].includes(requested)?requested:"puter";
+    state.engineChoice=["puter","research-local","horde","pollinations","sparktiates"].includes(requested)?requested:"puter";
+    $("sparktiatesControls").hidden=!isSparktiatesMode();
     $("pollinationsControls").hidden=!isPollinationsMode();
     $("hordeControls").hidden=!isHordeMode();
     save();buttonStates();
@@ -801,6 +930,8 @@ function init(){
         ?"AI Horde choisi : actualise les modèles disponibles et sélectionne un modèle réel. Les anciens échanges ne sont pas envoyés sans ton accord."
       :isPollinationsMode()
         ?"Pollinations choisi : connecte-toi via son autorisation sécurisée. Les requêtes peuvent consommer du Pollen."
+      :isSparktiatesMode()
+        ?"SPARKTIATES choisi : indique une vraie passerelle Ollama accessible et son jeton ; aucun abonnement par tour."
         :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
   });
   selection.addEventListener("change",()=>{
@@ -812,6 +943,7 @@ function init(){
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
   if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
+  if(isSparktiatesMode())sparktiatesStatus("Mode SPARKTIATES sélectionné, serveur non encore vérifié : renseigne l'adresse et le jeton.");
   if(isPollinationsMode())pollinationsStatus(pollinationsToken
     ?"Session Pollinations disponible : actualise les modèles et choisis-en un."
     :"Crée une App Key pk_ puis autorise la connexion. Pollinations peut dépenser du Pollen.");
@@ -925,6 +1057,7 @@ function init(){
       ?"Mode local disponible : charge le modèle scientifique. Puter n'est pas requis."
       :isHordeMode()?"AI Horde est disponible sans Puter : actualise son catalogue."
       :isPollinationsMode()?"Pollinations est disponible indépendamment de Puter : autorise sa connexion."
+      :isSparktiatesMode()?"SPARKTIATES : vérifie ton serveur Ollama, sans aucun crédit externe."
       :"Mode mobile allégé : Puter sera chargé uniquement si tu cliques sur « Se connecter à Puter ». AI Horde fonctionne sans lui.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
@@ -933,6 +1066,7 @@ function init(){
     ?"Mode de recherche local sélectionné : charge un modèle scientifique pour parler sans Puter."
     :isHordeMode()?"AI Horde : actualise le catalogue et choisis un modèle pour commencer."
     :isPollinationsMode()?"Pollinations : connecte-toi et sélectionne un modèle pour commencer."
+    :isSparktiatesMode()?"SPARKTIATES : saisis l'adresse de ton serveur personnel et sélectionne un modèle Ollama."
     :"Connecte Puter pour utiliser des modèles distants. Le Salon public ne dépend pas de WSL.");
 }
 init();
