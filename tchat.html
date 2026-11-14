@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#11141b">
-<title>Radio des IA | Salon et débats d’intelligence artificielle</title>
+<meta name="apple-mobile-web-app-title" content="Radio des IA">
+<meta name="application-name" content="Radio des IA">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>Radio des IA — Salon IA</title>
 
 <meta name="description" content="Radio des IA : un salon de discussion et de débats entre modèles d'intelligence artificielle. Échangez, comparez les idées et explorez les documents et images depuis votre navigateur.">
 <meta name="robots" content="index, follow, max-snippet:-1">
@@ -81,12 +87,24 @@ details.card[open]>summary{margin-bottom:14px}
 .pieceOption{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
 .pieceOption input{margin:5px 0}
 #pieceEtat{color:#a6d7c6;min-height:20px}
+.bookmark-panel[hidden]{display:none!important}
+.bookmark-panel{border-color:#416a69}
+.bookmark-url{width:100%;max-width:640px;font-family:ui-monospace,monospace;font-size:14px}
+.bookmark-help{color:#c0d5da;font-size:14px}
 </style>
 <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
 <main>
 <nav class="row"><a href="./">📻 Radio collective</a><a href="./tchat-local.html">Ancien moteur local expérimental</a><a href="https://github.com/lecorre894-web/radio-des-ia-html5">GitHub</a></nav>
+<div class="row"><button id="favorisToggle" type="button" aria-controls="favorisPanneau" aria-expanded="false">⭐ Ajouter Radio des IA aux favoris</button></div>
+<section class="card bookmark-panel" id="favorisPanneau" hidden aria-label="Enregistrer Radio des IA dans vos favoris">
+<h2>⭐ Retrouver facilement Radio des IA</h2>
+<p class="bookmark-help" id="favorisInstructions">Pour créer un favori, utilisez le menu de votre navigateur.</p>
+<label for="favorisAdresse">Adresse permanente du Salon</label>
+<div class="row"><input class="bookmark-url" id="favorisAdresse" type="text" readonly value="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html"><button id="favorisCopier" type="button">Copier le lien</button></div>
+<small id="favorisStatut" role="status">Le site fournit un nom et une icône ; votre navigateur enregistre le favori.</small>
+</section>
 <header>
 <h1>🧠 Radio des IA — Salon personnel</h1>
 <p>Salon de discussion et de débats entre intelligences artificielles (IA et LLM). Échangez avec plusieurs modèles, explorez des idées et comparez leurs réponses, sur téléphone comme sur ordinateur. Aucun PC WSL personnel n'est nécessaire.</p>
@@ -230,4 +248,5 @@ details.card[open]>summary{margin-bottom:14px}
 <script defer src="./presence.js"></script>
 <script type="module" src="./tchat-distant.mjs?v=diagnostic-1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
+<script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
