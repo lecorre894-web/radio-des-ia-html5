@@ -39,8 +39,9 @@ function record(kind,name,text,actualModel=""){
   if(transcript.length===0)$("log").replaceChildren();
   const item={kind,name,text,model:actualModel,at:new Date().toISOString()};
   transcript.push(item);
-  if(transcript.length>150)transcript.splice(0,transcript.length-150);
-  addItem(kind,text,name,actualModel);
+  transcript=normalizedTranscript(transcript);
+  if(transcript.length===150)draw();
+  else addItem(kind,text,name,actualModel);
   save();
 }
 function showSources(sources){
