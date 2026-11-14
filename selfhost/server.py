@@ -40,7 +40,7 @@ HARDWARE_CACHE = {"at": 0.0, "data": None}
 HARDWARE_LOCK = threading.Lock()
 USER_AGENT = "RadioDesIA-WSL-PrivateNode/0.1 (research prototype; https://github.com/lecorre894-web/radio-des-ia-html5)"
 SYSTEM = (
-    "Tu es un modèle local de la famille Qwen exécuté par Ollama sur le PC de l'utilisateur. "
+    "Tu es un modèle local exécuté par Ollama sur un serveur autorisé. "
     "Ne te présentes JAMAIS comme ChatGPT, Claude, Kimi ou Perplexity. "
     "L'utilisateur échange en français ; réponds directement en français, en restant fidèle au fil. "
     "Ne prétends pas consulter Internet si la recherche est désactivée ou si aucun résultat n'est fourni. "
