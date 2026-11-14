@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
-from resources import FAMILIES
+from resources import FAMILIES, plan_topology
 
 BASE = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -355,6 +355,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
             self.cluster.refresh()
             return self.reply(200, self.cluster.status())
+        if path == "/api/v1/plan":
+            if not self.auth_ok():
+                return self.reply(403, {"error": "Origine ou jeton invalide."})
+            try:
+                document=json.loads((BASE / "topology.plan.json").read_text(encoding="utf-8"))
+                if document.get("kind") != "capacity_plan_only_not_live_cluster":
+                    raise ValueError("Type de plan invalide.")
+                return self.reply(200, plan_topology(**document["assumptions"]))
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                return self.reply(503, {"error": "Plan de simulation indisponible ("+
+                                   type(error).__name__+")."})
         assets = {
             "/": ("cluster-console.html", "text/html; charset=utf-8"),
             "/cluster-console.mjs": ("cluster-console.mjs", "text/javascript; charset=utf-8"),
