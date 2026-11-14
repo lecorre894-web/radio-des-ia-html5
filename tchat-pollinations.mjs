@@ -7,6 +7,7 @@ export const POLLINATIONS_BASE = "https://gen.pollinations.ai";
 export const POLLINATIONS_AUTH = "https://enter.pollinations.ai/authorize";
 export const POLLINATIONS_TOKEN = "https://enter.pollinations.ai/api/oauth/token";
 export const POLLINATIONS_CALLBACK = "https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html";
+export const POLLINATIONS_CLIENT_ID = "https://lecorre894-web.github.io/radio-des-ia-html5/pollinations-client.json";
 export const POLLINATIONS_PENDING = "radio-pollinations-pkce-v1";
 export const POLLINATIONS_ACCESS = "radio-pollinations-access-v1";
 export const POLLINATIONS_APP = "radio-pollinations-client-v1";
@@ -68,9 +69,12 @@ export function secureRandom(cryptoRef=globalThis.crypto){
   if(!cryptoRef?.getRandomValues)throw Error("Générateur aléatoire sécurisé indisponible.");
   return base64url(cryptoRef.getRandomValues(new Uint8Array(32)));
 }
-export async function createPollinationsAuthorization({clientId,cryptoRef=globalThis.crypto,redirectUri=POLLINATIONS_CALLBACK}={}){
-  if(!/^pk_[A-Za-z0-9_-]{4,200}$/.test(String(clientId||"")))
-    throw Error("Clé publique d'application Pollinations (pk_) requise.");
+export async function createPollinationsAuthorization({clientId=POLLINATIONS_CLIENT_ID,cryptoRef=globalThis.crypto,redirectUri=POLLINATIONS_CALLBACK}={}){
+  // OAuth Client ID Metadata : une URL HTTPS publique remplace une app key enregistrée.
+  // Les clés pk_ personnalisées restent possibles, mais leur redirect_uri doit être déclaré par leur propriétaire.
+  if(clientId!==POLLINATIONS_CLIENT_ID &&
+      !/^pk_[A-Za-z0-9_-]{4,200}$/.test(String(clientId||"")))
+    throw Error("Identité Pollinations invalide : document officiel de la Radio ou App Key pk_ enregistrée.");
   if(!cryptoRef?.subtle?.digest)throw Error("Cryptographie Web sécurisée indisponible.");
   const verifier=secureRandom(cryptoRef);
   const state=secureRandom(cryptoRef);
@@ -88,6 +92,44 @@ async function parseJSON(response){
   const str=await response.text();
   try{return JSON.parse(str);}catch{throw Error("Réponse non JSON (HTTP "+response.status+").");}
 }
+/**
+ * Préflight sans jeton pour éviter un renvoi vers un consentement voué à échouer.
+ * Le mode Radio utilise son document public ; une clé pk_ tierce est validée
+ * avec l'URI complète de retour. La clé pk_ est publique (pas un secret sk_).
+ */
+export async function verifyPollinationsClient({clientId=POLLINATIONS_CLIENT_ID,
+    redirectUri=POLLINATIONS_CALLBACK,fetcher=fetch}={}) {
+  if(clientId===POLLINATIONS_CLIENT_ID){
+    const response=await fetcher(POLLINATIONS_CLIENT_ID,{method:"GET",mode:"cors",cache:"no-store"});
+    if(!response.ok)throw Error("Document OAuth de la Radio non publié (HTTP "+response.status+").");
+    let json;
+    try{json=await response.json();}
+    catch{throw Error("Le document OAuth de la Radio est illisible.");}
+    if(json?.client_id!==POLLINATIONS_CLIENT_ID ||
+       !Array.isArray(json?.redirect_uris) || !json.redirect_uris.includes(redirectUri) ||
+       json?.token_endpoint_auth_method!=="none")
+      throw Error("Document OAuth incohérent : identifiant ou URL de retour non reconnus.");
+    return {found:true,appName:String(json.client_name||"Radio des IA")};
+  }
+  if(!/^pk_[A-Za-z0-9_-]{4,200}$/.test(String(clientId||"")))
+    throw Error("Clé d'application pk_ invalide ; n'utilise jamais de clé sk_ dans ce champ.");
+  const uri="https://enter.pollinations.ai/api/app-lookup?client_id="+
+    encodeURIComponent(clientId)+"&redirect_uri="+encodeURIComponent(redirectUri);
+  let response;
+  try{response=await fetcher(uri,{method:"GET",mode:"cors",cache:"no-store"});}
+  catch{throw Error("Vérification de l'application Pollinations indisponible : essaie la connexion directe sans clé pk_.");}
+  if(!response.ok)throw Error("Vérification de l'application refusée par Pollinations (HTTP "+response.status+").");
+  let data;
+  try{data=await response.json();}
+  catch{throw Error("Réponse de vérification Pollinations invalide.");}
+  if(data?.found!==true)
+    throw Error("Clé pk_ non reconnue ou URL de retour non enregistrée. Dans Pollinations → App, ajoute exactement : "+redirectUri+
+      " ; ou efface la clé pour utiliser directement l'identité Radio des IA.");
+  if(Array.isArray(data.redirectUris) && !data.redirectUris.includes(redirectUri))
+    throw Error("La clé pk_ n'autorise pas l'URL exacte de la Radio : "+redirectUri);
+  return {found:true,appName:String(data.appName||"Application Pollinations")};
+}
+
 export async function exchangePollinationsCode({code,state,pending,fetcher=fetch,now=Date.now()}={}){
   if(!pending || pending.state!==state || typeof code!=="string" || !code)
     throw Error("Retour d'authentification Pollinations invalide (état CSRF ou code absent).");
