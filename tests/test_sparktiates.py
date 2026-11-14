@@ -64,7 +64,7 @@ class SparktiatesTests(unittest.TestCase):
         self.assertIn("spark-001",result["failed_host_ids"])
 
     def test_epyc_memory_caps_under_virtualization(self):
-        plan={**SMALL,"epyc_ram_gb":512}
+        plan={**SMALL,"epyc_ram_gb":512,"epyc_vms":6}  # 6 × 64 Gio = 384 Gio, soit 75 % de RAM
         r=sparktiates.simulate(plan,sparktiates.default_tasks(inference=0,compute=45))
         self.assertLessEqual(r["peak_ram_gib_per_host"]["epyc-001"],384)
         self.assertLessEqual(r["peak_concurrent_jobs_per_host"]["epyc-001"],8)
