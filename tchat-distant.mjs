@@ -2,11 +2,14 @@ import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPer
 import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=lineage-1";
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
+import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
 let documentManager=null;
 let reactionBoard=null;
+let researchEngine=null;
+let researchLoading=false;
 const KEY = "radio-salon-distant-v1";
 const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
@@ -20,7 +23,8 @@ const state = {
   participants: structuredClone(START), messages: [], sujet:"", next:0, tours:0,
   auto:false, mode:"direct", perplexityIntroduced:true, kimiIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0,
-  memory:{root:"",events:[]},archives:[],includeArchives:true
+  memory:{root:"",events:[]},archives:[],includeArchives:true,
+  researchIndex:0,engineChoice:"puter",researchModelChoice:RESEARCH_MODELS[0].id
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
@@ -48,7 +52,9 @@ function save(){
       sujet:state.sujet, next:state.next, tours:state.tours,
       perplexityIntroduced:state.perplexityIntroduced,
       kimiIntroduced:state.kimiIntroduced,
-      memory:state.memory,archives:state.archives,includeArchives:state.includeArchives
+      memory:state.memory,archives:state.archives,includeArchives:state.includeArchives,
+      researchIndex:state.researchIndex,engineChoice:state.engineChoice,
+      researchModelChoice:state.researchModelChoice
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
   renderLineageStatus();
@@ -74,6 +80,10 @@ function restore(){
     state.memory=updateLineageMemory(d.memory,state.messages);
     state.archives=Array.isArray(d.archives)?d.archives.slice(-8).filter(x=>x&&typeof x.root==="string"):[];
     state.includeArchives=d.includeArchives!==false;
+    state.researchIndex=Math.max(0,Number(d.researchIndex)||0);
+    state.engineChoice=d.engineChoice==="research-local"?"research-local":"puter";
+    state.researchModelChoice=RESEARCH_MODELS.some(m=>m.id===d.researchModelChoice)
+      ?d.researchModelChoice:RESEARCH_MODELS[0].id;
   }catch{}
 }
 function renderLineageStatus(){
@@ -88,6 +98,8 @@ function renderLineageStatus(){
       " · "+state.archives.length+" ancien(s) Salon(s) conservé(s).";
   }
 }
+function isResearchMode(){return state.engineChoice==="research-local";}
+function researchStatus(value){const indicator=$("rechercheEtat");if(indicator)indicator.textContent=value;}
 function buttonStates(){
   $("tour").disabled=state.busy;
   $("infini").disabled=state.busy || state.auto;
@@ -95,7 +107,11 @@ function buttonStates(){
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":"Salon prêt";
+  $("moteurDialogue").disabled=state.busy || researchLoading;
+  $("modeleRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
+  $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
+  $("dechargerRecherche").disabled=state.busy || researchLoading || !researchEngine;
+  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":"Salon prêt";
 }
 function renderParts(){
   const host=$("parts");host.replaceChildren();
@@ -234,6 +250,7 @@ function speech(name,text){
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function nextTour(){
   if(state.busy)return;
+  if(isResearchMode())return nextResearchTurn();
   try{
     const p=available();
     if(!p.auth.isSignedIn()){
@@ -307,14 +324,90 @@ async function nextTour(){
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;render();buttonStates();
   }
 }
+async function loadResearch(){
+  if(state.busy || researchLoading || researchEngine)return;
+  researchLoading=true;buttonStates();
+  const modelId=$("modeleRecherche").value;
+  try{
+    researchStatus("Vérification du GPU et du catalogue réel du modèle…");
+    const {loadResearchEngine}=await import("./tchat-recherche-local.mjs?v=1");
+    const result=await loadResearchEngine({
+      modelId,onProgress:(message)=>researchStatus(message)
+    });
+    researchEngine=result;
+    state.researchModelChoice=modelId;
+    save();
+    researchStatus("Prêt : "+modelId+". Calcul sur cet appareil sans Puter ni frais de génération par tour. Aucun doctorat garanti.");
+    status("Moteur de recherche chargé. Sélectionne « Recherche locale » et utilise le Salon habituel.");
+  }catch(e){
+    researchStatus("Chargement impossible : "+String(e?.message||e)+
+      ". Aucun remplacement automatique par une petite IA ; Puter reste disponible.");
+  }finally{researchLoading=false;buttonStates();}
+}
+async function unloadResearch(){
+  if(state.busy || researchLoading || !researchEngine)return;
+  researchLoading=true;buttonStates();
+  try{await researchEngine.unload();}finally{
+    researchEngine=null;researchLoading=false;buttonStates();
+    researchStatus("Modèle local déchargé. Les messages existants sont conservés.");
+  }
+}
+async function nextResearchTurn(){
+  if(state.busy)return;
+  if(!researchEngine){
+    state.auto=false;buttonStates();
+    status("Mode scientifique local choisi, mais modèle non chargé. Clique d'abord sur « Charger le modèle scientifique ».");
+    return;
+  }
+  if($("pieceUtiliser")?.checked && documentManager?.hasAttachments?.()){
+    state.auto=false;buttonStates();
+    status("Le moteur local ne traite pas les fichiers joints. Désactive « Inclure les textes extraits » ou repasse à Puter.");
+    return;
+  }
+  const role=RESEARCH_ROLES[state.researchIndex%RESEARCH_ROLES.length];
+  const prompts=researchPrompts({
+    history:state.messages,topic:$("sujet").value||state.sujet,
+    role,round:state.researchIndex
+  });
+  const current={
+    origin:"ai",nom:"Conseil local · "+role.nom,
+    modele:researchEngine.modelId,
+    heure:new Date().toLocaleTimeString("fr-FR"),texte:""
+  };
+  state.messages.push(current);state.current=current;state.busy=true;render();buttonStates();
+  status("Recherche locale sur "+researchEngine.modelId+" · rôle "+role.nom+"…");
+  try{
+    const answer=await researchEngine.complete(prompts,boundedTokens($("longueur").value));
+    const normalized=cleanAnswer(answer,state.participants);
+    const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
+    if(issue)throw Error("Réponse rejetée : "+issue);
+    current.texte=normalized;
+    state.researchIndex++;
+    state.tours++;
+    status(role.nom+" : tour local n°"+state.tours+". Aucun appel Puter.");
+    speech(role.nom,current.texte);
+  }catch(e){
+    state.messages=state.messages.filter(m=>m!==current);
+    state.auto=false;
+    status("Recherche locale interrompue : "+String(e?.message||e)+". Les messages précédents sont conservés.");
+  }finally{
+    state.busy=false;state.current=null;state.activeCard=null;render();buttonStates();
+  }
+}
 async function launchInfinity(mode="direct"){
   if(state.auto || state.busy)return;
-  if(!window.puter?.auth?.isSignedIn()){status("Connecte Puter avant de lancer ∞.");return;}
+  if(researchLoading){status("Le moteur local charge encore. Attends son initialisation.");return;}
+  if(isResearchMode()){
+    if(!researchEngine){status("Charge le modèle scientifique local avant de lancer un débat.");return;}
+    if(!confirm("Lancer les tours scientifiques locaux ? Un unique modèle réel animera différents rôles méthodologiques : cela ne constitue pas une validation indépendante. Les calculs utilisent le GPU tant que l'onglet reste ouvert ; aucune facturation Puter."))return;
+  }else{
+    if(!window.puter?.auth?.isSignedIn()){status("Connecte Puter avant de lancer ∞.");return;}
+    const question=mode==="debate"
+      ?"Lancer le DÉBAT IA ↔ IA ? Les modèles vont se répondre, proposer des objections et des questions, même sans message humain."
+      :"Lancer la discussion automatique entre IA ?";
+    if(!confirm(question+"\n\nChaque tour consomme des crédits Puter. Il n'y a pas de nombre maximal programmé et le Salon s'arrête avec Arrêter, la fermeture de la page, ou une erreur. Continuer ?"))return;
+  }
   if(mode!=="direct" && mode!=="debate")throw Error("Mode de discussion inconnu");
-  const question=mode==="debate"
-    ?"Lancer le DÉBAT IA ↔ IA ? Les modèles vont se répondre, proposer des objections et des questions, même sans message humain."
-    :"Lancer la discussion automatique entre IA ?";
-  if(!confirm(question+"\n\nChaque tour consomme des crédits Puter. Il n'y a pas de nombre maximal programmé et le Salon s'arrête avec Arrêter, la fermeture de la page, ou une erreur. Continuer ?"))return;
   state.mode=mode;
   state.sujet=$("sujet").value.trim();
   save();
@@ -332,8 +425,9 @@ async function launchInfinity(mode="direct"){
 function stop(){
   state.auto=false;
   if(state.controller)state.controller.abort();
+  if(isResearchMode())researchEngine?.interrupt();
   if("speechSynthesis" in window)speechSynthesis.cancel();
-  status("Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
+  status(isResearchMode()?"Arrêt du débat local demandé. Le calcul GPU peut encore se terminer.":"Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
   buttonStates();
 }
 function exportConversation(){
@@ -346,7 +440,31 @@ function exportConversation(){
   setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
 function init(){
-  restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
+  restore();
+  const selection=$("modeleRecherche");
+  for(const model of RESEARCH_MODELS){
+    const option=document.createElement("option");
+    option.value=model.id;
+    option.textContent=model.name+" · environ "+(model.vramMB/1024).toFixed(1)+" Gio VRAM";
+    selection.append(option);
+  }
+  selection.value=state.researchModelChoice;
+  $("moteurDialogue").value=state.engineChoice;
+  $("moteurDialogue").addEventListener("change",()=>{
+    state.engineChoice=$("moteurDialogue").value==="research-local"?"research-local":"puter";
+    save();buttonStates();
+    status(isResearchMode()
+      ?"Moteur scientifique local sélectionné : charge un modèle puis utilise les commandes habituelles."
+      :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
+  });
+  selection.addEventListener("change",()=>{
+    if(researchEngine){selection.value=researchEngine.modelId;return;}
+    state.researchModelChoice=selection.value;save();
+  });
+  $("chargerRecherche").addEventListener("click",()=>void loadResearch());
+  $("dechargerRecherche").addEventListener("click",()=>void unloadResearch());
+  $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
+  if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
   $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
     const button=$("quotaVoir"),node=$("quotaEtat");
     if(!node||!button)return;
@@ -448,12 +566,15 @@ function init(){
     saveDraft();
     state.auto=false;
     if(state.controller)state.controller.abort();
+    researchEngine?.interrupt();
   });
   if(!window.puter){
     status("Bibliothèque Puter.js indisponible. Un bloqueur de script ou le réseau peut être en cause.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
     void loadCatalog();
-  }else status("Connecte Puter pour utiliser des modèles distants. Le Salon public ne dépend pas de WSL.");
+  }else status(isResearchMode()
+    ?"Mode de recherche local sélectionné : charge un modèle scientifique pour parler sans Puter."
+    :"Connecte Puter pour utiliser des modèles distants. Le Salon public ne dépend pas de WSL.");
 }
 init();
