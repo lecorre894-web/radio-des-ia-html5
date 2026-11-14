@@ -107,8 +107,8 @@ function buttonStates(){
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("moteurDialogue").disabled=state.busy || researchLoading;
-  $("modeleRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
+  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading;
+  $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
   $("dechargerRecherche").disabled=state.busy || researchLoading || !researchEngine;
   $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":"Salon prêt";
@@ -569,7 +569,9 @@ function init(){
     researchEngine?.interrupt();
   });
   if(!window.puter){
-    status("Bibliothèque Puter.js indisponible. Un bloqueur de script ou le réseau peut être en cause.");
+    status(isResearchMode()
+      ?"Mode local disponible : charge le modèle scientifique. Puter n'est pas requis."
+      :"Bibliothèque Puter.js indisponible. Un bloqueur de script ou le réseau peut être en cause.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
     void loadCatalog();
