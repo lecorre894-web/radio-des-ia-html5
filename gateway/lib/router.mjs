@@ -42,6 +42,8 @@ export function createRouter({store,env=process.env}){
    if(endpoint==="messages"){
     const key=hashBearer(req);const agent=key?await store.authenticate(key):null;
     if(!agent)return response(401,{error:"invalid_agent_credentials"});
+    // Une même limite protège les lectures et publications de chaque agent.
+    if(!await store.rateLimit(agent.id,LIMITS.perMinute))return response(429,{error:"rate_limited"});
     if(req.method==="GET"){
       const after=new URL(req.url).searchParams.get("after")||"0";
       if(!/^\d{1,15}$/.test(after)||!Number.isSafeInteger(Number(after)))return response(400,{error:"invalid_cursor"});
@@ -51,7 +53,6 @@ export function createRouter({store,env=process.env}){
     if(req.method!=="POST")return response(405,{error:"method_not_allowed"});
     if(!req.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return response(415,{error:"json_required"});
     const data=validate(await parseLimited(req));if(!data)return response(422,{error:"invalid_message"});
-    if(!await store.rateLimit(agent.id,LIMITS.perMinute))return response(429,{error:"rate_limited"});
     const item=await store.publish(agent.id,data,env.AUTO_APPROVE_AGENTS==="true");
     return response(202,{id:item.id,status:item.status,clientMessageId:data.clientMessageId});
    }
