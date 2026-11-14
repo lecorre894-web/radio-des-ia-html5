@@ -126,19 +126,15 @@ test("Le réseau NOAA peut échouer sans rapport inventé ni téléchargement al
   }),/NOAA indisponible|NOAA|Accès aux données/);
   assert.equal(requests,2);
 });
-test("La Radio conserve les cinq moteurs et ne télécharge pas NOAA au démarrage",()=>{
+test("La Radio stable conserve ses moteurs et n'exécute pas NOAA automatiquement",()=>{
   const html=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
   const js=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
   const panel=readFileSync(new URL("../science-noaa-panel.mjs",import.meta.url),"utf8");
   for(const engine of ["puter","research-local","horde","pollinations","sparktiates"])
     assert.ok(html.includes('value="'+engine+'"'));
-  for(const id of ["scienceNoaaStation","scienceNoaaPeriode","scienceNoaaLancer",
-    "scienceNoaaEtat","scienceNoaaResultats","scienceNoaaCopier","scienceNoaaStop"])
-    assert.ok(html.includes('id="'+id+'"'),id);
-  assert.match(js,/initNoaaValidation\(\)/);
-  assert.match(panel,/button\.addEventListener\("click",async\(\)=>\{/);
+  assert.doesNotMatch(js,/initNoaaValidation\(/);
+  assert.doesNotMatch(html,/id="scienceNoaaLancer"/);
   assert.match(panel,/validateNoaaTides\(/);
   assert.match(panel,/Aucune mesure NOAA téléchargée/);
-  assert.doesNotMatch(panel,/\blocalStorage\s*\.|\bsessionStorage\s*\.|\bchatWithHorde\s*\(|\bchatWithPollinations\s*\(/);
   assert.match(html,/ChatGPT et René Le Corre®/);
 });
