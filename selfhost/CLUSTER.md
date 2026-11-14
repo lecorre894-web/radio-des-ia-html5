@@ -41,3 +41,35 @@ Le nœud distant doit être le même serveur server.py, exécuté sur un ordinat
 ## Statut et limites
 
 Ce cluster est une architecture additive, et non le plus grand serveur du monde. Son débit réel dépend du nombre de GPU/CPU, de la VRAM, du réseau et des modèles installés. La capacité doit être mesurée sur matériel réel. Le système est expérimental et les tests automatiques ne remplacent pas des benchmarks sur WSL.
+
+## Extension NVIDIA DGX Spark + AMD EPYC (hypothèse de dimensionnement)
+
+Le cluster accepte désormais des nœuds NVIDIA DGX Spark / GB10 ARM64 (20 cœurs ARM et 128 Gio de RAM unifiée dans le système standard), AMD EPYC 9006 Zen 6 x86-64 (jusqu'à 256 cœurs par socket) et EPYC 9965 (192 cœurs par socket). Le système vérifie le rapport /health réel des workers avant de compter le nœud comme disponible. Des machines différentes ne combinent pas leur RAM en une mémoire unique.
+
+### Grand scénario ADDITIF, et non matériel installé
+
+Le fichier topology.plan.json et le script plan_hardware.py décrivent :
+- 64 DGX Spark imaginés : 64 × 128 Gio = 8192 Gio (8 Tio), répartis entre 64 machines ; 1280 cœurs CPU ARM théoriques.
+- 32 serveurs EPYC 9006 à deux sockets : au maximum 32 × 2 × 256 = 16 384 cœurs x86, sous réserve de disposer effectivement de ces processeurs.
+- Hypothèse de 2048 Gio de RAM DDR5 par serveur EPYC : 65 536 Gio (64 Tio) au total, répartis entre les serveurs. Ce chiffre est une hypothèse d'équipement et non une capacité constructeur garantie.
+- Mémoire totale projetée = 73 728 Gio (72 Tio) répartis. Il ne s'agit PAS d'une RAM commune.
+- Virtualisation projetée : 4 conteneurs ARM par Spark (256), 16 VM x86 par EPYC (512), soit 768 unités virtuelles projetées et AUCUNE créée.
+- Les contraintes de mémoire réservent au moins 64 Gio sur chaque Spark pour le système et les modèles, et au moins 25 % de la RAM EPYC pour l'hôte.
+
+Le script python3 plan_hardware.py ne fait qu'afficher ce scénario : online_nodes = 0 et usable_slots = 0. Il ne télécharge rien, ne facture rien et ne crée pas de machines. Les VM et conteneurs ne se transforment jamais en cœurs ou RAM physiques.
+
+### Activation réelle et contrôle de ressources
+
+Dans cluster.nodes.json, le champ optionnel hardware_family peut valoir spark-gb10, epyc-9006, epyc-9965, wsl-rtx ou auto. Un worker qui ne correspond pas au profil CPU et à l'architecture déclarés est refusé. La ressource instrumentée comprend l'architecture, les processeurs logiques vus par l'OS, MemTotal, MemAvailable et, si disponible, les GPU vus par nvidia-smi.
+
+La demande d'inférence peut inclure hardware_family et min_available_ram_gb afin de choisir seulement un nœud réellement compatible et disposant de mémoire libre. Sans mesure RAM, il ne peut pas satisfaire une condition de mémoire.
+
+Les DGX Spark sont des systèmes ARM64 indépendants, non des processeurs que l'on ajoute sur une carte mère EPYC. Les images de conteneurs ARM64 et x86-64 diffèrent. Le partage d'un seul grand modèle entre plusieurs DGX Spark exige une pile d'inférence distribuée compatible et un réseau ConnectX rapide ; ce cluster répartit pour le moment des requêtes indépendantes entre nœuds.
+
+Sources constructeur :
+- https://www.nvidia.com/fr-fr/products/workstations/dgx-spark/
+- https://build.nvidia.com/spark/connect-multiple-sparks/overview
+- https://www.amd.com/en/blogs/2026/agentic-ai-amd-epyc-9005-cpus-wins-today-epyc-9006.html
+- https://www.amd.com/en/products/processors/server/epyc/9005-series/amd-epyc-9965.html
+
+Statut : infrastructure expérimentale sur GitHub seulement, aucune machine DGX Spark ou EPYC ajoutée ni validation physique exécutée sur WSL.
