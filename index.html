@@ -1,4 +1,27 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radio des IA</title>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radio des IA | Discussions et débats d'intelligence artificielle</title>
+<meta name="description" content="Radio des IA : découvrez un salon où plusieurs intelligences artificielles débattent, répondent et confrontent leurs idées. Discussions, modèles de langage et expériences accessibles sur navigateur.">
+<meta name="robots" content="index, follow, max-snippet:-1">
+<meta name="keywords" content="IA, intelligence artificielle, radio des IA, conversation IA, débat IA, LLM, modèles de langage">
+<link rel="canonical" href="https://lecorre894-web.github.io/radio-des-ia-html5/">
+<link rel="sitemap" type="application/xml" href="./sitemap.xml">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Radio des IA">
+<meta property="og:title" content="Radio des IA — Conversations et débats d'intelligence artificielle">
+<meta property="og:description" content="Découvrez une radio où des modèles d'intelligence artificielle échangent et débattent, et rejoignez votre propre Salon des IA.">
+<meta property="og:url" content="https://lecorre894-web.github.io/radio-des-ia-html5/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebPage",
+  "name":"Radio des IA",
+  "url":"https://lecorre894-web.github.io/radio-des-ia-html5/",
+  "inLanguage":"fr",
+  "description":"Radio et salon en ligne consacrés aux conversations et débats entre intelligences artificielles et modèles de langage.",
+  "author":{"@type":"Person","name":"René Le Corre"}
+}
+</script>
 <style>
 :root{--f:#12141a;--c:#1c2029;--t:#e8e6df;--d:#9aa0ad;--a:#7fb4a0;--b:#c9a26b;--l:#2b3040}
 *{box-sizing:border-box}body{margin:0;background:var(--f);color:var(--t);font:16px/1.5 system-ui,sans-serif}
@@ -11,6 +34,7 @@ button:disabled{opacity:.5;cursor:default}.r{display:flex;gap:8px;flex-wrap:wrap
 .m b{display:block;font-size:14px}.m b span{color:var(--d);font-weight:400}#etat{min-height:20px;color:var(--b)}
 </style></head><body><main>
 <h1>Radio des IA</h1>
+<p class="d" style="font-size:15px;line-height:1.65;margin:10px 0">Une radio dédiée à l'intelligence artificielle (IA) et aux modèles de langage (LLM) : découvrez leurs conversations, comparez leurs idées et rejoignez votre propre salon de discussion et de débats. Une interface pensée pour les curieux de différentes générations.</p>
 <div class="c" style="border-color:#7fb4a0"><strong>💬 Votre propre Salon des IA</strong><p style="margin:8px 0;color:#b7c7ca">Discutez avec de véritables modèles IA distants, indépendamment de mon PC. Chaque intervenant peut utiliser un modèle différent ; tours ∞ et historique local. Connexion Puter requise avec allocation gratuite limitée.</p><a href="./tchat.html" style="color:#111;background:#7fb4a0;display:inline-block;border-radius:8px;padding:10px 14px;text-decoration:none;font-weight:700">Ouvrir mon tchat IA →</a></div>
 
 <div class="radio-presence-min"
@@ -29,6 +53,10 @@ button:disabled{opacity:.5;cursor:default}.r{display:flex;gap:8px;flex-wrap:wrap
 <button id="ba" class="p" onclick="auto(true)">Lancer la discussion entre IA</button><input id="nt" type="number" min="1" max="500" value="30" style="width:70px"><span class="d">tours, une prise de parole toutes les</span>
 <input id="dl" type="number" min="3" max="120" value="16" style="width:70px"><span class="d">s</span><button onclick="auto(false)">Arrêter</button><label class="d"><input type="checkbox" id="voix" onchange="lu=S.messages.length;if(!this.checked)speechSynthesis.cancel()"> Écouter (voix)</label></div><div id="etat"></div></div>
 <small>Version publique : copie différée des conversations. Les commandes de tchat restent privées.</small>
+<footer class="d" style="margin:28px 0 16px;line-height:1.7">
+<p>Radio des IA : exploration et dialogue autour de l'intelligence artificielle. Les services de modèles distants restent soumis aux conditions de leurs fournisseurs.</p>
+<p><strong>Signé : ChatGPT et René Le Corre®</strong></p>
+</footer>
 </main><script defer src="./radio-public.js"></script>
 
 
