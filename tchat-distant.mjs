@@ -3,7 +3,7 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
-import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
+import {listHordeModels,listHordeStatus,enrichHordeModels,recommendHordeModel,hordeTokenBudget,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=3";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
@@ -16,6 +16,7 @@ let researchEngine=null;
 let researchLoading=false;
 let hordeModels=[];
 let hordeLoading=false;
+let hordeQueueStatsAvailable=false;
 let pollinationsModels=[];
 let pollinationsToken="";
 let pollinationsLoading=false;
@@ -240,6 +241,8 @@ function buttonStates(){
   }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
+  $("hordeRapide").disabled=state.busy || state.auto || hordeLoading || !hordeModels.length;
+  $("hordeLongueur").disabled=state.busy || state.auto || hordeLoading;
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
@@ -570,27 +573,42 @@ async function refreshHordeModels(){
   hordeStatus("Interrogation du catalogue des travailleurs AI Horde en ligne…");
   try{
     const available=await listHordeModels();
-    hordeModels=available;
+    // Statistiques du réseau : file ETA, nombre de travailleurs et charge.
+    // Échec/CORS => catalogue principal reste fonctionnel, sans fausse estimation.
+    let stats=[];
+    try {
+      const signal=typeof AbortSignal.timeout==="function" ? AbortSignal.timeout(6500) : undefined;
+      stats=await listHordeStatus({signal});
+    }catch{}
+    hordeQueueStatsAvailable=stats.length>0;
+    hordeModels=enrichHordeModels(available,stats);
     const node=$("hordeModele");
     node.replaceChildren();
     const placeholder=document.createElement("option");
     placeholder.value="";placeholder.textContent="Choisissez un modèle réellement disponible";
     node.append(placeholder);
-    for(const item of available){
+    for(const item of hordeModels){
       const option=document.createElement("option");
       option.value=item.id;
-      option.textContent=item.id+(item.workers!==null?" · "+item.workers+" travailleurs":"")+
+      const queueHint=Number.isFinite(item.etaSeconds)
+        ?" · file estimée ~"+Math.ceil(item.etaSeconds/60)+" min":"";
+      option.textContent=item.id+
+        (item.workers!==null?" · "+item.workers+" travailleurs":"")+queueHint+
         (item.context!==null?" · contexte "+item.context:"");
       node.append(option);
     }
-    if(available.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
+    if(hordeModels.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
     else {
       node.value="";
       state.hordeModel="";
     }
     save();
     hordeStatus(available.length
-      ?available.length+" modèles communautaires annoncés en ligne. Choisis-en un. Leur qualité scientifique et disponibilité ne sont pas garanties."
+      ?available.length+" modèles en ligne. "+
+        (hordeQueueStatsAvailable
+          ?"Files indicatives récupérées : le temps d'un appel peut différer de l'estimation."
+          :"Estimation de file indisponible ; le nombre de travailleurs n'assure pas une réponse rapide.")+
+        " Tu peux choisir « ⚡ Choisir un modèle avec moins d'attente (≥ 7B) » ou garder ton modèle."
       :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; Puter et le mode local restent disponibles.");
   }catch(e){
     hordeModels=[];
@@ -600,6 +618,22 @@ async function refreshHordeModels(){
     hordeStatus("Catalogue AI Horde indisponible : "+String(e?.message||e)+
       ". Si le navigateur bloque CORS, aucun appel de génération n'est lancé. Les autres moteurs sont préservés.");
   }finally{hordeLoading=false;buttonStates();}
+}
+function chooseFasterHorde(){
+  if(state.busy || state.auto || hordeLoading)return;
+  const choice=recommendHordeModel(hordeModels,{minimumB:7});
+  if(!choice){
+    hordeStatus("Aucun modèle d'au moins 7B n'a suffisamment d'informations de disponibilité pour être recommandé. Garde ton modèle actuel ou actualise le catalogue.");
+    return;
+  }
+  state.hordeModel=choice.id;
+  $("hordeModele").value=choice.id;
+  save();buttonStates();
+  const hint=Number.isFinite(choice.etaSeconds)
+    ?" · file indiquée ~"+Math.ceil(choice.etaSeconds/60)+" min (non garanti)"
+    :" · "+choice.workers+" travailleurs annoncés (délai inconnu)";
+  hordeStatus("Modèle sélectionné : "+choice.id+hint+
+    ". Aucun message envoyé. Tu peux lancer le prochain tour quand tu veux ; aucun niveau doctoral n'est certifié.");
 }
 async function nextHordeTurn(){
   if(state.busy)return;
@@ -624,10 +658,25 @@ async function nextHordeTurn(){
   state.busy=true;
   state.controller=new AbortController();
   render();buttonStates();
-  status("AI Horde · "+model+" : attente d'un travailleur bénévole. Tu peux arrêter.");
+  const beginning=Date.now();
+  const responseMode=$("hordeLongueur").value;
+  const modelInfo=hordeModels.find(x=>x.id===model);
+  const initialHint=Number.isFinite(modelInfo?.etaSeconds)
+    ?" (file publique indicative : "+Math.ceil(modelInfo.etaSeconds/60)+" min)":"";
+  status("AI Horde · "+model+" : requête en file ou en génération"+initialHint+
+    ". Mode "+responseMode+". Le réseau bénévole peut être lent.");
+  // Indiquer le temps écoulé : le serveur OpenAI-compatible ne garantit pas
+  // un vrai suivi de position dans la file pour cet appel.
+  const waitingIndicator=setInterval(()=>{
+    if(state.busy && isHordeMode()){
+      const elapsed=Math.floor((Date.now()-beginning)/1000);
+      status("AI Horde · "+model+" : "+elapsed+
+        " s écoulées (file ou génération). En attente du modèle communautaire ; bouton « Arrêter » disponible.");
+    }
+  },12000);
   try{
     const answer=await chatWithHorde({
-      model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
+      model,messages:prompt,maxTokens:hordeTokenBudget(responseMode),
       signal:state.controller.signal
     });
     const normalized=cleanAnswer(answer.text,state.participants);
@@ -648,6 +697,7 @@ async function nextHordeTurn(){
       :String(e?.message||e);
     status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
   }finally{
+    clearInterval(waitingIndicator);
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;
     render();buttonStates();
   }
@@ -1060,6 +1110,11 @@ function init(){
   });
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
+  $("hordeRapide").addEventListener("click",chooseFasterHorde);
+  $("hordeLongueur").addEventListener("change",()=>{
+    hordeStatus("Longueur AI Horde : "+$("hordeLongueur").selectedOptions[0]?.textContent+
+      ". Le modèle n'est pas sollicité avant le prochain tour.");
+  });
   $("hordeModele").addEventListener("change",()=>{
     const selected=$("hordeModele").value;
     state.hordeModel=hordeModels.some(m=>m.id===selected)?selected:"";
