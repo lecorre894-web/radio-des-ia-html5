@@ -83,6 +83,16 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🖥️ SPARKTIATES avec tours sans plafond logiciel (moteur Ollama personnel)
+
+La Radio des IA propose maintenant **cinq moteurs indépendants** dans le Salon `tchat.html` : Puter, AI Horde, Pollinations, recherche WebGPU locale et **SPARKTIATES / Ollama**. Ce dernier relie le même tchat, la mémoire, les intervenants et les commandes de débat à un vrai modèle Ollama hébergé sur le PC de l'utilisateur. Uniquement lorsque ce moteur a été sélectionné, les tours automatiques ne sont pas limités en nombre par le logiciel et ne sollicitent ni Puter ni Pollinations.
+
+Ce choix **ne supprime pas les quotas de Pollinations** : ce sont deux moteurs distincts. Il ne crée pas de serveur cloud ni de puissance de calcul virtuelle. Pour en profiter depuis Android, le PC doit faire tourner Ollama et la passerelle SPARKTIATES locale authentifiée, puis être accessible par une URL HTTPS sécurisée. Le site GitHub Pages, statique, ne peut pas fournir lui-même l'inférence CPU/GPU.
+
+Le serveur SPARKTIATES expose `/health`, `/v1/models` et `/v1/chat/completions`, accepte uniquement un jeton secret aléatoire privé, limite la taille de chaque requête et n'exécute aucune commande téléchargée ou distante. Les modèles affichés viennent directement des modèles Ollama **effectivement installés**. La Radio ne stocke pas l'URL ni le jeton d'accès dans `localStorage` ; le partage du contexte récent est facultatif et désactivé au départ. Un seul modèle produit les quatre rôles méthodologiques, sans faire croire à quatre IA indépendantes ni promettre un niveau doctoral.
+
+**Instructions complètes et lanceurs WSL** : [addons/sparktiates/README.md](addons/sparktiates/README.md). Les tests de la passerelle utilisent un backend Ollama simulé pour valider la compatibilité, l'authentification et cinq tours répétés ; ils ne signifient pas qu'un modèle Ollama tourne déjà sur le serveur réel.
+
 ## 🌼 Pollinations intégré à la Radio des IA (OAuth sécurisé)
 
 Dans **la même page `tchat.html`**, le sélecteur propose désormais quatre moteurs : Puter, recherche locale WebGPU, AI Horde et Pollinations. Les intervenants et conversations existants ne sont ni supprimés ni rebaptisés. L'accès Pollinations est activé à la demande ; il ne déclenche aucune requête payante à l'ouverture.
