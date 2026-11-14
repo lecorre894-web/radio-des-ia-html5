@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "about": "La puissance physique est mesuree par GET /health. Les slots ne sont pas des coeurs CPU physiques.",
+  "nodes": [
+    {
+      "id": "wsl-ryzen-4080",
+      "url": "http://127.0.0.1:8765",
+      "model": "qwen3:8b",
+      "slots": 1
+    }
+  ]
+}

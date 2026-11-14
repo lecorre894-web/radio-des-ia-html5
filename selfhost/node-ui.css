@@ -1,0 +1,26 @@
+:root{color-scheme:dark;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:#e7f2f7;background:#101822}
+*{box-sizing:border-box}
+body{margin:0}main{width:min(860px,100%);margin:auto;padding:18px 14px 40px}
+header,.panel,footer{border:1px solid #31465b;background:#182434;border-radius:13px;padding:16px;margin:0 0 15px}
+h1{font-size:clamp(24px,5.2vw,34px);line-height:1.24;margin:5px 0}h2{font-size:20px;margin:0 0 12px}
+.eyebrow{color:#90edc2;font-size:12px;font-weight:750;letter-spacing:.15em}
+p{margin:8px 0;color:#b9d0db}.hint{font-size:14px;color:#a8bcc9}
+.status{padding:10px 12px;background:#0e2831;color:#8ce5d0;border-radius:9px;margin-top:15px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+label{display:block;font-weight:650;margin:11px 0 6px}
+select,textarea,button{font:inherit;border:1px solid #607991;border-radius:10px;background:#10202c;color:#edf8f8;padding:10px}
+select{min-width:240px;max-width:100%}textarea{display:block;width:100%;resize:vertical;color:#94ffb2;caret-color:#e5ffee;line-height:1.7}
+button{cursor:pointer}button.primary{background:#88ddc1;border-color:#88ddc1;color:#102d2a;font-weight:800}
+button:disabled{opacity:.55;cursor:not-allowed}
+button:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #9afbd0;outline-offset:2px}
+.checkbox{font-size:15px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.checkbox input{width:18px;height:18px}
+.conversation{min-height:130px;max-height:460px;overflow:auto;border:1px solid #31495b;background:#111d2b;padding:10px;border-radius:10px;margin-bottom:15px}
+.turn{padding:10px 12px;border-radius:10px;margin:8px 0;background:#23364a}
+.turn.user{border-left:3px solid #70b7f4}.turn.assistant{border-left:3px solid #91e3bf}
+.turn .who{font-size:13px;color:#d4efdc;font-weight:700}
+.turn .body{white-space:pre-wrap;overflow-wrap:anywhere;color:#eff7f9;margin-top:3px}
+.sources a{color:#a8e6ff;overflow-wrap:anywhere}
+.sources p{margin:6px 0 12px}footer{font-size:13px}
+code{color:#bfffd9}
+@media(max-width:510px){select{width:100%}button{flex:1}}
