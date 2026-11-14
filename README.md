@@ -13,6 +13,35 @@ Salon public multi-IA hébergé sur GitHub Pages.
 
 Le mode ∞ ne fixe pas de maximum de tours, mais exige que l'onglet reste ouvert et dépend des crédits/quotas du fournisseur.
 
+## Documents, imagerie et code — import facultatif
+
+Le module `tchat-documents.mjs` est chargé dynamiquement, sans remplacer le Salon ni ses tours IA. L'atelier est replié par défaut pour conserver l'ergonomie sur téléphone.
+
+- **PDF** : texte extrait de 30 pages au maximum et aperçu de la première page ; les scans sans couche texte ne bénéficient pas d'OCR.
+- **Word** : extraction textuelle des `.docx` ; les anciens `.doc` doivent être convertis.
+- **Excel, ODS, CSV** : lecture de valeurs affichées, avec limites de lignes et colonnes ; aucune macro ni formule exécutée.
+- **JSON / JSONL / GeoJSON / Jupyter `.ipynb`** : lecture structurée ; les sorties de notebook et médias intégrés ne sont pas exécutés ni importés.
+- **Code de programmation** : Python, JavaScript, TypeScript, C/C++, Rust, Java, Go, SQL, HTML, CSS, shell et autres formats textuels ; analyse de texte uniquement, sans exécuter le code.
+- **Images** : JPEG/JPG, PNG, WebP, GIF animé (une image représentative pour l'analyse), TIFF (première page), DICOM monochrome non compressé pris en charge expérimentalement.
+- **Vidéo** : exclue (MP4, MOV, WebM, etc.).
+
+Limites : six fichiers, 20 Mio par pièce, 48 Mio au total ; le texte transmis aux IA est tronqué au besoin. Les fichiers ne sont pas déposés sur GitHub. Leur inclusion dans les appels IA nécessite un consentement activé par l'utilisateur. Les images en aperçu requièrent une autorisation supplémentaire, sont stockées temporairement sur Puter pour l'appel, puis leur suppression est tentée. **Attention aux données personnelles : les images DICOM peuvent contenir des annotations visibles ; le rendu n'est pas destiné au diagnostic.**
+
+## Génération d'images
+
+Le module `tchat-images.mjs` utilise `puter.ai.txt2img()`. Il propose une description, un choix de modèle image et un format (carré, paysage, portrait), ainsi qu'un mode de démonstration sans crédit de génération selon Puter. La génération réelle nécessite une confirmation explicite et peut consommer les crédits du visiteur. Aucune vidéo.
+
+## Tableau de bord 🎭 Émojis / Émoticônes / GIF
+
+Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, sans toucher à l'orchestre des IA.
+
+- Les émojis et émoticônes s'insèrent au curseur dans le texte en cours de rédaction.
+- Les visiteurs importent leurs propres GIF animés (4 Mio chacun, 12 au plus, 32 Mio au total). Un fichier renommé en `.gif` est refusé si sa signature ne correspond pas au format GIF.
+- Les GIF sont conservés **dans le navigateur du visiteur** via IndexedDB lorsque disponible ; sinon en mémoire jusqu'à la fermeture. Ils sont affichés dans son Salon personnel, sans publication sur GitHub ni transmission automatique aux modèles IA.
+- Pour demander une interprétation visuelle d'un GIF, utiliser séparément le module Documents avec consentement ; le tableau de réactions ne transmet que le libellé du GIF aux IA.
+
+Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
+
 ## Confidentialité et tarification
 
 La connexion Puter est faite **par l'utilisateur**, via le navigateur. Aucune clé de fournisseur n'est publiée dans le dépôt. L'historique personnel est stocké dans le navigateur et transmis à Puter uniquement lors des demandes de génération. Les conversations ne sont pas partagées entre visiteurs.
