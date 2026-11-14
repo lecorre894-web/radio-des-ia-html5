@@ -5,7 +5,7 @@ import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMat
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
-import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations} from "./tchat-pollinations.mjs?v=2";
+import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
@@ -157,6 +157,8 @@ function engineReadiness(){
     if(!token)return {ready:false,label:"Pollinations",reason:"Autorise d'abord la connexion Pollinations dans le panneau scientifique (des crédits Pollen peuvent être utilisés)."};
     if(!state.pollinationsModel || !pollinationsModels.some(x=>x.id===state.pollinationsModel))
       return {ready:false,label:"Pollinations",reason:"Connexion autorisée : choisis un modèle dans « Modèle actuellement proposé » au panneau Pollinations. Le catalogue est chargé automatiquement, ou via « Voir les modèles Pollinations »."};
+    if(lastPollinationsCreditRefusal() && state.messages.at(-1).modele===state.pollinationsModel)
+      return {ready:false,label:"Pollinations",reason:"Le dernier appel à ce modèle a été refusé faute de crédits Pollen. Pour continuer sans acheter de Pollen, utilise « Essayer AI Horde »."};
     return {ready:true,label:"Pollinations · "+state.pollinationsModel+" (crédits Pollen éventuels)"};
   }
   if(isSparktiatesMode()){
@@ -173,8 +175,27 @@ function engineReadiness(){
   if(!state.validModels.size)return {ready:false,label:"Puter",reason:"Le catalogue Puter n'a pas encore été chargé. Appuie sur « Actualiser les modèles » dans la section de connexion."};
   return {ready:true,label:"Puter · modèle distant disponible (crédits éventuels)"};
 }
+function lastPollinationsCreditRefusal(){
+  const last=state.messages.at(-1);
+  return last?.origin==="ai" &&
+    String(last.nom||"").startsWith("Pollinations") &&
+    isPollinationsCreditRefusal(last.texte);
+}
 function unansweredHuman(){
-  return state.messages.length>0 && state.messages.at(-1)?.origin==="human";
+  return state.messages.length>0 &&
+    (state.messages.at(-1)?.origin==="human" || lastPollinationsCreditRefusal());
+}
+function switchToHorde(){
+  if(state.busy || state.auto)return;
+  state.engineChoice="horde";
+  $("moteurDialogue").value="horde";
+  $("pollinationsControls").hidden=true;
+  $("sparktiatesControls").hidden=true;
+  $("hordeControls").hidden=false;
+  save();buttonStates();
+  status("AI Horde sélectionné sans crédits Pollen. Le catalogue sera recherché ; choisis ensuite un modèle réellement disponible. Aucun message n'est envoyé automatiquement.");
+  if(!hordeModels.length)void refreshHordeModels();
+  $("hordeControls").scrollIntoView?.({behavior:"smooth",block:"start"});
 }
 function retryLastHuman(){
   if(state.busy || state.auto)return;
@@ -199,6 +220,11 @@ function buttonStates(){
     :"Moteur sélectionné : "+readiness.label+" · PAS ENCORE PRÊT. "+readiness.reason;
   const retry=$("reessayerDernier");
   if(retry)retry.disabled=state.busy || state.auto || !unansweredHuman();
+  const hordeAlternative=$("passerHorde");
+  if(hordeAlternative){
+    hordeAlternative.hidden=!(isPollinationsMode() && lastPollinationsCreditRefusal());
+    hordeAlternative.disabled=state.busy || state.auto || hordeLoading;
+  }
   $("tour").disabled=state.busy;
   $("infini").disabled=state.busy || state.auto;
   $("debattre").disabled=state.busy || state.auto;
@@ -257,9 +283,23 @@ function renderParts(){
 function makeMessage(m){
   const card=document.createElement("article");card.className="msg "+(m.origin==="human"?"human":"ai");
   const meta=document.createElement("div");meta.className="meta";
-  meta.textContent=String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
-  const text=document.createElement("div");text.className="body";text.textContent=m.texte||"⏳ Réflexion en cours…";
+  const creditError=m.origin==="ai" &&
+    String(m.nom||"").startsWith("Pollinations") &&
+    isPollinationsCreditRefusal(m.texte);
+  meta.textContent=creditError
+    ?"⚠ Erreur de crédits Pollinations · "+String(m.heure||"")+" · "+String(m.modele||"modèle non précisé")
+    :String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
+  const text=document.createElement("div");text.className="body";
+  text.textContent=creditError
+    ?"Pollinations a refusé la génération : crédits Pollen insuffisants pour ce modèle. Ce bloc n'est PAS une réponse de l'IA. La dernière question humaine reste disponible ; choisis un autre moteur pour la reprendre."
+    :(m.texte||"⏳ Réflexion en cours…");
   card.append(meta,text);
+  if(creditError){
+    const details=document.createElement("details");
+    const summary=document.createElement("summary");summary.textContent="Afficher le message technique original";
+    const raw=document.createElement("pre");raw.textContent=String(m.texte||"");
+    details.append(summary,raw);card.append(details);
+  }
   if(m.gifId){
     const holder=document.createElement("div");
     holder.className="reactionMessage";
@@ -769,8 +809,20 @@ async function nextPollinationsTurn(){
     speech(current.nom,current.texte);
   }catch(e){
     state.messages=state.messages.filter(m=>m!==current);state.auto=false;
-    status("Pollinations : "+String(e?.name==="AbortError"?"requête interrompue côté navigateur":e?.message||e)+
-      ". Aucune relance automatique ; la facturation d'une demande déjà acceptée dépend du fournisseur.");
+    if(e?.code==="POLLINATIONS_CREDITS"){
+      // On conserve le refus comme état de session, sans le transformer en contribution IA.
+      const original=state.messages.at(-1);
+      if(original?.origin==="human"){
+        state.messages.push({origin:"ai",nom:"Pollinations · erreur de crédits",modele:model,
+          heure:new Date().toLocaleTimeString("fr-FR"),
+          texte:"The account behind this API key doesn't have enough credits. This model needs paid Pollen."});
+      }
+      status("Pollinations : crédits insuffisants pour "+model+
+        ". Ce refus n'est pas une réponse scientifique. AUCUN NOUVEL APPEL PAYANT. Utilise « Essayer AI Horde » pour continuer sans Pollen.");
+    }else{
+      status("Pollinations : "+String(e?.name==="AbortError"?"requête interrompue côté navigateur":e?.message||e)+
+        ". Aucune relance automatique ; la facturation d'une demande déjà acceptée dépend du fournisseur.");
+    }
   }finally{
     state.busy=false;state.current=null;state.activeCard=null;state.controller=null;render();buttonStates();
   }
@@ -1127,6 +1179,7 @@ function init(){
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
   $("reessayerDernier").addEventListener("click",retryLastHuman);
+  $("passerHorde").addEventListener("click",switchToHorde);
   $("moi").addEventListener("input",saveDraft);
   $("tour").addEventListener("click",()=>{if(!state.auto)state.mode="direct";void nextTour()});
   $("infini").addEventListener("click",()=>void launchInfinity("direct"));
