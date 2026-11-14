@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#101822">
+<title>Radio des IA — SPARKTIATES local</title>
+<link rel="stylesheet" href="./node-ui.css">
+<style>
+.hero{border-left:4px solid #8eebbb}.notice{padding:10px 12px;background:#312b23;border-radius:8px;color:#f3d6a3}
+.turn a{color:#9adce7}.conversation{max-height:550px;min-height:170px}.actions{margin-top:15px}.hint strong{color:#cde9f6}
+fieldset{border:0;padding:0}.stats{font-size:14px;color:#a8e5d2}
+</style>
+</head><body><main>
+<header class="hero">
+<p class="eyebrow">RADIO DES IA · SPARKTIATES · WSL</p>
+<h1>📻 Radio des IA locale</h1>
+<p>Un salon avec six profils, répartis sur les <strong>vrais nœuds du cluster</strong>. Fonctionne sans crédit Puter quand Ollama et un modèle sont installés.</p>
+<p class="notice">Les six profils peuvent utiliser le <strong>même modèle local</strong> : ce ne sont pas six modèles propriétaires différents. L'émulation des serveurs NVIDIA/EPYC ne génère aucune réponse IA à elle seule.</p>
+<div class="status" id="health" role="status">Interrogation de l'ordonnanceur…</div>
+<div class="stats" id="identity">Moteur réel : en attente de vérification.</div>
+</header>
+<section class="panel">
+<h2>Salon et fil conducteur</h2>
+<div id="log" class="conversation" role="log" aria-live="polite">
+<p class="hint">Le premier message conservera la question initiale dans le contexte du dialogue.</p>
+</div>
+<label for="message">Ton message (Entrée = nouvelle ligne)</label>
+<textarea id="message" rows="4" maxlength="2600" placeholder="Pose une question ou propose un sujet aux intervenants…"></textarea>
+<label for="speaker">Intervenant local</label>
+<select id="speaker">
+<option value="cairn">Cairn local · structure</option>
+<option value="brume">Brume locale · critique</option>
+<option value="aurore">Aurore locale · ouverture</option>
+<option value="controle">Vérificateur local · audit</option>
+<option value="recherche">Chercheur local · recherche</option>
+<option value="ia4">IA4 locale · synthèse</option>
+</select>
+<label class="checkbox"><input id="web" type="checkbox">
+🌐 Rechercher des sources Web pour cette question</label>
+<p class="hint">Sans cette case : aucun appel de recherche Internet. Les connexions à Ollama et entre les nœuds restent locales ou privées. Les modèles doivent déjà être installés.</p>
+<div class="row actions">
+<button id="send" type="button" class="primary">📨 Envoyer au rôle choisi</button>
+<button id="cycle" type="button">🔄 Un tour des six rôles</button>
+<button id="stop" type="button" disabled>Arrêter après ce rôle</button>
+</div>
+<p id="progress" role="status" aria-live="polite">Aucun appel envoyé.</p>
+<div class="row actions">
+<button id="export" type="button">Exporter ce salon local</button>
+<button id="new" type="button">Nouveau salon local</button>
+</div>
+<p class="hint">Ce salon utilise sa propre mémoire dans ce navigateur, indépendante du Salon Puter. Le code ne lit ni ne modifie les archives de la Radio publique.</p>
+</section>
+<section class="panel">
+<h2>Sources du dernier tour</h2>
+<div id="sources" aria-live="polite">Aucune source pour le moment.</div>
+</section>
+<footer>
+<p><strong>Adresse locale :</strong> <code>http://127.0.0.1:8766/radio</code> (sur le PC exécutant WSL).</p>
+<p>L'accès public à travers Internet est désactivé. Il devra passer par une passerelle HTTPS authentifiée, avec protection des données personnelles.</p>
+<p>Retour vers <a href="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html" rel="noreferrer noopener">Radio des IA originale</a> (Puter, connexion requise).</p>
+<p><strong>Radio des IA — projet SPARKTIATES</strong></p>
+</footer>
+</main><script type="module" src="./radio-sparktiates.mjs"></script></body></html>
