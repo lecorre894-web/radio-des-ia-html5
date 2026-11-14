@@ -135,6 +135,7 @@ details.card[open]>summary{margin-bottom:14px}
 <option value="puter">IA distantes existantes (Puter, selon crédits)</option>
 <option value="research-local">Recherche locale sans abonnement (GPU de cet appareil)</option>
 <option value="horde">AI Horde — modèles communautaires sans crédits Puter</option>
+<option value="pollinations">Pollinations — catalogue avancé (compte et crédits Pollen)</option>
 </select>
 </div>
 <div id="hordeControls" class="card" hidden aria-label="Options du réseau AI Horde">
@@ -149,6 +150,27 @@ details.card[open]>summary{margin-bottom:14px}
 <span><strong>Autoriser l'envoi d'extraits récents du Salon à AI Horde</strong> (jusqu'à 8 messages, taille limitée) pour poursuivre une discussion ou un débat. Désactivé par défaut à chaque ouverture de la page.</span></label>
 <p class="notice">Attention : ton message actuel est envoyé aux travailleurs communautaires lorsque tu demandes une réponse. Si la case ci-dessus est cochée, des extraits des échanges précédents sont également transmis. Ne transmets pas de documents médicaux, de secrets ni d'informations personnelles. Les fichiers joints ne sont jamais transmis par ce moteur.</p>
 <small id="hordeEtat" role="status">AI Horde sélectionné : actualise son catalogue pour choisir un modèle réellement disponible. Aucun envoi tant que tu ne demandes pas de réponse.</small>
+</div>
+<div id="pollinationsControls" class="card" hidden aria-label="Options du moteur Pollinations">
+<h3 style="font-size:16px;margin:2px 0 7px">🌼 Pollinations — modèles scientifiques et raisonnement avancé</h3>
+<p>Ce moteur est ajouté à ta Radio sans remplacer Puter ni AI Horde. Les modèles sont réellement fournis par Pollinations, pas des personnages simulés. Leur niveau doctoral n'est pas garanti.</p>
+<p class="notice"><strong>Tarification :</strong> Pollinations nécessite une autorisation personnelle et peut dépenser des crédits Pollen. La connexion proposée préremplit une limite de 1 Pollen et une validité d'un jour, modifiables sur l'écran d'autorisation. Aucune génération sans confirmation du modèle et de ta connexion.</p>
+<div class="row"><a href="https://enter.pollinations.ai/keys" target="_blank" rel="noopener noreferrer">Créer une clé publique d'application Pollinations (pk_)</a></div>
+<small>Dans Pollinations, crée une App Key et déclare cette adresse de retour exacte : <code>https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html</code>. Une clé <code>pk_</code> identifie l'application : ce n'est pas la clé secrète d'un compte. Ne colle jamais de clé <code>sk_</code> ici.</small>
+<label for="pollinationsAppKey"><strong>Ta clé publique d'application (pk_)</strong></label>
+<input type="text" id="pollinationsAppKey" style="width:100%" placeholder="pk_..." autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text">
+<div class="row">
+<button type="button" id="pollinationsConnecter" class="primary">Connexion Pollinations sécurisée</button>
+<button type="button" id="pollinationsDeconnecter">Déconnecter de cette Radio</button>
+<button type="button" id="pollinationsActualiser">🔎 Voir les modèles Pollinations</button>
+</div>
+<label for="pollinationsModele"><strong>Modèle actuellement proposé</strong></label>
+<select id="pollinationsModele" style="width:100%;max-width:100%">
+<option value="">Actualise le catalogue et choisis un modèle</option>
+</select>
+<label class="pieceOption"><input id="pollinationsPartagerContexte" type="checkbox">
+<span><strong>Autoriser les extraits des derniers échanges</strong> à être envoyés à Pollinations pour poursuivre le dialogue et les débats (désactivé au démarrage).</span></label>
+<small id="pollinationsEtat" role="status">Pas de connexion Pollinations active. Les listes de modèles sont publiques, mais la génération requiert ton autorisation. Un retour d'authentification peut nécessiter Chrome plutôt qu'un navigateur intégré.</small>
 </div>
 <div class="row">
 <label for="modeleRecherche">Modèle local de recherche</label>
