@@ -174,15 +174,15 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row">
 <button type="button" id="pollinationsConnecter" class="primary">Se connecter directement à Pollinations</button>
 <button type="button" id="pollinationsDeconnecter">Déconnecter de cette Radio</button>
-<button type="button" id="pollinationsActualiser">🔎 Voir les modèles Pollinations</button>
+<button type="button" id="pollinationsActualiser">🔎 Recharger les modèles Pollinations</button>
 </div>
 <label for="pollinationsModele"><strong>Modèle actuellement proposé</strong></label>
 <select id="pollinationsModele" style="width:100%;max-width:100%">
-<option value="">Actualise le catalogue et choisis un modèle</option>
+<option value="">Après connexion, les modèles se chargent automatiquement</option>
 </select>
 <label class="pieceOption"><input id="pollinationsPartagerContexte" type="checkbox">
 <span><strong>Autoriser les extraits des derniers échanges</strong> à être envoyés à Pollinations pour poursuivre le dialogue et les débats (désactivé au démarrage).</span></label>
-<small id="pollinationsEtat" role="status">Connexion directe sans clé pk_ prête à être vérifiée. Aucun crédit Pollen n’est consommé par l’ouverture de la connexion. En cas de problème dans le navigateur intégré, ouvre le Salon avec Chrome.</small>
+<small id="pollinationsEtat" role="status">Après la connexion, le catalogue de modèles se charge automatiquement, sans crédit Pollen. Choisis ensuite le modèle, puis relance ta dernière question. Chrome est recommandé sur Android.</small>
 </div>
 <div id="sparktiatesControls" class="card" hidden aria-label="Serveur SPARKTIATES personnel">
 <h3 style="font-size:16px;margin:2px 0 7px">🖥️ SPARKTIATES — serveur réel, tours automatiques sans plafond</h3>
@@ -352,7 +352,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=2&amp;sparktiates=1&amp;diagnostic=1"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=3&amp;sparktiates=1&amp;diagnostic=2"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
