@@ -1,0 +1,25 @@
+name: SPARKTIATES PowerShell Windows validation
+on:
+  pull_request:
+    paths:
+      - 'selfhost/sparktiates-windows.ps1'
+      - 'tests/test_powershell.ps1'
+      - '.github/workflows/sparktiates-powershell.yml'
+  workflow_dispatch:
+jobs:
+  powershell_windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v4
+      - name: Validate SPARKTIATES on Windows PowerShell
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./tests/test_powershell.ps1
+      - name: Validate script also on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./tests/test_powershell.ps1
