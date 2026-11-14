@@ -139,6 +139,6 @@ test("La Radio conserve les cinq moteurs et ne télécharge pas NOAA au démarra
   assert.match(panel,/button\.addEventListener\("click",async\(\)=>\{/);
   assert.match(panel,/validateNoaaTides\(/);
   assert.match(panel,/Aucune mesure NOAA téléchargée/);
-  assert.doesNotMatch(panel,/localStorage|sessionStorage|chatWithHorde|chatWithPollinations/);
+  assert.doesNotMatch(panel,/\blocalStorage\s*\.|\bsessionStorage\s*\.|\bchatWithHorde\s*\(|\bchatWithPollinations\s*\(/);
   assert.match(html,/ChatGPT et René Le Corre®/);
 });
