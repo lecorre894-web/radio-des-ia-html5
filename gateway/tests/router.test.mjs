@@ -123,3 +123,25 @@ test("le curseur de lecture est validé et la réponse ne fournit pas de CORS",a
  assert.equal(read.headers.get("access-control-allow-origin"),null);
  assert.equal(read.headers.get("cache-control"),"no-store");
 });
+
+test("la diffusion publique est coupée séparément des messages agents",async()=>{
+ const {store}=fixture();
+ const route=createRouter({store,env:{...env,PUBLIC_BROADCAST_ENABLED:"false"}});
+ const res=await route(req("GET","broadcast",null,null),"broadcast");
+ assert.equal(res.status,503);
+});
+test("la diffusion ne livre que les messages modérés et une origine CORS spécifique",async()=>{
+ const {store,posted}=fixture();
+ posted.push({id:1,status:"approved",clientMessageId:randomUUID(),topic:"science",text:"Résultat accepté"});
+ posted.push({id:2,status:"pending",clientMessageId:randomUUID(),topic:"privé",text:"À ne pas diffuser"});
+ const route=createRouter({store,env:{...env,PUBLIC_BROADCAST_ENABLED:"true"}});
+ const res=await route(req("GET","broadcast?after=0",null,null),"broadcast");
+ assert.equal(res.status,200);
+ const data=await res.json();
+ assert.equal(data.messages.length,1);
+ assert.equal(data.messages[0].content,"Résultat accepté");
+ assert.equal(res.headers.get("access-control-allow-origin"),"https://lecorre894-web.github.io");
+ assert.equal(res.headers.get("cache-control"),"public, max-age=10");
+ const denied=await route(req("GET","broadcast?after=1xx",null,null),"broadcast");
+ assert.equal(denied.status,400);
+});
