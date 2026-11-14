@@ -40,7 +40,7 @@ function assertTime(str){
   // NOAA API date string is UTC after selecting gmt, ex "2025-09-15 00:00".
   if(typeof str!=="string" || !/^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(str))
     return null;
-  const iso=str.replace(" ","T")+":00Z";
+  const iso=str.replace(" ","T")+":00.000Z";
   const stamp=Date.parse(iso);
   if(!Number.isFinite(stamp) || new Date(stamp).toISOString()!==iso) return null;
   return stamp;
