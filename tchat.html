@@ -92,7 +92,8 @@ details.card[open]>summary{margin-bottom:14px}
 .bookmark-url{width:100%;max-width:640px;font-family:ui-monospace,monospace;font-size:14px}
 .bookmark-help{color:#c0d5da;font-size:14px}
 </style>
-<script src="https://js.puter.com/v2/"></script>
+<!-- Puter n'est plus chargé à l'ouverture : le module puter-lazy.mjs le charge sur demande. -->
+<meta name="puter-script-url" content="https://js.puter.com/v2/">
 </head>
 <body>
 <main>
@@ -114,6 +115,7 @@ details.card[open]>summary{margin-bottom:14px}
 </header>
 <section class="card">
 <h2>Connexion aux IA distantes</h2>
+<small>Mode allégé pour téléphone : Puter.js ne se charge que si tu demandes une connexion ou un appel Puter. AI Horde fonctionne indépendamment.</small>
 <p class="notice">Ce tchat utilise Puter.js. Chaque visiteur se connecte à son propre compte Puter et bénéficie d'une allocation d'usage gratuite. Au-delà, Puter peut proposer une offre payante. Il n'existe pas de gratuité illimitée garantie. Aucun paiement ni clé d'API n'est demandé par ce site.</p>
 <div class="row"><button id="connecter" class="primary">Se connecter à Puter</button><button id="catalogueBouton">Actualiser les modèles</button><span id="connexion" class="pill">Non connecté</span></div>
 <small id="catalogue">Le catalogue des modèles disponibles sera chargé depuis le service.</small>
@@ -295,7 +297,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
