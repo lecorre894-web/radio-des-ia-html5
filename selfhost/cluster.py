@@ -127,8 +127,8 @@ def fetch_json(url: str, *, payload: dict | None = None, token: str = "", timeou
     if payload is not None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
-        if token:
-            headers["Authorization"] = "Bearer " + token
+    if token:
+        headers["Authorization"] = "Bearer " + token
     request = Request(url, data=body, headers=headers)
     with urlopen(request, timeout=timeout) as response:
         data = response.read(120_001)
