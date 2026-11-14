@@ -1,15 +1,15 @@
-import {LOCAL_SPEAKERS,STORAGE_KEY,normalizedTranscript,requestForTurn,safeStatus}
+import {LOCAL_SPEAKERS,RESEARCH_SPEAKERS,ALL_SPEAKERS,STORAGE_KEY,normalizedTranscript,requestForTurn,safeStatus}
   from "./radio-sparktiates-core.mjs";
 /* Salon SPARKTIATES local : pas de Puter, pas d'API ou d'images tierces.
  * Tous les appels applicatifs sont sur la même origine 127.0.0.1:8766.
  */
 const $=id=>document.getElementById(id);
-const label=id=>LOCAL_SPEAKERS.find(s=>s.id===id)?.name||"Modèle local";
+const label=id=>ALL_SPEAKERS.find(s=>s.id===id)?.name||"Modèle local";
 let transcript=[];
 let active=false,stopAfterTurn=false,model="";
 try{transcript=normalizedTranscript(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"));}catch{}
 function save(){
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(transcript.slice(-150)));}catch{
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(normalizedTranscript(transcript)));}catch{
     setProgress("Attention : sauvegarde locale du navigateur indisponible.");
   }
 }
@@ -62,17 +62,27 @@ function showSources(sources){
 }
 function lock(value){
   active=value;
-  for(const id of ["send","cycle","new","speaker","export"])$(id).disabled=value;
+  for(const id of ["send","cycle","doctoral","new","speaker","export"])$(id).disabled=value;
   $("stop").disabled=!value;
 }
 async function checkServer(){
   try{
-    const [response,ident]=await Promise.all([
+    const [response,ident,scientific]=await Promise.all([
       fetch("/api/v1/status",{cache:"no-store"}),
-      fetch("/api/v1/personas",{cache:"no-store"})
+      fetch("/api/v1/personas",{cache:"no-store"}),
+      fetch("/api/v1/research",{cache:"no-store"})
     ]);
-    const status=await response.json(),roles=await ident.json();
-    if(!response.ok||!ident.ok)throw Error(status.error||roles.error||"Serveur non disponible.");
+    const status=await response.json(),roles=await ident.json(),research=await scientific.json();
+    if(!response.ok||!ident.ok||!scientific.ok)
+      throw Error(status.error||roles.error||research.error||"Serveur non disponible.");
+    const installed=Array.isArray(research.models_installed)?research.models_installed:[];
+    const advanced=research.roles?.filter(r=>r.model_if_available&&r.model_if_available!==model)
+      .map(r=>r.model_if_available)||[];
+    const additional=[...new Set(advanced)].filter(x=>installed.includes(x));
+    $("researchStatus").textContent=installed.length?
+      "Modèles Ollama réellement installés : "+installed.join(", ")+
+      (additional.length?" · modèles avancés disponibles : "+additional.join(", "):" · rôles avancés sur le modèle de base"):
+      "Aucun modèle installé confirmé : le comité ne peut pas générer de réponses.";
     const snapshot=safeStatus(status);
     model=String(roles.model||"aucun modèle actif");
     $("health").textContent=snapshot.online>0?
@@ -128,6 +138,7 @@ async function launch(profiles){
 }
 $("send").addEventListener("click",()=>void launch([$("speaker").value]));
 $("cycle").addEventListener("click",()=>void launch(LOCAL_SPEAKERS.map(s=>s.id)));
+$("doctoral").addEventListener("click",()=>void launch(RESEARCH_SPEAKERS.map(s=>s.id)));
 $("stop").addEventListener("click",()=>{stopAfterTurn=true;setProgress("Arrêt demandé après la réponse en cours.");});
 $("new").addEventListener("click",()=>{
   if(active)return;
