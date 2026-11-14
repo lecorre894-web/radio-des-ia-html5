@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#11141b">
+<title>Radio des IA — Lune locale sans abonnement</title>
+<meta name="description" content="Poursuivez les conversations de Radio des IA sur la Lune grâce à une petite intelligence artificielle locale, exécutée dans un navigateur WebGPU compatible. Sans Puter et sans abonnement.">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+:root{font:16px/1.6 system-ui,sans-serif;color-scheme:dark;--bg:#11141b;--card:#1b212b;--line:#344053;--fg:#e9edf2;--muted:#aab6c7;--a:#85bca9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg)}
+main{max-width:900px;margin:auto;padding:16px}
+h1{font-size:clamp(22px,4vw,30px)}
+h2{font-size:19px}
+a{color:#a4d9ff}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;margin:16px 0}
+p,small{color:var(--muted)}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0}
+button,textarea{background:#10151d;color:var(--fg);font:inherit;border:1px solid #47536a;border-radius:9px;padding:10px}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--a);color:#081b14;font-weight:700;border-color:var(--a)}
+textarea{width:100%;min-height:125px;resize:vertical;color:#8dffad}
+#etatLocal{color:#f3cb86;white-space:pre-wrap;overflow-wrap:anywhere}
+#filLocal{max-height:600px;overflow-y:auto}
+.msg{background:#151b25;border-left:4px solid var(--a);padding:12px;border-radius:7px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.human{border-color:#d8b177}
+.meta{font-size:13px;color:var(--muted);margin-bottom:6px}
+</style>
+</head>
+<body>
+<main>
+<nav class="row">
+<a href="./tchat.html">← Retour au Salon des IA</a>
+<a href="./">Radio collective</a>
+</nav>
+<header>
+<h1>🌕 Radio des IA — Lune locale</h1>
+<p>Continue ta conversation sur la Lune sans abonnement. Ici, un <strong>petit modèle de langage réel</strong> fonctionne sur le GPU de ton navigateur : il ne contacte pas Puter et ne consomme pas ses crédits.</p>
+</header>
+<section aria-label="Démarrer le moteur local">
+<h2>1. Démarrer l'IA locale</h2>
+<p>Le premier lancement télécharge un modèle et ses composants, potentiellement plusieurs centaines de Mo ; une connexion Internet et du stockage sont nécessaires. Les fichiers peuvent rester en cache, mais le navigateur peut les effacer. L'inférence se fait ensuite sur ton appareil, tant que le moteur et la page restent actifs.</p>
+<p>Un navigateur et un appareil compatibles WebGPU sont indispensables. Sur certains téléphones, le modèle peut manquer de mémoire ou fonctionner lentement. L'IA locale est plus petite et moins fiable que les grands modèles distants : ce n'est ni Perplexity, ni Kimi, ni ChatGPT.</p>
+<div class="row"><button type="button" id="charger" class="primary">⚙️ Charger mon IA locale</button>
+<span id="modeleLocal">Aucun modèle chargé</span></div>
+<div id="etatLocal" role="status" aria-live="polite"></div>
+</section>
+<section aria-label="Conversation lunaire">
+<h2>2. Poursuivre le tchat</h2>
+<p id="historique"></p>
+<div id="filLocal" aria-label="Historique des discussions"></div>
+<label for="questionLocale"><strong>Ton message</strong></label>
+<textarea id="questionLocale" rows="5" placeholder="Parlons de la Lune : cratères, face cachée, missions, orbite, analyse d'images…"></textarea>
+<div class="row"><button id="envoyerLocal" class="primary" type="button" disabled>📨 Envoyer à l'IA locale</button></div>
+<div class="row">
+<button type="button" data-question="Pourquoi voit-on presque toujours la même face de la Lune ?">Face cachée</button>
+<button type="button" data-question="Que sait-on avec certitude de la glace d'eau aux pôles lunaires ? Distingue mesures et hypothèses.">Glace lunaire</button>
+<button type="button" data-question="Comment séparer un signal réel d'un artefact dans une image du sol lunaire ?">Images lunaires</button>
+</div>
+<small>Ton texte est conservé dans le même stockage local que ton Salon principal, sur le même navigateur. Il n'est pas publié sur GitHub. Seul le téléchargement des fichiers du modèle utilise Internet. L'historique peut être perdu si les données du navigateur sont effacées.</small>
+</section>
+<footer><small>Radio des IA · Module optionnel sans abonnement · Signé : ChatGPT et René Le Corre®</small></footer>
+</main>
+<script type="module" src="./lune-locale.mjs?v=1"></script>
+</body>
+</html>
