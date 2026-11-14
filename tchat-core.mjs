@@ -1,3 +1,20 @@
+export const PERPLEXITY = Object.freeze({
+  nom: "Perplexity",
+  role: "Vérificateur indépendant : vérification des faits et des sources, détection des contradictions et des dérives, tests reproductibles, distinction entre mesuré, reconstruit, candidat, artefact et inconnu.",
+  modele: "perplexity/sonar-pro"
+});
+
+export function addPerplexity(participants) {
+  const all = Array.isArray(participants) ? participants.map(x => ({...x})) : [];
+  const found = all.find(x => String(x?.nom || "").trim().toLocaleLowerCase("fr") === "perplexity");
+  if (found) {
+    // Le label Perplexity ne doit jamais masquer un modèle non-Perplexity.
+    if (!String(found.modele || "").startsWith("perplexity/")) found.modele = PERPLEXITY.modele;
+    if (!String(found.role || "").trim()) found.role = PERPLEXITY.role;
+  } else all.push({...PERPLEXITY});
+  return all;
+}
+
 export function lastHuman(messages) {
   return [...messages].reverse().find(m => m && m.origin === "human" && String(m.texte || "").trim()) || null;
 }
@@ -21,6 +38,11 @@ export function buildPrompt({participants, index, messages, sujet, mode="direct"
     "N'affirme pas avoir effectué des mesures ou consulté des sources sans l'avoir réellement fait.",
     "Utilise la langue de la question humaine, sinon le français."
   ];
+  if (String(p.modele || "").startsWith("perplexity/")) {
+    base.push("Mission particulière : évaluer les affirmations des autres IA, vérifier les contradictions, chercher les sources et signaler explicitement les affirmations non vérifiées.");
+    base.push("Quand tu cites une source, donne une référence identifiable et si possible son URL ; si tu ne peux pas la confirmer, dis-le. Distingue les faits établis, les reconstructions, les candidats, les artefacts et les inconnues.");
+    base.push("Propose un test ou un contrôle indépendant, avec hypothèse, méthode et critère de réussite. Ne déclare jamais un résultat mesuré sans mesure réelle.");
+  }
   if (mode === "debate") {
     const prochain = String(recipient || participants[(index + 1) % participants.length]?.nom || "l'intervenant suivant").slice(0,80);
     const nonSalutation = question && !/^(bonjour|salut|bonsoir|hello|merci)[!?.\s]*$/i.test(question);
