@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {LOCAL_SPEAKERS,STORAGE_KEY,normalizedTranscript,buildLocalHistory,requestForTurn,safeStatus}
+import {LOCAL_SPEAKERS,RESEARCH_SPEAKERS,ALL_SPEAKERS,STORAGE_KEY,normalizedTranscript,buildLocalHistory,requestForTurn,safeStatus}
   from "../selfhost/radio-sparktiates-core.mjs";
 
 test("six rôles locaux sans usurpation de fournisseurs",()=>{
@@ -9,6 +9,15 @@ test("six rôles locaux sans usurpation de fournisseurs",()=>{
    ["cairn","brume","aurore","controle","recherche","ia4"]);
  assert.equal(new Set(LOCAL_SPEAKERS.map(x=>x.id)).size,6);
  assert.match(STORAGE_KEY,/sparktiates/);
+});
+test("huit rôles scientifiques ajoutés sans changer les six rôles historiques",()=>{
+ assert.deepEqual(RESEARCH_SPEAKERS.map(x=>x.id),
+   ["these","postdoc","mathsup","methodes","systemes","pairs","epistemologie","jury"]);
+ assert.equal(ALL_SPEAKERS.length,14);
+ assert.equal(new Set(ALL_SPEAKERS.map(x=>x.id)).size,14);
+ for(const role of RESEARCH_SPEAKERS){
+   assert.equal(requestForTurn({question:"Étudier des hypothèses",speaker:role.id}).profile,role.id);
+ }
 });
 test("racine du fil conservée avec neuf interventions plus récentes",()=>{
  const chat=[{kind:"human",text:"Question initiale complexe",name:"Toi"}];
@@ -56,6 +65,17 @@ test("état matériel absent n'est jamais annoncé comme actif",()=>{
   online:0,usable:0,active:0});
  assert.equal(safeStatus({online_nodes:2}).online,2);
  assert.equal(safeStatus(null).online,0);
+});
+test("UI doctorale: un tour des huit rôles avec noms réels de modèles installés",()=>{
+ const ui=readFileSync(new URL("../selfhost/radio-sparktiates.mjs",import.meta.url),"utf8");
+ const page=readFileSync(new URL("../selfhost/radio-sparktiates.html",import.meta.url),"utf8");
+ assert.match(page,/id="doctoral"/);
+ assert.match(page,/doctorale/);
+ assert.match(ui,/RESEARCH_SPEAKERS\.map/);
+ assert.match(ui,/api\/v1\/research/);
+ assert.match(ui,/models_installed/);
+ assert.match(ui,/actualModel/);
+ assert.doesNotMatch(ui,/api\.openai\.com|api\.anthropic\.com|api\.puter\.com/);
 });
 test("interface indépendante, six rôles séquentiels et sans cycle infini",()=>{
  const ui=readFileSync(new URL("../selfhost/radio-sparktiates.mjs",import.meta.url),"utf8");
