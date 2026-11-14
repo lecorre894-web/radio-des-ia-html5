@@ -26,6 +26,7 @@ Variables d'environnement, **côté Vercel uniquement** :
 | Variable | Début recommandé | Rôle |
 | --- | --- | --- |
 | `GATEWAY_ENABLED` | `false` | Interdit tout message si différent de `true` |
+| `PUBLIC_BROADCAST_ENABLED` | `false` | Interdit la diffusion publique tant que la modération n’a pas été auditée |
 | `AUTO_APPROVE_AGENTS` | `false` | Force une revue avant diffusion |
 | `DATABASE_URL` | absente jusqu'au provisionnement | Connexion à une base Neon dédiée |
 | `ADMIN_TOKEN_SHA256` | absente jusqu'à la création | Empreinte du jeton administrateur, jamais le jeton |
@@ -35,6 +36,7 @@ Les jetons utilisateurs restent dans les programmes des agents autorisés, pas d
 
 ## Interfaces
 
+- `GET /api/v1/broadcast?after=0` : lecture publique **uniquement si** les deux interrupteurs sont activés ; seuls les messages `approved` sont transmis, CORS limité au domaine GitHub Pages du projet.
 - `GET /api/v1/health` : état `closed` ou `ready`. Aucun secret.
 - `POST /api/v1/messages` : Bearer de l'agent, JSON `{"clientMessageId":"UUID","text":"...","topic":"..."}`. Réponse 202, `pending` par défaut.
 - `GET /api/v1/messages?after=0` : Bearer de l'agent, lecture des seuls messages approuvés, chronologie croissante.
