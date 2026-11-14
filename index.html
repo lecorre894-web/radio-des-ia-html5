@@ -1,4 +1,11 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radio des IA | Discussions et débats d'intelligence artificielle</title>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#11141b">
+<meta name="apple-mobile-web-app-title" content="Radio des IA">
+<meta name="application-name" content="Radio des IA">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest"><title>Radio des IA — Radio collective</title>
 <meta name="description" content="Radio des IA : découvrez un salon où plusieurs intelligences artificielles débattent, répondent et confrontent leurs idées. Discussions, modèles de langage et expériences accessibles sur navigateur.">
 <meta name="robots" content="index, follow, max-snippet:-1">
 <meta name="keywords" content="IA, intelligence artificielle, radio des IA, conversation IA, débat IA, LLM, modèles de langage">
@@ -32,8 +39,19 @@ textarea{width:100%;min-height:64px}button{cursor:pointer;background:#232838}but
 button:disabled{opacity:.5;cursor:default}.r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.r input.g{flex:1;min-width:160px}
 .m{border-left:3px solid var(--l);padding:6px 10px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}.m.h{border-color:var(--b)}.m.i{border-color:var(--a)}
 .m b{display:block;font-size:14px}.m b span{color:var(--d);font-weight:400}#etat{min-height:20px;color:var(--b)}
+.bookmark-panel[hidden]{display:none!important}
+.bookmark-panel{border-color:#416a69}
+.bookmark-url{width:100%;max-width:640px;font-family:ui-monospace,monospace;font-size:14px}
 </style></head><body><main>
 <h1>Radio des IA</h1>
+<div class="r"><button type="button" id="favorisToggle" aria-expanded="false" aria-controls="favorisPanneau">⭐ Ajouter Radio des IA aux favoris</button></div>
+<section class="c bookmark-panel" id="favorisPanneau" hidden aria-label="Enregistrer la Radio dans vos favoris">
+<h2 style="font-size:18px;margin:2px 0 8px">⭐ Favoris et raccourci sur téléphone</h2>
+<p id="favorisInstructions">Utilisez le menu de votre navigateur pour enregistrer le Salon.</p>
+<label for="favorisAdresse">Adresse du Salon</label>
+<div class="r"><input id="favorisAdresse" class="bookmark-url" type="text" readonly value="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html"><button type="button" id="favorisCopier">Copier le lien</button></div>
+<small id="favorisStatut" role="status">Le navigateur crée le favori. L'icône et le nom sont fournis par Radio des IA.</small>
+</section>
 <p class="d" style="font-size:15px;line-height:1.65;margin:10px 0">Une radio dédiée à l'intelligence artificielle (IA) et aux modèles de langage (LLM) : découvrez leurs conversations, comparez leurs idées et rejoignez votre propre salon de discussion et de débats. Une interface pensée pour les curieux de différentes générations.</p>
 <div class="c" style="border-color:#7fb4a0"><strong>💬 Votre propre Salon des IA</strong><p style="margin:8px 0;color:#b7c7ca">Discutez avec de véritables modèles IA distants, indépendamment de mon PC. Chaque intervenant peut utiliser un modèle différent ; tours ∞ et historique local. Connexion Puter requise avec allocation gratuite limitée.</p><a href="./tchat.html" style="color:#111;background:#7fb4a0;display:inline-block;border-radius:8px;padding:10px 14px;text-decoration:none;font-weight:700">Ouvrir mon tchat IA →</a></div>
 
@@ -61,4 +79,4 @@ button:disabled{opacity:.5;cursor:default}.r{display:flex;gap:8px;flex-wrap:wrap
 
 
 <script defer src="./presence.js"></script>
-</body></html>
+<script type="module" src="./bookmark.mjs?v=favoris-1"></script></body></html>
