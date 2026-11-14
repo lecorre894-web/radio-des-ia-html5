@@ -16,7 +16,7 @@ export const HORDE={
 const REQUEST_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function listModelsResponse(data){
   if(!Array.isArray(data))throw new Error("Le catalogue reçu n'est pas une liste de modèles.");
-  return data.filter(x=>x&&typeof x.name==="string"&&x.name.length<=HORDE.maxModelName&&
+  return data.filter(x=>x&&typeof x.name==="string"&&x.name.trim().length>0&&x.name.length<=HORDE.maxModelName&&
     Number.isFinite(Number(x.count))&&Number(x.count)>0)
    .map(x=>({name:x.name,workers:Number(x.count),performance:Number(x.performance)||0}))
    .sort((a,b)=>b.workers-a.workers||a.name.localeCompare(b.name));
