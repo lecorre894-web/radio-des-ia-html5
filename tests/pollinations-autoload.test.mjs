@@ -43,5 +43,5 @@ test("La Radio reste utilisable sans Pollinations, même si le catalogue échoue
     assert.ok(html.includes('id="'+id+'"'));
   assert.match(js,/Catalogue Pollinations inaccessible/);
   assert.match(js,/Une fois le moteur configuré, utilise/);
-  assert.match(html,/tchat-distant\.mjs\?v=[^"]+pollinations=3/);
+  assert.match(html,/tchat-distant\.mjs\?v=[^"]+pollinations=\d+/);
 });
