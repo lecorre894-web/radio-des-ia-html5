@@ -5,6 +5,11 @@ import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMat
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
+import {
+  POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,
+  createPollinationsAuthorization,exchangePollinationsCode,listPollinationsModels,
+  buildPollinationsMessages,chatWithPollinations
+} from "./tchat-pollinations.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -14,6 +19,10 @@ let researchEngine=null;
 let researchLoading=false;
 let hordeModels=[];
 let hordeLoading=false;
+let pollinationsModels=[];
+let pollinationsToken="";
+let pollinationsLoading=false;
+let pollinationsApproved=false;
 const KEY = "radio-salon-distant-v1";
 const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
@@ -29,7 +38,7 @@ const state = {
   validModels:new Set(), lastRender:0,
   memory:{root:"",events:[]},archives:[],includeArchives:true,
   researchIndex:0,engineChoice:"puter",researchModelChoice:"Qwen3.5-9B-q4f16_1-MLC",
-  hordeModel:"",hordeIndex:0
+  hordeModel:"",hordeIndex:0,pollinationsModel:"",pollinationsIndex:0
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
@@ -60,7 +69,8 @@ function save(){
       memory:state.memory,archives:state.archives,includeArchives:state.includeArchives,
       researchIndex:state.researchIndex,engineChoice:state.engineChoice,
       researchModelChoice:state.researchModelChoice,
-      hordeModel:state.hordeModel,hordeIndex:state.hordeIndex
+      hordeModel:state.hordeModel,hordeIndex:state.hordeIndex,
+      pollinationsModel:state.pollinationsModel,pollinationsIndex:state.pollinationsIndex
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
   renderLineageStatus();
@@ -87,7 +97,9 @@ function restore(){
     state.archives=Array.isArray(d.archives)?d.archives.slice(-8).filter(x=>x&&typeof x.root==="string"):[];
     state.includeArchives=d.includeArchives!==false;
     state.researchIndex=Math.max(0,Number(d.researchIndex)||0);
-    state.engineChoice=["puter","research-local","horde"].includes(d.engineChoice)?d.engineChoice:"puter";
+    state.engineChoice=["puter","research-local","horde","pollinations"].includes(d.engineChoice)?d.engineChoice:"puter";
+    state.pollinationsModel=String(d.pollinationsModel||"").slice(0,220);
+    state.pollinationsIndex=Math.max(0,Number(d.pollinationsIndex)||0);
     state.hordeModel=String(d.hordeModel||"").slice(0,200);
     state.hordeIndex=Math.max(0,Number(d.hordeIndex)||0);
     state.researchModelChoice=RESEARCH_MODELS.some(m=>m.id===d.researchModelChoice)
@@ -108,6 +120,11 @@ function renderLineageStatus(){
 }
 function isResearchMode(){return state.engineChoice==="research-local";}
 function isHordeMode(){return state.engineChoice==="horde";}
+function isPollinationsMode(){return state.engineChoice==="pollinations";}
+function pollinationsStatus(message){
+  const node=$("pollinationsEtat");
+  if(node)node.textContent=message;
+}
 function hordeStatus(value){const node=$("hordeEtat");if(node)node.textContent=value;}
 function researchStatus(value){const indicator=$("rechercheEtat");if(indicator)indicator.textContent=value;}
 function buttonStates(){
@@ -117,14 +134,17 @@ function buttonStates(){
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading || hordeLoading;
+  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading || hordeLoading || pollinationsLoading;
+  for(const id of ["pollinationsAppKey","pollinationsConnecter","pollinationsDeconnecter","pollinationsActualiser","pollinationsModele","pollinationsPartagerContexte"]){
+    const el=$(id);if(el)el.disabled=state.busy || state.auto || pollinationsLoading;
+  }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
   $("dechargerRecherche").disabled=state.busy || researchLoading || !researchEngine;
-  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":isHordeMode()?"Salon AI Horde":"Salon prêt";
+  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":isHordeMode()?"Salon AI Horde":isPollinationsMode()?"Salon Pollinations":"Salon prêt";
 }
 function renderParts(){
   const host=$("parts");host.replaceChildren();
@@ -265,6 +285,7 @@ async function nextTour(){
   if(state.busy)return;
   if(isResearchMode())return nextResearchTurn();
   if(isHordeMode())return nextHordeTurn();
+  if(isPollinationsMode())return nextPollinationsTurn();
   try{
     const p=await available();
     if(!p.auth.isSignedIn()){
@@ -496,12 +517,170 @@ async function nextHordeTurn(){
     render();buttonStates();
   }
 }
+function getPollinationsStoredToken(){
+  try {return String(sessionStorage.getItem(POLLINATIONS_ACCESS)||"");}
+  catch{return "";}
+}
+async function connectPollinations(){
+  if(state.busy || pollinationsLoading)return;
+  const clientId=$("pollinationsAppKey").value.trim();
+  pollinationsLoading=true;buttonStates();
+  try{
+    const prepared=await createPollinationsAuthorization({clientId});
+    sessionStorage.setItem(POLLINATIONS_PENDING,JSON.stringify(prepared.pending));
+    sessionStorage.setItem(POLLINATIONS_APP,clientId); // Identifiant PUBLIC, jamais le secret sk_.
+    pollinationsStatus("Ouverture de l'autorisation Pollinations. Le fournisseur demande un accord explicite et un plafond de Pollen.");
+    window.location.assign(prepared.url);
+  }catch(e){
+    pollinationsStatus("Connexion impossible : "+String(e?.message||e)+
+      ". Crée une App Key pk_ et déclare exactement l'URL de retour indiquée.");
+  }finally{pollinationsLoading=false;buttonStates();}
+}
+async function finishPollinationsCallback(){
+  const params=new URLSearchParams(window.location.search||"");
+  const code=params.get("code");
+  const stateKey=params.get("state");
+  const authError=params.get("error");
+  if(!code && !authError)return;
+  // Effacer immédiatement le code de l'URL avant tout autre travail.
+  try{history.replaceState(null,"",window.location.pathname+window.location.hash);}catch{}
+  if(authError){
+    pollinationsStatus("Autorisation Pollinations refusée ou annulée : "+authError+". Aucun débit par la Radio.");
+    try{sessionStorage.removeItem(POLLINATIONS_PENDING);}catch{}
+    return;
+  }
+  pollinationsLoading=true;buttonStates();
+  try{
+    const pending=JSON.parse(sessionStorage.getItem(POLLINATIONS_PENDING)||"null");
+    const token=await exchangePollinationsCode({code,state:stateKey,pending});
+    pollinationsToken=token;
+    sessionStorage.setItem(POLLINATIONS_ACCESS,token);
+    state.engineChoice="pollinations";
+    $("moteurDialogue").value="pollinations";
+    $("pollinationsControls").hidden=false;
+    $("hordeControls").hidden=true;
+    save();
+    pollinationsStatus("Autorisation obtenue pour cette session. Le plafond Pollen choisi sur le site fournisseur reste applicable.");
+    status("Pollinations connecté. Actualise ses modèles, puis sélectionne un modèle.");
+  }catch(e){
+    pollinationsStatus("Retour Pollinations non exploitable : "+String(e?.message||e)+
+      ". Utilise Chrome dans le même onglet pour conserver la preuve PKCE.");
+  }finally{
+    try{sessionStorage.removeItem(POLLINATIONS_PENDING);}catch{}
+    pollinationsLoading=false;buttonStates();
+  }
+}
+function disconnectPollinations(){
+  pollinationsToken="";
+  pollinationsApproved=false;
+  try{
+    sessionStorage.removeItem(POLLINATIONS_ACCESS);
+    sessionStorage.removeItem(POLLINATIONS_APP);
+    sessionStorage.removeItem(POLLINATIONS_PENDING);
+  }catch{}
+  $("pollinationsAppKey").value="";
+  pollinationsStatus("Session de cette Radio déconnectée. Pour révoquer un jeton déjà délivré, utilise les clés de ton compte Pollinations.");
+}
+async function refreshPollinationsModels(){
+  if(state.busy||state.auto||pollinationsLoading)return;
+  pollinationsLoading=true;buttonStates();
+  pollinationsStatus("Lecture du catalogue officiel des modèles texte Pollinations (sans paiement)…");
+  try{
+    const catalog=await listPollinationsModels();
+    pollinationsModels=catalog;
+    const select=$("pollinationsModele");
+    select.replaceChildren();
+    const placeholder=document.createElement("option");
+    placeholder.value="";placeholder.textContent="Choisis un modèle du catalogue officiel";
+    select.append(placeholder);
+    for(const item of catalog){
+      const option=document.createElement("option");
+      option.value=item.id;
+      option.textContent=item.title+(item.title!==item.id?" — "+item.id:"")+
+        (item.publisher?" · "+item.publisher:"");
+      select.append(option);
+    }
+    if(catalog.some(m=>m.id===state.pollinationsModel))select.value=state.pollinationsModel;
+    else{state.pollinationsModel="";select.value="";}
+    save();
+    pollinationsStatus(catalog.length+" modèles texte répertoriés. Sélectionne un modèle. La liste est gratuite ; chaque réponse peut consommer du Pollen.");
+  }catch(e){
+    pollinationsModels=[];
+    $("pollinationsModele").replaceChildren();
+    state.pollinationsModel="";
+    pollinationsStatus("Catalogue Pollinations inaccessible : "+String(e?.message||e)+". Les autres moteurs restent utilisables.");
+  }finally{pollinationsLoading=false;buttonStates();}
+}
+async function nextPollinationsTurn(){
+  if(state.busy)return;
+  if(pollinationsLoading){
+    state.auto=false;buttonStates();status("Pollinations est en cours de connexion ou d'actualisation.");return;
+  }
+  if(!pollinationsToken)pollinationsToken=getPollinationsStoredToken();
+  if(!/^sk_[A-Za-z0-9_-]{4,}$/.test(pollinationsToken)){
+    state.auto=false;buttonStates();
+    status("Pollinations : connexion avec autorisation requise, sans copier ta clé secrète dans le site.");return;
+  }
+  const model=state.pollinationsModel;
+  if(!model||!pollinationsModels.some(m=>m.id===model)){
+    state.auto=false;buttonStates();
+    status("Sélectionne un modèle du catalogue Pollinations actualisé.");return;
+  }
+  if($("pieceUtiliser")?.checked && documentManager?.hasAttachments?.()){
+    state.auto=false;buttonStates();
+    status("Pollinations : le moteur texte n'envoie pas les pièces jointes. Désactive leur inclusion.");return;
+  }
+  if(!state.auto && !pollinationsApproved){
+    if(!confirm("Envoyer une question au modèle "+model+" via Pollinations ? Cela peut consommer des crédits Pollen de ton compte, dans la limite autorisée auprès du fournisseur. Aucun crédit Puter."))return;
+    pollinationsApproved=true;
+  }
+  const role=RESEARCH_ROLES[state.pollinationsIndex%RESEARCH_ROLES.length];
+  const messages=buildPollinationsMessages({
+    history:state.messages,topic:$("sujet").value||state.sujet,
+    role:role.nom+" — "+role.specialite,
+    includeHistory:Boolean($("pollinationsPartagerContexte").checked)
+  });
+  const current={origin:"ai",nom:"Pollinations · "+role.nom,modele:model,
+    heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
+  state.messages.push(current);state.current=current;state.busy=true;
+  state.controller=new AbortController();render();buttonStates();
+  status("Pollinations : interrogation du modèle "+model+" (crédits Pollen potentiellement utilisés)…");
+  try{
+    const output=await chatWithPollinations({
+      model,messages,token:pollinationsToken,
+      maxTokens:boundedTokens($("longueur").value),
+      signal:state.controller.signal
+    });
+    const normalized=cleanAnswer(output.text,state.participants);
+    const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
+    if(issue)throw Error("Réponse rejetée : "+issue);
+    current.texte=normalized;current.modele=output.model;
+    state.pollinationsIndex++;state.tours++;
+    status("Pollinations : réponse de "+output.model+" enregistrée. Ce tour peut avoir dépensé du Pollen.");
+    speech(current.nom,current.texte);
+  }catch(e){
+    state.messages=state.messages.filter(m=>m!==current);state.auto=false;
+    status("Pollinations : "+String(e?.name==="AbortError"?"requête interrompue côté navigateur":e?.message||e)+
+      ". Aucune relance automatique ; la facturation d'une demande déjà acceptée dépend du fournisseur.");
+  }finally{
+    state.busy=false;state.current=null;state.activeCard=null;state.controller=null;render();buttonStates();
+  }
+}
 async function launchInfinity(mode="direct"){
   if(state.auto || state.busy)return;
-  if(researchLoading || hordeLoading){status("Un catalogue ou moteur est en cours de chargement.");return;}
+  if(researchLoading || hordeLoading || pollinationsLoading){status("Un catalogue ou moteur est en cours de chargement.");return;}
   if(isResearchMode()){
     if(!researchEngine){status("Charge le modèle scientifique local avant de lancer un débat.");return;}
     if(!confirm("Lancer les tours scientifiques locaux ? Un unique modèle réel animera différents rôles méthodologiques : cela ne constitue pas une validation indépendante. Les calculs utilisent le GPU tant que l'onglet reste ouvert ; aucune facturation Puter."))return;
+  }else if(isPollinationsMode()){
+    if(!pollinationsToken)pollinationsToken=getPollinationsStoredToken();
+    if(!pollinationsToken || !state.pollinationsModel || !pollinationsModels.some(m=>m.id===state.pollinationsModel)){
+      status("Connecte Pollinations et sélectionne un modèle réel avant de lancer le débat.");return;
+    }
+    if(!$("pollinationsPartagerContexte").checked){
+      status("Pour le débat Pollinations, autorise d'abord explicitement le partage des extraits du Salon.");return;
+    }
+    if(!confirm("Démarrer jusqu'à 3 tours Pollinations automatiques ? Chaque réponse peut consommer des crédits Pollen de ton compte. Le nombre de tours est limité pour protéger ton budget. Continuer ?"))return;
   }else if(isHordeMode()){
     if(!state.hordeModel || !hordeModels.some(m=>m.id===state.hordeModel)){
       status("Actualise les modèles AI Horde et sélectionne un modèle en ligne.");return;
@@ -523,8 +702,15 @@ async function launchInfinity(mode="direct"){
   save();
   state.auto=true;buttonStates();
   status(mode==="debate"?"Débat IA ↔ IA actif : vous pouvez écouter ou intervenir.":"Discussion IA automatique active.");
+  let pollinationsAutomaticTurns=0;
   while(state.auto){
+    if(isPollinationsMode()&&pollinationsAutomaticTurns>=3){
+      state.auto=false;
+      status("Pollinations : pause de sécurité après 3 tours. Relance manuellement pour contrôler la consommation de Pollen.");
+      break;
+    }
     await nextTour();
+    if(isPollinationsMode())pollinationsAutomaticTurns++;
     if(!state.auto)break;
     const delay=Math.max(0,Math.min(120,Number($("pause").value)||0))*1000;
     const end=Date.now()+delay;
@@ -540,6 +726,7 @@ function stop(){
   status(isResearchMode()
     ?"Arrêt du débat local demandé. Le calcul GPU peut encore se terminer."
     :isHordeMode()?"AI Horde : arrêt demandé. Une requête acceptée peut se poursuivre chez le travailleur."
+    :isPollinationsMode()?"Pollinations : arrêt demandé. Une requête déjà acceptée peut avoir utilisé du Pollen."
     :"Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
   buttonStates();
 }
@@ -564,6 +751,29 @@ function init(){
   selection.value=state.researchModelChoice;
   $("moteurDialogue").value=state.engineChoice;
   $("hordeControls").hidden=!isHordeMode();
+  $("pollinationsControls").hidden=!isPollinationsMode();
+  $("pollinationsPartagerContexte").checked=false; // Ne jamais conserver le consentement entre sessions.
+  try{
+    $("pollinationsAppKey").value=sessionStorage.getItem(POLLINATIONS_APP)||"";
+    pollinationsToken=getPollinationsStoredToken();
+  }catch{}
+  $("pollinationsConnecter").addEventListener("click",()=>void connectPollinations());
+  $("pollinationsDeconnecter").addEventListener("click",disconnectPollinations);
+  $("pollinationsActualiser").addEventListener("click",()=>void refreshPollinationsModels());
+  $("pollinationsModele").addEventListener("change",()=>{
+    const selected=$("pollinationsModele").value;
+    state.pollinationsModel=pollinationsModels.some(m=>m.id===selected)?selected:"";
+    pollinationsApproved=false;save();
+    pollinationsStatus(state.pollinationsModel?"Modèle sélectionné : "+state.pollinationsModel+
+      ". Les réponses peuvent consommer du Pollen.":"Choisis un modèle réel de la liste.");
+  });
+  $("pollinationsPartagerContexte").addEventListener("change",()=>{
+    pollinationsStatus($("pollinationsPartagerContexte").checked
+      ?"Partage des extraits anciens autorisé pour Pollinations."
+      :"Seuls le message actuel et le sujet sont envoyés à Pollinations.");
+  });
+  // L'échange OAuth reste facultatif et n'affecte pas les autres moteurs.
+  void finishPollinationsCallback();
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
   $("hordeModele").addEventListener("change",()=>{
@@ -581,13 +791,16 @@ function init(){
   });
   $("moteurDialogue").addEventListener("change",()=>{
     const requested=$("moteurDialogue").value;
-    state.engineChoice=["puter","research-local","horde"].includes(requested)?requested:"puter";
+    state.engineChoice=["puter","research-local","horde","pollinations"].includes(requested)?requested:"puter";
+    $("pollinationsControls").hidden=!isPollinationsMode();
     $("hordeControls").hidden=!isHordeMode();
     save();buttonStates();
     status(isResearchMode()
       ?"Moteur scientifique local sélectionné : charge un modèle puis utilise les commandes habituelles."
       :isHordeMode()
         ?"AI Horde choisi : actualise les modèles disponibles et sélectionne un modèle réel. Les anciens échanges ne sont pas envoyés sans ton accord."
+      :isPollinationsMode()
+        ?"Pollinations choisi : connecte-toi via son autorisation sécurisée. Les requêtes peuvent consommer du Pollen."
         :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
   });
   selection.addEventListener("change",()=>{
@@ -599,6 +812,9 @@ function init(){
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
   if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
+  if(isPollinationsMode())pollinationsStatus(pollinationsToken
+    ?"Session Pollinations disponible : actualise les modèles et choisis-en un."
+    :"Crée une App Key pk_ puis autorise la connexion. Pollinations peut dépenser du Pollen.");
   $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
     const button=$("quotaVoir"),node=$("quotaEtat");
     if(!node||!button)return;
@@ -708,6 +924,7 @@ function init(){
     status(isResearchMode()
       ?"Mode local disponible : charge le modèle scientifique. Puter n'est pas requis."
       :isHordeMode()?"AI Horde est disponible sans Puter : actualise son catalogue."
+      :isPollinationsMode()?"Pollinations est disponible indépendamment de Puter : autorise sa connexion."
       :"Mode mobile allégé : Puter sera chargé uniquement si tu cliques sur « Se connecter à Puter ». AI Horde fonctionne sans lui.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
@@ -715,6 +932,7 @@ function init(){
   }else status(isResearchMode()
     ?"Mode de recherche local sélectionné : charge un modèle scientifique pour parler sans Puter."
     :isHordeMode()?"AI Horde : actualise le catalogue et choisis un modèle pour commencer."
+    :isPollinationsMode()?"Pollinations : connecte-toi et sélectionne un modèle pour commencer."
     :"Connecte Puter pour utiliser des modèles distants. Le Salon public ne dépend pas de WSL.");
 }
 init();
