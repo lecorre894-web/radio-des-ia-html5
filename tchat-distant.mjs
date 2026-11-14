@@ -1,4 +1,4 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity} from "./tchat-core.mjs?v=perplexity-1";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=kimi-k3-1";
 
 const $ = id => document.getElementById(id);
 const KEY = "radio-salon-distant-v1";
@@ -6,11 +6,12 @@ const START = [
   {nom:"Cairn",role:"Épistémologie, audit critique, contradictions argumentées",modele:"gpt-5.5"},
   {nom:"Brume",role:"Mathématiques, physique et méthodologie expérimentale",modele:"claude-sonnet-4-6"},
   {nom:"Aurore",role:"Philosophie, science ouverte et nouvelles hypothèses",modele:"gemini-3.1-flash-lite"},
-  {...PERPLEXITY}
+  {...PERPLEXITY},
+  {...KIMI}
 ];
 const state = {
   participants: structuredClone(START), messages: [], sujet:"", next:0, tours:0,
-  auto:false, mode:"direct", perplexityIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
+  auto:false, mode:"direct", perplexityIntroduced:true, kimiIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0
 };
 function status(value){$("etat").textContent=value;}
@@ -20,7 +21,8 @@ function save(){
     localStorage.setItem(KEY,JSON.stringify({
       participants:state.participants, messages:state.messages.slice(-150),
       sujet:state.sujet, next:state.next, tours:state.tours,
-      perplexityIntroduced:state.perplexityIntroduced
+      perplexityIntroduced:state.perplexityIntroduced,
+      kimiIntroduced:state.kimiIntroduced
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
 }
@@ -35,7 +37,9 @@ function restore(){
     if(!state.participants.length)state.participants=structuredClone(START);
     // Ajout non destructif pour les salons sauvegardés avant l'arrivée de Perplexity.
     if(!d.perplexityIntroduced)state.participants=addPerplexity(state.participants);
+    if(!d.kimiIntroduced)state.participants=addKimi(state.participants);
     state.perplexityIntroduced=true;
+    state.kimiIntroduced=true;
     state.messages=(Array.isArray(d.messages)?d.messages:[]).filter(x=>x&&typeof x.texte==="string");
     state.sujet=String(d.sujet||"").slice(0,4000);
     state.next=Number(d.next)||0;
@@ -64,6 +68,10 @@ function renderParts(){
       const requested=modele.value.trim()||p.modele;
       if(p.nom.trim().toLowerCase()==="perplexity" && !requested.startsWith("perplexity/")){
         status("Perplexity doit utiliser un véritable modèle de la famille perplexity/ ; modification refusée.");
+        modele.value=p.modele;return;
+      }
+      if(p.nom.trim().toLowerCase()==="kimi" && !requested.startsWith("moonshotai/kimi-")){
+        status("Kimi doit utiliser un véritable modèle Moonshot Kimi ; modification refusée.");
         modele.value=p.modele;return;
       }
       p.modele=requested;save();
@@ -131,6 +139,12 @@ async function loadCatalog(){
         const alternative=["perplexity/sonar-pro","perplexity/sonar","perplexity/sonar-reasoning-pro"].find(id=>names.has(id));
         if(alternative)speaker.modele=alternative;
         else warnings.push("Perplexity indisponible dans ce catalogue : aucun remplacement par une autre IA.");
+        continue;
+      }
+      if(speaker.nom.trim().toLowerCase()==="kimi" || speaker.modele.startsWith("moonshotai/kimi-")){
+        const alternative=["moonshotai/kimi-k3.1-pro","moonshotai/kimi-k3.1-pro-highspeed","moonshotai/kimi-k3","moonshotai/kimi-k2.6"].find(id=>names.has(id));
+        if(alternative)speaker.modele=alternative;
+        else warnings.push("Kimi indisponible dans ce catalogue : aucun remplacement par une autre IA.");
         continue;
       }
       const fallback=["gpt-5.5","gpt-5.4-nano","claude-sonnet-4-6"].find(id=>names.has(id));
@@ -250,11 +264,12 @@ function init(){
   $("ajouter").addEventListener("click",()=>{
     if(state.busy)return;
     const name=$("nouveauNom").value.trim()||"IA"+(state.participants.length+1);
-    if(name.toLowerCase()==="perplexity" && state.participants.some(p=>p.nom.toLowerCase()==="perplexity")){
-      status("Perplexity est déjà présent comme intervenant.");return;
+    if(["perplexity","kimi"].includes(name.toLowerCase()) && state.participants.some(p=>p.nom.toLowerCase()===name.toLowerCase())){
+      status(name+" est déjà présent comme intervenant.");return;
     }
     state.participants.push({nom:name,
-      role:$("nouveauRole").value.trim()||"Analyse critique",modele:name.toLowerCase()==="perplexity"?PERPLEXITY.modele:"gpt-5.5"});
+      role:$("nouveauRole").value.trim()||"Analyse critique",
+      modele:name.toLowerCase()==="perplexity"?PERPLEXITY.modele:name.toLowerCase()==="kimi"?KIMI.modele:"gpt-5.5"});
     $("nouveauNom").value="";$("nouveauRole").value="";renderParts();save();
   });
   $("nouveau").addEventListener("click",()=>{
