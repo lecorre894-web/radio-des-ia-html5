@@ -87,3 +87,37 @@ Par défaut, 640 tâches synthétiques sont réparties entre les 64 Spark et 32 
 À la fin, le rapport indique toujours status=SIMULE_NON_MESURE, provisioned_hardware=false, real_models_executed=0, requests_sent_to_internet=0. Les résultats de l'émulateur ne doivent JAMAIS alimenter les indicateurs de performance mesurée du cluster.
 
 Les futurs tests physiques compareront, sur un vrai Spark ou un vrai serveur EPYC, les latences, la saturation mémoire et le nombre de calculs simultanés ; seul cet étalonnage permettra d'améliorer les hypothèses de SPARKTIATES.
+
+## Passerelle PowerShell Windows — couche additive sans duplication du matériel
+
+Fichier : `selfhost/sparktiates-windows.ps1`. Ce contrôleur PowerShell 5.1/7+ fonctionne sur Windows 11 et complète les services WSL de SPARKTIATES. **Il n'ajoute aucun processeur physique ni aucune RAM : WSL et Windows se partagent les ressources du PC.** Le script ne démarre aucun service réseau public et ne change ni le Pare-feu Windows ni la Radio publique.
+
+À exécuter depuis Windows PowerShell, dans le dossier `selfhost` de ce dépôt :
+
+```powershell
+.\sparktiates-windows.ps1 -Mode Audit
+.\sparktiates-windows.ps1 -Mode Check
+.\sparktiates-windows.ps1 -Mode Start
+.\sparktiates-windows.ps1 -Mode Open
+.\sparktiates-windows.ps1 -Mode Stop
+```
+
+`Audit` recueille seulement les données rapportées par Windows (CPU, mémoire, noms de GPU) et ne fait **aucune requête réseau**. `Check` ne consulte que `127.0.0.1:8766` et affiche les nœuds réellement opérationnels ainsi que les modèles déclarés installés ; `Start`/`Stop` pilotent les scripts Bash existants via `wsl.exe`. `Open` ouvre `http://127.0.0.1:8766/radio` seulement si le cluster répond. Si la redirection localhost WSL n'est pas disponible, aucun accès n'est simulé.
+
+Quand le dépôt existe directement dans `/home/...` sous Ubuntu et non sur un disque Windows, ajouter `-LinuxSelfhost '/home/UTILISATEUR/radio-des-ia-html5/selfhost'` à la commande PowerShell de démarrage, d'arrêt ou de vérification. Ne pas deviner un chemin Linux réel ; l'adapter à celui du dépôt.
+
+Installation de modèles locaux, **sur demande explicite seulement** :
+
+```powershell
+.\sparktiates-windows.ps1 -Mode ResearchCheck
+.\sparktiates-windows.ps1 -Mode ResearchInstall
+.\sparktiates-windows.ps1 -Mode GptOssInstall
+.\sparktiates-windows.ps1 -Mode WindowsModels
+.\sparktiates-windows.ps1 -Mode WindowsResearchInstall
+```
+
+`ResearchCheck` ne télécharge rien. `ResearchInstall` demande à Ollama **dans WSL** de télécharger `qwen3:14b` et `deepseek-r1:14b`; `GptOssInstall` ajoute `gpt-oss:20b` dans WSL. `WindowsModels` inspecte seulement le serveur Ollama **natif Windows** sur localhost ; `WindowsResearchInstall` télécharge les deux modèles **nativement sous Windows**, seulement si cette commande est explicitement lancée et Ollama pour Windows fonctionne déjà. Les modèles natifs Windows ne sont **pas ajoutés automatiquement comme nœuds** au cluster : ils ne deviennent disponibles qu'après vérification de l'accès réseau et de l'absence de comptage double de la RTX.
+
+À distinguer : un second processus PowerShell ou Ollama sur le même PC ne crée pas un deuxième GPU. Les modèles restent des modèles locaux identifiés par leur véritable nom, et les huit profils « doctoraux » restent des méthodes de travail, pas une certification universitaire. Aucune adresse IP publique n'est générée.
+
+Validation Windows dédiée : `.github/workflows/sparktiates-powershell.yml` vérifie les modes non destructifs en **PowerShell 7 et Windows PowerShell 5.1**. Cette validation ne prouve pas qu'Ollama a généré une réponse sur le vrai PC.
