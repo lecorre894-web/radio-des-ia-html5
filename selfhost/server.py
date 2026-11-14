@@ -18,6 +18,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 from resources import detect_resources
+from personas import PROFILES, LOCAL_AGENTS
 
 APP = Path(__file__).resolve().parent
 MODEL = os.environ.get("RADIO_LOCAL_MODEL", "qwen3:8b").strip()
@@ -36,11 +37,6 @@ BUCKETS = {}
 HARDWARE_CACHE = {"at": 0.0, "data": None}
 HARDWARE_LOCK = threading.Lock()
 USER_AGENT = "RadioDesIA-WSL-PrivateNode/0.1 (research prototype; https://github.com/lecorre894-web/radio-des-ia-html5)"
-PROFILES = {
-    "analyste": "Analyse les affirmations, distingue preuves, hypotheses et questions ouvertes.",
-    "mathematique": "Raisonnement mathematique rigoureux, hypotheses et contre-exemples.",
-    "explorateur": "Explore plusieurs interpretations en conservant la rigueur et les incertitudes.",
-}
 SYSTEM = (
     "Tu es un modèle local de la famille Qwen exécuté par Ollama sur le PC de l'utilisateur. "
     "Ne te présentes JAMAIS comme ChatGPT, Claude, Kimi ou Perplexity. "
@@ -191,7 +187,7 @@ def prompt_messages(user: str, history: list, profile: str, sources: list[dict])
             continue
         if content.strip():
             valid.append({"role": role, "content": content[:900]})
-    system = SYSTEM + "\nSpecialite: " + PROFILES[profile]
+    system = SYSTEM + "\nProfil de rôle local: " + LOCAL_AGENTS[profile][0] + ". Spécialité: " + PROFILES[profile] + "\nTu peux voir les interventions des autres profils dans l’historique. N’usurpe pas leur identité."
     if sources:
         references = "\n".join(
             "[" + str(i) + "] " + r["title"] + " | " + r["url"] + " | " + r["snippet"]
