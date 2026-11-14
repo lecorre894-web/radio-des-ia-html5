@@ -132,7 +132,21 @@ details.card[open]>summary{margin-bottom:14px}
 <select id="moteurDialogue">
 <option value="puter">IA distantes existantes (Puter, selon crédits)</option>
 <option value="research-local">Recherche locale sans abonnement (GPU de cet appareil)</option>
+<option value="horde">AI Horde — modèles communautaires sans crédits Puter</option>
 </select>
+</div>
+<div id="hordeControls" class="card" hidden aria-label="Options du réseau AI Horde">
+<h3 style="font-size:16px;margin:2px 0 7px">🌐 AI Horde — modèle réel du réseau communautaire</h3>
+<p>Les modèles sont servis sur des ordinateurs bénévoles, avec délais et disponibilité variables. Ni identité de Claude/Perplexity/Kimi ni niveau doctoral ne sont garantis. Le réseau ne nécessite pas d'abonnement et ne consomme aucun crédit Puter.</p>
+<div class="row"><button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button></div>
+<label for="hordeModele"><strong>Choisir un modèle effectivement annoncé en ligne</strong></label>
+<select id="hordeModele" style="width:100%;max-width:100%" aria-label="Modèle communautaire AI Horde">
+<option value="">Clique sur « Actualiser les modèles »</option>
+</select>
+<label class="pieceOption"><input id="hordePartagerContexte" type="checkbox">
+<span><strong>Autoriser l'envoi d'extraits récents du Salon à AI Horde</strong> (jusqu'à 8 messages, taille limitée) pour poursuivre une discussion ou un débat. Désactivé par défaut à chaque ouverture de la page.</span></label>
+<p class="notice">Attention : ton message actuel est envoyé aux travailleurs communautaires lorsque tu demandes une réponse. Si la case ci-dessus est cochée, des extraits des échanges précédents sont également transmis. Ne transmets pas de documents médicaux, de secrets ni d'informations personnelles. Les fichiers joints ne sont jamais transmis par ce moteur.</p>
+<small id="hordeEtat" role="status">AI Horde sélectionné : actualise son catalogue pour choisir un modèle réellement disponible. Aucun envoi tant que tu ne demandes pas de réponse.</small>
 </div>
 <div class="row">
 <label for="modeleRecherche">Modèle local de recherche</label>
