@@ -153,7 +153,16 @@ export async function validateNoaaTides({station="9414290",period="20250915",
   if(predicted.stationId && predicted.stationId!==station)
     throw Error("La station de prédiction NOAA ne correspond pas à la requête.");
   const compared=compareObservedToPredicted(observed,predicted);
+  // Do not make a one-week "validation" out of a truncated one-day download.
   const window=NOAA_WINDOWS[period];
+  const expectedHours=(Date.UTC(Number(window.end.slice(0,4)),Number(window.end.slice(4,6))-1,
+    Number(window.end.slice(6,8))+1)-
+    Date.UTC(Number(window.begin.slice(0,4)),Number(window.begin.slice(4,6))-1,
+    Number(window.begin.slice(6,8))))/3_600_000;
+  const periodCoverage=compared.n/expectedHours;
+  if(periodCoverage<0.8)
+    throw Error("Données temporelles insuffisantes pour "+window.label+
+      " : "+compared.n+"/"+expectedHours+" heures alignées (minimum 80 %).");
   const lower=Date.UTC(Number(window.begin.slice(0,4)),Number(window.begin.slice(4,6))-1,
     Number(window.begin.slice(6,8)));
   const upper=Date.UTC(Number(window.end.slice(0,4)),Number(window.end.slice(4,6))-1,
@@ -168,6 +177,7 @@ export async function validateNoaaTides({station="9414290",period="20250915",
     measurementUrl,predictionUrl,
     observedQuality:{rejected:observed.rejected,duplicates:observed.duplicates},
     predictedQuality:{rejected:predicted.rejected,duplicates:predicted.duplicates},
-    ...compared
+    ...compared,
+    expectedHours,periodCoverage
   };
 }
