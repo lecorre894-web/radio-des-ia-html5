@@ -533,6 +533,10 @@ async function connectPollinations(){
   }finally{pollinationsLoading=false;buttonStates();}
 }
 async function finishPollinationsCallback(){
+  // Ne jamais intercepter la connexion d'un autre fournisseur : il faut un PKCE lancé ici.
+  let hasPending=false;
+  try{hasPending=Boolean(sessionStorage.getItem(POLLINATIONS_PENDING));}catch{}
+  if(!hasPending)return;
   const params=new URLSearchParams(window.location.search||"");
   const code=params.get("code");
   const stateKey=params.get("state");
