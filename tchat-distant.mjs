@@ -664,8 +664,8 @@ async function finishPollinationsCallback(){
     $("pollinationsControls").hidden=false;
     $("hordeControls").hidden=true;
     save();
-    pollinationsStatus("Autorisation obtenue pour cette session. Le plafond Pollen choisi sur le site fournisseur reste applicable.");
-    status("Pollinations connecté. Actualise ses modèles, puis sélectionne un modèle.");
+    pollinationsStatus("Autorisation obtenue pour cette session. Chargement automatique du catalogue des modèles texte…");
+    status("Pollinations connecté. Récupération des modèles disponibles, sans génération ni crédit Pollen.");
   }catch(e){
     pollinationsStatus("Retour Pollinations non exploitable : "+String(e?.message||e)+
       ". Utilise Chrome dans le même onglet pour conserver la preuve PKCE.");
@@ -707,12 +707,15 @@ async function refreshPollinationsModels(){
     if(catalog.some(m=>m.id===state.pollinationsModel))select.value=state.pollinationsModel;
     else{state.pollinationsModel="";select.value="";}
     save();
-    pollinationsStatus(catalog.length+" modèles texte répertoriés. Sélectionne un modèle. La liste est gratuite ; chaque réponse peut consommer du Pollen.");
+    pollinationsStatus(catalog.length
+      ?catalog.length+" modèles texte disponibles. Choisis un modèle dans le menu ci-dessus, puis utilise « Répondre à ma dernière question » en bas du Salon. Aucun crédit n'a été utilisé pour afficher la liste."
+      :"Le catalogue Pollinations a répondu, mais aucun modèle texte n'est actuellement proposé. Réessaie ultérieurement ; aucun crédit Pollen utilisé.");
   }catch(e){
     pollinationsModels=[];
     $("pollinationsModele").replaceChildren();
     state.pollinationsModel="";
-    pollinationsStatus("Catalogue Pollinations inaccessible : "+String(e?.message||e)+". Les autres moteurs restent utilisables.");
+    pollinationsStatus("Catalogue Pollinations inaccessible : "+String(e?.message||e)+
+      ". Réessaie avec « Voir les modèles Pollinations ». Aucune génération lancée ; les autres moteurs restent disponibles.");
   }finally{pollinationsLoading=false;buttonStates();}
 }
 async function nextPollinationsTurn(){
@@ -992,8 +995,14 @@ function init(){
       ?"Partage des extraits anciens autorisé pour Pollinations."
       :"Seuls le message actuel et le sujet sont envoyés à Pollinations.");
   });
-  // L'échange OAuth reste facultatif et n'affecte pas les autres moteurs.
-  void finishPollinationsCallback();
+  // Après OAuth (ou restauration d'une session autorisée), le catalogue public
+  // est chargé automatiquement. Aucun modèle n'est sélectionné ni facturé d'office.
+  void finishPollinationsCallback().then(()=>{
+    if(pollinationsToken && isPollinationsMode() && !pollinationsModels.length)
+      void refreshPollinationsModels();
+  }).catch(e=>{
+    pollinationsStatus("Chargement de la session Pollinations interrompu : "+String(e?.message||e));
+  });
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
   $("hordeModele").addEventListener("change",()=>{
@@ -1016,12 +1025,15 @@ function init(){
     $("pollinationsControls").hidden=!isPollinationsMode();
     $("hordeControls").hidden=!isHordeMode();
     save();buttonStates();
+    if(isPollinationsMode() && (pollinationsToken || getPollinationsStoredToken()) &&
+       !pollinationsLoading && !pollinationsModels.length)
+      void refreshPollinationsModels();
     status(isResearchMode()
       ?"Moteur scientifique local sélectionné : charge un modèle puis utilise les commandes habituelles."
       :isHordeMode()
         ?"AI Horde choisi : actualise les modèles disponibles et sélectionne un modèle réel. Les anciens échanges ne sont pas envoyés sans ton accord."
       :isPollinationsMode()
-        ?"Pollinations choisi : connecte-toi via son autorisation sécurisée. Les requêtes peuvent consommer du Pollen."
+        ?"Pollinations choisi : le catalogue public se charge si tu es déjà connecté. Chaque réponse peut consommer du Pollen."
       :isSparktiatesMode()
         ?"SPARKTIATES choisi : indique une vraie passerelle Ollama accessible et son jeton ; aucun abonnement par tour."
         :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
