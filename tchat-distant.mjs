@@ -1,4 +1,4 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=kimi-k3-1";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=qualite-2";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
