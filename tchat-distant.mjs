@@ -1,4 +1,4 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity} from "./tchat-core.mjs";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity} from "./tchat-core.mjs?v=perplexity-1";
 
 const $ = id => document.getElementById(id);
 const KEY = "radio-salon-distant-v1";
