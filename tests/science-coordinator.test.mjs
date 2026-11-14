@@ -92,25 +92,19 @@ test("Rapport reproductible, avec sources, résultats et limites scientifiques",
   assert.match(output,/Validation indépendante des affirmations scientifiques : NON/);
   assert.doesNotMatch(output,/sk_[a-z0-9]{5,}/i);
 });
-test("L'interface est ajoutée au même Salon, sans supprimer les cinq moteurs",()=>{
+test("Le Salon restauré reste indépendant du module scientifique archivé",()=>{
   const html=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
   const js=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
   const module=readFileSync(new URL("../science-panel.mjs",import.meta.url),"utf8");
-  for(const id of ["scienceCoord","scienceCas","scienceQuestion","scienceQuestionWrap",
-    "scienceHorde","scienceSparktiates","scienceLancer","scienceStop","scienceCopier",
-    "scienceResultats","scienceEtat","scienceDerniere"]){
-    assert.ok(html.includes('id="'+id+'"'),"Élément "+id+" préservé");
-  }
-  for(const engine of ["puter","research-local","horde","pollinations","sparktiates"]){
-    assert.ok(html.includes('value="'+engine+'"'),"Moteur "+engine+" préservé");
-  }
+  for(const engine of ["puter","research-local","horde","pollinations","sparktiates"])
+    assert.ok(html.includes('value="'+engine+'"'),engine);
   for(const id of ["fil","moi","tour","infini","debattre","arreter","passerHorde"])
-    assert.ok(html.includes('id="'+id+'"'),"Salon "+id);
+    assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(html,/ChatGPT et René Le Corre®/);
-  assert.match(js,/initScientificCoordinator\(\{getConfig:/);
+  assert.doesNotMatch(js,/initScientificCoordinator\(/);
+  assert.doesNotMatch(html,/id="scienceCoord"/);
+  // Les modules restent conservés mais ne sont pas chargés par la page fonctionnelle.
   assert.match(module,/Promise\.allSettled\(task\)/);
   assert.match(module,/chatWithHorde\(/);
   assert.match(module,/sparktiatesChat\(/);
-  assert.doesNotMatch(module,/localStorage|sessionStorage|window\.puter|chatWithPollinations/);
-  assert.match(module,/currentController\?\.abort\(\)/);
 });
