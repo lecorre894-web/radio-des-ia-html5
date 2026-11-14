@@ -53,6 +53,31 @@ assert 'intelligence artificielle' in index_page.lower()
 assert '<meta name="description"' in index_page and '<link rel="canonical"' in index_page
 sitemap = (root / "sitemap.xml").read_text(encoding="utf-8")
 assert "tchat.html</loc>" in sitemap and "radio-des-ia-html5/</loc>" in sitemap
+# Favoris : icones dédiées, manifeste et bouton sans dépendance au tchat.
+manifest = json.loads((root / "manifest.webmanifest").read_text(encoding="utf-8"))
+assert manifest["short_name"] == "Radio des IA"
+assert manifest["start_url"] == "./tchat.html"
+assert manifest["scope"] == "./"
+icons = manifest["icons"]
+assert any(icon.get("sizes") == "192x192" for icon in icons)
+assert any(icon.get("sizes") == "512x512" for icon in icons)
+for page_name in ("index.html", "tchat.html"):
+    document = (root / page_name).read_text(encoding="utf-8")
+    for control in ("favorisToggle", "favorisPanneau", "favorisInstructions", "favorisAdresse", "favorisCopier", "favorisStatut"):
+        assert f'id="{control}"' in document, f"Bouton favori manquant : {control}"
+    assert 'rel="manifest" href="./manifest.webmanifest"' in document
+    assert 'href="./favicon.svg"' in document
+    assert 'href="./icon-32.png"' in document
+    assert 'href="./icon-180.png"' in document
+    assert './bookmark.mjs?v=favoris-1' in document
+svg = (root / "favicon.svg").read_text(encoding="utf-8")
+assert '<svg ' in svg and 'Radio des IA' in svg
+for dimension in (32, 180, 192, 512):
+    raw = (root / f"icon-{dimension}.png").read_bytes()
+    assert raw[:8] == b"\\x89PNG\\r\\n\\x1a\\n", "Signature PNG incorrecte"
+    assert int.from_bytes(raw[16:20], "big") == dimension
+    assert int.from_bytes(raw[20:24], "big") == dimension
+
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
 assert "enterkeyhint=\"enter\"" in page
