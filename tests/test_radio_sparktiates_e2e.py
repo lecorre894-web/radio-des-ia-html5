@@ -120,6 +120,39 @@ class RadioLoopTests(unittest.TestCase):
 
                 self.assertTrue(all(call["stream"] is False for call in FakeInference.chat_payloads))
 
+    def test_doctoral_committee_eight_roles_routes_without_external_api(self):
+        FakeInference.chat_payloads=[]
+        roles=("these","postdoc","mathsup","methodes","systemes","pairs","epistemologie","jury")
+        with serve(FakeInference) as fake,patch.object(server,"OLLAMA",fake),\
+             patch.object(server,"BUCKETS",{}),patch.object(server,"NODE_TOKEN",""),\
+             serve(server.Handler) as worker:
+            nodes=cluster.Cluster([cluster.Node("wsl-doctoral",worker,"qwen3:8b",1)])
+            with patch.object(cluster.Handler,"cluster",nodes),\
+                 patch.object(cluster,"CLUSTER_KEY",""),serve(cluster.Handler) as radio:
+                code,data,_=http(radio+"/api/v1/research")
+                self.assertEqual(code,200)
+                status=json.loads(data)
+                self.assertEqual(status["mode"],"doctoral_method_profiles_not_academic_credentials")
+                self.assertEqual(len(status["roles"]),8)
+                self.assertEqual(status["models_installed"],["qwen3:8b"])
+                for role in roles:
+                    code,data,_=http(radio+"/api/v1/chat",
+                                     {"message":"Valider une hypothèse avec limites.",
+                                      "profile":role,"web":False,
+                                      "history":[{"role":"user","content":"Question source"}]})
+                    self.assertEqual(code,200,(role,data))
+                    reply=json.loads(data)
+                    self.assertTrue(reply["scientific_protocol"])
+                    self.assertFalse(reply["peer_review_independent"])
+                    self.assertEqual(reply["model"],"qwen3:8b")
+                self.assertEqual(nodes.status()["completed_jobs"],8)
+                self.assertEqual(len(FakeInference.chat_payloads),8)
+                for result in FakeInference.chat_payloads:
+                    self.assertTrue(result["think"])
+                    self.assertEqual(result["options"]["num_predict"],1152)
+                    self.assertIn("PROTOCOLE SCIENTIFIQUE AVANCE",
+                                  result["messages"][0]["content"])
+
     def test_public_origin_cannot_post_from_other_site(self):
         assigned=cluster.Cluster([cluster.Node("offline","http://127.0.0.1:1","qwen3:8b",1)])
         with patch.object(cluster.Handler,"cluster",assigned),serve(cluster.Handler) as url:
