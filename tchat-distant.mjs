@@ -7,6 +7,7 @@ import {listHordeModels,listHordeStatus,enrichHordeModels,recommendHordeModel,ho
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
+import {initScientificCoordinator} from "./science-panel.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -1043,6 +1044,19 @@ function exportConversation(){
 }
 function init(){
   restore();
+  // Panneau additif : ne modifie ni le Salon ni les identités des intervenants.
+  // Les jetons ne sont lus qu'à la demande de l'utilisateur, jamais enregistrés.
+  initScientificCoordinator({getConfig:()=>({
+    history:state.messages,
+    hordeModel:state.hordeModel,
+    hordeVerified:hordeModels.some(m=>m.id===state.hordeModel),
+    sparktiates:{
+      model:state.sparktiatesModel,
+      verified:sparktiatesModelsReady.some(m=>m.id===state.sparktiatesModel),
+      endpoint:$("sparktiatesAdresse")?.value.trim()||"",
+      token:$("sparktiatesToken")?.value.trim()||""
+    }
+  })});
   const selection=$("modeleRecherche");
   for(const model of RESEARCH_MODELS){
     const option=document.createElement("option");
