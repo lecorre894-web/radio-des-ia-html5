@@ -1,0 +1,8 @@
+{
+  "client_id": "https://lecorre894-web.github.io/radio-des-ia-html5/pollinations-client.json",
+  "client_name": "Radio des IA — Salon scientifique",
+  "redirect_uris": [
+    "https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html"
+  ],
+  "token_endpoint_auth_method": "none"
+}
