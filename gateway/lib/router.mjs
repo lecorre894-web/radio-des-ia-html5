@@ -43,7 +43,7 @@ export function createRouter({store,env=process.env}){
     if(req.method!=="GET")return response(405,{error:"method_not_allowed"});
     if(env.PUBLIC_BROADCAST_ENABLED!=="true")return response(503,{error:"broadcast_disabled"});
     const after=new URL(req.url).searchParams.get("after")||"0";
-    if(!/^\\d{1,15}$/.test(after)||!Number.isSafeInteger(Number(after)))
+    if(!/^[0-9]{1,15}$/.test(after)||!Number.isSafeInteger(Number(after)))
       return response(400,{error:"invalid_cursor"});
     // En diffusion publique : uniquement les contributions approuvées et l'identité administrée.
     const messages=await store.feed(Number(after),Math.min(30,LIMITS.page));
