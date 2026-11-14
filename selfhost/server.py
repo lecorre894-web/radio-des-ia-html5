@@ -271,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/health":
             try:
                 tags = fetch_json(OLLAMA + "/api/tags", timeout=3)
-                available = any(x.get("name", "").split(":")[0] == MODEL.split(":")[0]
+                available = any(x.get("name") == MODEL or x.get("model") == MODEL
                     for x in tags.get("models", []) if isinstance(x, dict))
                 self.send_json(200, {"ready": available, "ollama": True, "model": MODEL,
                     "web": "Wikipedia + SearXNG facultatif" if SEARXNG else "Wikipedia",
@@ -351,6 +351,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if NODE_TOKEN and len(NODE_TOKEN) < 32:
+        raise RuntimeError("RADIO_NODE_AUTH_TOKEN doit contenir au moins 32 caracteres.")
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"RADIO_WSL_NODE=PRET http://{HOST}:{PORT}", flush=True)
