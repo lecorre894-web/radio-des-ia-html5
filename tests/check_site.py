@@ -23,12 +23,13 @@ class Check(HTMLParser):
 page = (root / "tchat.html").read_text(encoding="utf-8")
 parser = Check()
 parser.feed(page)
-for required in ("moi","parler","tour","infini","debattre","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue","connected","pieceFichier","pieceDepot","pieceListe","pieceUtiliser","pieceVision","pieceEtat","imagePrompt","imageGenerer","imageModele","imageRatio","imageDemo","imageEtat","imageResult","reactionToggle","reactionBoard","reactionClose","reactionSearch","reactionEmojis","reactionSmileys","reactionGifs","reactionGifFile","reactionGifList","reactionStatus"):
+for required in ("moi","parler","tour","infini","debattre","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue","connected","diagnosticModeles","pieceAutoTest","pieceAutoResult","pieceFichier","pieceDepot","pieceListe","pieceUtiliser","pieceVision","pieceEtat","imagePrompt","imageGenerer","imageModele","imageRatio","imageDemo","imageEtat","imageResult","reactionToggle","reactionBoard","reactionClose","reactionSearch","reactionEmojis","reactionSmileys","reactionGifs","reactionGifFile","reactionGifList","reactionStatus"):
     assert required in parser.ids, f"Élément manquant: {required}"
 for relative in parser.files:
     assert (root / relative).is_file(), f"Script absent: {relative}"
 assert "https://js.puter.com/v2/" in page
 assert "tchat-distant.mjs" in page
+assert (root / "tchat-models.mjs").is_file()
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
 assert "enterkeyhint=\"enter\"" in page
