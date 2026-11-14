@@ -5,11 +5,7 @@ import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMat
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
-import {
-  POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,
-  createPollinationsAuthorization,exchangePollinationsCode,listPollinationsModels,
-  buildPollinationsMessages,chatWithPollinations
-} from "./tchat-pollinations.mjs?v=1";
+import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,createPollinationsAuthorization,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations} from "./tchat-pollinations.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
