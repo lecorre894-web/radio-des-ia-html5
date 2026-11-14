@@ -253,7 +253,7 @@ function buttonStates(){
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
   $("hordeRapide").disabled=state.busy || state.auto || hordeLoading ||
-    !chooseResponsiveHorde(hordeModels);
+    !hordeModels.length || !chooseResponsiveHorde(hordeModels);
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
