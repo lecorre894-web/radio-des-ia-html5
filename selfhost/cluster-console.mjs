@@ -25,6 +25,28 @@ function metricsText(status){
   " · Calculs en cours : "+n.running_jobs+
   " · Réponses terminées : "+n.completed_jobs;
 }
+async function refreshPlan(){
+ const target=$("planned");
+ try{
+  const response=await fetch("/api/v1/plan",{cache:"no-store"});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||"HTTP "+response.status);
+  if(data.mode!=="simulation_capacite_seulement"||data.online_nodes!==0||data.usable_slots!==0)
+    throw Error("Plan non reconnu comme simulation.");
+  const spark=data.spark,epyc=data.epyc;
+  target.textContent=
+    "SIMULATION — 0 serveur installé par ce plan\n"+
+    "NVIDIA DGX Spark projetés : "+spark.planned_systems+
+    " · RAM unifiée totale répartie : "+spark.planned_unified_memory_gb+" Gio"+
+    " · conteneurs ARM projetés : "+spark.planned_virtual_containers+"\n"+
+    "Serveurs AMD EPYC projetés : "+epyc.planned_systems+
+    " · cœurs x86 maximum théoriques : "+epyc.planned_max_x86_cores_if_equipped+
+    " · RAM DDR5 supposée : "+epyc.planned_ddr5_ram_gb+" Gio"+
+    " · VM projetées : "+epyc.planned_virtual_machines+"\n"+
+    "Total projeté réparti : "+data.aggregate_planned_memory_gb_not_shared+
+    " Gio (72 Tio). Ce n'est PAS une mémoire commune.";
+ }catch(error){target.textContent="Plan indisponible : "+String(error?.message||error);}
+}
 async function refresh(){
  $("refresh").disabled=true;
  try{
@@ -97,3 +119,4 @@ $("clear").addEventListener("click",()=>{
  phrase("Console locale réinitialisée.");
 });
 refresh();
+void refreshPlan();
