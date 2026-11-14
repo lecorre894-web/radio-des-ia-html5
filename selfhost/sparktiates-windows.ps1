@@ -13,7 +13,8 @@
 param(
   [ValidateSet('Audit','Check','Start','Stop','Open','ResearchCheck',
                'ResearchInstall','GptOssInstall','WindowsModels','WindowsResearchInstall')]
-  [string]$Mode = 'Audit'
+  [string]$Mode = 'Audit',
+  [string]$LinuxSelfhost = ''
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -89,14 +90,20 @@ function Invoke-WslLocal([string]$Script, [string[]]$Arguments = @()) {
   if (-not (Get-Command 'wsl.exe' -ErrorAction SilentlyContinue)) {
     throw 'WSL_ABSENT : aucune commande lancee.'
   }
-  $localScript = Join-Path $PSScriptRoot $Script
-  if (-not (Test-Path -LiteralPath $localScript -PathType Leaf)) {
-    throw ("SOURCE_LOCALE_ABSENTE : {0}" -f $Script)
+  if ([string]::IsNullOrWhiteSpace($LinuxSelfhost)) {
+    $localScript = Join-Path $PSScriptRoot $Script
+    if (-not (Test-Path -LiteralPath $localScript -PathType Leaf)) {
+      throw ("SOURCE_LOCALE_ABSENTE : {0}" -f $Script)
+    }
+    # Si le depot est sur un disque Windows, wslpath convertit son chemin.
+    $linuxDir = (& wsl.exe --exec wslpath -a -u $PSScriptRoot | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'CONVERSION_CHEMIN_WSL=ECHEC' }
+  } else {
+    # Le depot peut aussi vivre directement sous /home/... dans WSL.
+    $linuxDir = $LinuxSelfhost.Trim()
   }
-  # La conversion de chemin est effectuee par WSL : aucun chemin Windows invente.
-  $linuxDir = (& wsl.exe --exec wslpath -a -u $PSScriptRoot | Out-String).Trim()
-  if ($LASTEXITCODE -ne 0 -or -not $linuxDir.StartsWith('/')) {
-    throw 'CONVERSION_CHEMIN_WSL=ECHEC'
+  if (-not $linuxDir.StartsWith('/') -or $linuxDir -match '[\x00\r\n]') {
+    throw 'CHEMIN_LINUX_INVALID'
   }
   # Aucun eval, aucun bash -lc avec chemin insere; arguments POSIX separes.
   $scriptArgs = @(
@@ -112,17 +119,17 @@ function Invoke-WslLocal([string]$Script, [string[]]$Arguments = @()) {
 function Get-NativeOllamaModels {
   $result = Read-LocalEndpoint $WindowsOllamaAddress
   if (-not $result.Ready) {
-    Write-Report 'OLLAMA_WINDOWS' 'NOT_RUNNING_OR_UNREACHABLE'
-    return @()
+    return @{ Ready = $false; Names = @() }
   }
   $list = @()
-  foreach ($entry in @($result.Data.models)) {
-    if ($null -ne $entry -and $null -ne $entry.name) {
-      $list += [string]$entry.name
+  if ($null -ne $result.Data -and $null -ne $result.Data.models) {
+    foreach ($entry in @($result.Data.models)) {
+      if ($null -ne $entry -and $null -ne $entry.name) {
+        $list += [string]$entry.name
+      }
     }
   }
-  Write-Report 'OLLAMA_WINDOWS' 'REACHABLE'
-  return $list
+  return @{ Ready = $true; Names = $list }
 }
 
 Write-Report 'SPARKTIATES_WINDOWS_POWERSHELL' 'ADDITIVE_CONTROLLER'
@@ -155,7 +162,7 @@ switch ($Mode) {
     }
     if ($research.Ready) {
       Write-Report 'SCIENTIFIC_MODELS_DECLARED_INSTALLED' (@($research.Data.models_installed) -join ',')
-      Write-Report 'DOCTORAL_METHOD_ROLES' @($research.Data.roles).Count
+      Write-Report 'DOCTORAL_METHOD_ROLES' (@($research.Data.roles).Count)
     } else {
       Write-Report 'SCIENTIFIC_MODELS' 'UNAVAILABLE'
     }
@@ -190,8 +197,9 @@ switch ($Mode) {
     Invoke-WslLocal 'setup_research_wsl.sh' @('--gpt-oss')
   }
   'WindowsModels' {
-    $models = @(Get-NativeOllamaModels)
-    Write-Report 'INSTALLED_NATIVE_MODELS' ($models -join ',')
+    $result = Get-NativeOllamaModels
+    Write-Report 'OLLAMA_WINDOWS' $(if ($result.Ready) { 'REACHABLE' } else { 'NOT_RUNNING_OR_UNREACHABLE' })
+    Write-Report 'INSTALLED_NATIVE_MODELS' (@($result.Names) -join ',')
     Write-Report 'NATIVE_WINDOWS_AS_SEPARATE_CLUSTER_NODE' 'NOT_REGISTERED'
   }
   'WindowsResearchInstall' {
