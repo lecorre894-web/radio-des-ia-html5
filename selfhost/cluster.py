@@ -4,6 +4,7 @@ Orchestrateur LOCAL : HTTP 127.0.0.1:8766, sans CORS public.
 """
 from __future__ import annotations
 import hmac
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
@@ -25,6 +26,7 @@ MAX_NODES = 4096  # Garde-fou de configuration, PAS une promesse de puissance.
 MAX_SLOTS_PER_NODE = 64
 PROBE_TTL_SECONDS = 15
 FAILURE_COOLDOWN_SECONDS = 30
+REFRESH_BATCH = 64
 CLUSTER_KEY = os.environ.get("RADIO_CLUSTER_KEY", "").strip()
 DEFAULT_CONFIG = BASE / "cluster.nodes.json"
 CONFIG = Path(os.environ.get("RADIO_CLUSTER_CONFIG", str(DEFAULT_CONFIG))).resolve()
@@ -133,6 +135,8 @@ class Cluster:
         self.lock = threading.RLock()
         self.rr = 0
         self.total_requests = 0
+        self.refresh_gate = threading.Lock()
+        self.refresh_cursor = 0
 
     def probe(self, node: Node, *, force: bool = False) -> bool:
         now = self.clock()
@@ -143,6 +147,8 @@ class Cluster:
                 return False
             node.last_check = now
         try:
+            if node.token_env and len(os.environ.get(node.token_env, "")) < 32:
+                raise RuntimeError("Jeton distant absent, nœud indisponible.")
             response = self.transport(node.url+"/health", timeout=3)
             ready = response.get("ready") is True and response.get("model") == node.model
             reason = "Modèle absent ou non prêt" if not ready else ""
@@ -156,9 +162,24 @@ class Cluster:
             return node.ready
 
     def refresh(self) -> None:
-        # Un controle ne reserve pas de coeur ; seuls les travailleurs vraiment joignables comptent.
-        for node in self.nodes:
-            self.probe(node)
+        # Actualisation bornee pour eviter que 4096 machines hors ligne bloquent le controle.
+        if not self.refresh_gate.acquire(blocking=False):
+            return
+        try:
+            count = len(self.nodes)
+            if not count:
+                return
+            with self.lock:
+                order = [self.nodes[(self.refresh_cursor+i) % count]
+                         for i in range(min(REFRESH_BATCH, count))]
+                self.refresh_cursor = (self.refresh_cursor + len(order)) % count
+            expired = [n for n in order if self.clock()-n.last_check >= PROBE_TTL_SECONDS
+                       and n.cooldown_until <= self.clock()]
+            if expired:
+                with ThreadPoolExecutor(max_workers=min(16, len(expired))) as pool:
+                    list(pool.map(self.probe, expired))
+        finally:
+            self.refresh_gate.release()
 
     def status(self) -> dict:
         with self.lock:
@@ -281,11 +302,30 @@ class Handler(BaseHTTPRequestHandler):
                                    "Bearer "+CLUSTER_KEY)
 
     def do_GET(self):
-        if self.path == "/api/v1/status":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/v1/status":
+            if not self.auth_ok():
+                return self.reply(403, {"error": "Origine ou jeton invalide."})
             self.cluster.refresh()
-            self.reply(200, self.cluster.status())
-        else:
-            self.reply(404, {"error": "Route inconnue."})
+            return self.reply(200, self.cluster.status())
+        assets = {
+            "/": ("cluster-console.html", "text/html; charset=utf-8"),
+            "/cluster-console.mjs": ("cluster-console.mjs", "text/javascript; charset=utf-8"),
+            "/node-ui.css": ("node-ui.css", "text/css; charset=utf-8")
+        }
+        if path not in assets:
+            return self.reply(404, {"error": "Route inconnue."})
+        filename, mime = assets[path]
+        data = (BASE / filename).read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'")
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_POST(self):
         if self.path != "/api/v1/chat":
@@ -317,6 +357,14 @@ def main() -> None:
     nodes = load_nodes()
     cluster = Cluster(nodes)
     Handler.cluster = cluster
+    def maintenance():
+        while True:
+            try:
+                cluster.refresh()
+            except Exception:
+                logging.exception("Vérification des nœuds indisponible.")
+            time.sleep(3)
+    threading.Thread(target=maintenance, daemon=True, name="radio-cluster-health").start()
     print("RADIO_CLUSTER=LOCAL_READY", flush=True)
     print(f"NODES_CONFIGURES={len(nodes)} SLOTS_CONFIGURES={sum(n.slots for n in nodes)}", flush=True)
     print("ACCES_PUBLIC=DESACTIVE 127.0.0.1:"+str(PORT), flush=True)
