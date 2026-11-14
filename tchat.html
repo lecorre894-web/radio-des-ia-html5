@@ -136,6 +136,7 @@ details.card[open]>summary{margin-bottom:14px}
 <option value="research-local">Recherche locale sans abonnement (GPU de cet appareil)</option>
 <option value="horde">AI Horde — modèles communautaires sans crédits Puter</option>
 <option value="pollinations">Pollinations — catalogue avancé (compte et crédits Pollen)</option>
+<option value="sparktiates">SPARKTIATES — modèle personnel sur serveur Ollama (sans crédits par tour)</option>
 </select>
 </div>
 <div id="hordeControls" class="card" hidden aria-label="Options du réseau AI Horde">
@@ -171,6 +172,21 @@ details.card[open]>summary{margin-bottom:14px}
 <label class="pieceOption"><input id="pollinationsPartagerContexte" type="checkbox">
 <span><strong>Autoriser les extraits des derniers échanges</strong> à être envoyés à Pollinations pour poursuivre le dialogue et les débats (désactivé au démarrage).</span></label>
 <small id="pollinationsEtat" role="status">Pas de connexion Pollinations active. Les listes de modèles sont publiques, mais la génération requiert ton autorisation. Un retour d'authentification peut nécessiter Chrome plutôt qu'un navigateur intégré.</small>
+</div>
+<div id="sparktiatesControls" class="card" hidden aria-label="Serveur SPARKTIATES personnel">
+<h3 style="font-size:16px;margin:2px 0 7px">🖥️ SPARKTIATES — serveur réel, tours automatiques sans plafond</h3>
+<p>Ce moteur transmet la conversation à un <strong>modèle Ollama installé sur ton propre serveur</strong>. Aucun crédit Puter ou Pollen n'est dépensé. Le serveur doit toutefois être allumé, connecté et doté des ressources nécessaires ; les tours ne sont ni rapides ni illimités en puissance par magie.</p>
+<p class="notice"><strong>Important sur téléphone :</strong> le serveur WSL en <code>127.0.0.1</code> ne correspond pas à ton PC depuis Android. Pour y accéder depuis le téléphone, il faut d'abord lui donner une <strong>adresse HTTPS sécurisée</strong> via un tunnel ou un hébergement authentifié. Aucune adresse publique n'est encore attribuée automatiquement.</p>
+<label for="sparktiatesAdresse"><strong>Adresse de la passerelle SPARKTIATES</strong></label>
+<input id="sparktiatesAdresse" type="url" style="width:100%" placeholder="https://ton-pont-spartiates.exemple" autocomplete="off" spellcheck="false">
+<label for="sparktiatesToken"><strong>Jeton d'accès privé du serveur</strong></label>
+<input id="sparktiatesToken" type="password" style="width:100%" placeholder="Jeton créé sur le serveur (jamais enregistré)" autocomplete="off">
+<div class="row"><button type="button" id="sparktiatesActualiser">Vérifier le serveur et ses modèles</button></div>
+<label for="sparktiatesModele"><strong>Modèle Ollama effectivement installé</strong></label>
+<select id="sparktiatesModele" style="width:100%"><option value="">Vérifie d'abord le serveur</option></select>
+<label class="pieceOption"><input type="checkbox" id="sparktiatesPartagerContexte">
+<span>Envoyer les extraits récents du Salon à ce serveur pour assurer la continuité du débat (désactivé par défaut).</span></label>
+<small id="sparktiatesEtat" role="status">Configuration non renseignée. Le serveur est facultatif ; Puter, AI Horde et Pollinations restent disponibles.</small>
 </div>
 <div class="row">
 <label for="modeleRecherche">Modèle local de recherche</label>
@@ -319,7 +335,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=1"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=1&amp;mobile=1&amp;pollinations=1&amp;sparktiates=1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
