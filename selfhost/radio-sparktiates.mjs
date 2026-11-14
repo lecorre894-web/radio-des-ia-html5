@@ -75,6 +75,7 @@ async function checkServer(){
     const status=await response.json(),roles=await ident.json(),research=await scientific.json();
     if(!response.ok||!ident.ok||!scientific.ok)
       throw Error(status.error||roles.error||research.error||"Serveur non disponible.");
+    model=String(roles.model||"aucun modèle actif");
     const installed=Array.isArray(research.models_installed)?research.models_installed:[];
     const advanced=research.roles?.filter(r=>r.model_if_available&&r.model_if_available!==model)
       .map(r=>r.model_if_available)||[];
@@ -84,7 +85,6 @@ async function checkServer(){
       (additional.length?" · modèles avancés disponibles : "+additional.join(", "):" · rôles avancés sur le modèle de base"):
       "Aucun modèle installé confirmé : le comité ne peut pas générer de réponses.";
     const snapshot=safeStatus(status);
-    model=String(roles.model||"aucun modèle actif");
     $("health").textContent=snapshot.online>0?
       "✓ "+snapshot.online+" nœud(s) disponible(s) · "+snapshot.usable+
       " slot(s) · "+snapshot.active+" tâche(s) en cours":
