@@ -66,6 +66,7 @@ details.card[open]>summary{margin-bottom:14px}
 <p class="notice">Ce tchat utilise Puter.js. Chaque visiteur se connecte à son propre compte Puter et bénéficie d'une allocation d'usage gratuite. Au-delà, Puter peut proposer une offre payante. Il n'existe pas de gratuité illimitée garantie. Aucun paiement ni clé d'API n'est demandé par ce site.</p>
 <div class="row"><button id="connecter" class="primary">Se connecter à Puter</button><button id="catalogueBouton">Actualiser les modèles</button><span id="connexion" class="pill">Non connecté</span></div>
 <small id="catalogue">Le catalogue des modèles disponibles sera chargé depuis le service.</small>
+<div id="diagnosticModeles" aria-live="polite"></div>
 <div id="etat" role="status"></div>
 <small>Les requêtes sont envoyées à Puter et à ses fournisseurs de modèles ; n'entre pas de données confidentielles. L'historique du Salon est enregistré dans ce navigateur seulement, hors des appels effectués aux modèles.</small>
 </section>
@@ -182,6 +183,6 @@ details.card[open]>summary{margin-bottom:14px}
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=envoi-explicite-1"></script>
+<script type="module" src="./tchat-distant.mjs?v=diagnostic-1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-2"></script>
 </body></html>
