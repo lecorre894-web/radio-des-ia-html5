@@ -177,9 +177,9 @@ function engineReadiness(){
 }
 function lastPollinationsCreditRefusal(){
   const last=state.messages.at(-1);
-  return last?.origin==="ai" &&
+  return ["ai","error"].includes(last?.origin) &&
     String(last.nom||"").startsWith("Pollinations") &&
-    isPollinationsCreditRefusal(last.texte);
+    (last.erreurCode==="POLLINATIONS_CREDITS" || isPollinationsCreditRefusal(last.texte));
 }
 function unansweredHuman(){
   return state.messages.length>0 &&
@@ -281,11 +281,12 @@ function renderParts(){
   }
 }
 function makeMessage(m){
-  const card=document.createElement("article");card.className="msg "+(m.origin==="human"?"human":"ai");
+  const card=document.createElement("article");
+  card.className="msg "+(m.origin==="human"?"human":m.origin==="error"?"error":"ai");
   const meta=document.createElement("div");meta.className="meta";
-  const creditError=m.origin==="ai" &&
+  const creditError=["ai","error"].includes(m.origin) &&
     String(m.nom||"").startsWith("Pollinations") &&
-    isPollinationsCreditRefusal(m.texte);
+    (m.erreurCode==="POLLINATIONS_CREDITS" || isPollinationsCreditRefusal(m.texte));
   meta.textContent=creditError
     ?"⚠ Erreur de crédits Pollinations · "+String(m.heure||"")+" · "+String(m.modele||"modèle non précisé")
     :String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
@@ -294,7 +295,7 @@ function makeMessage(m){
     ?"Pollinations a refusé la génération : crédits Pollen insuffisants pour ce modèle. Ce bloc n'est PAS une réponse de l'IA. La dernière question humaine reste disponible ; choisis un autre moteur pour la reprendre."
     :(m.texte||"⏳ Réflexion en cours…");
   card.append(meta,text);
-  if(creditError){
+  if(creditError && m.origin==="ai"){
     const details=document.createElement("details");
     const summary=document.createElement("summary");summary.textContent="Afficher le message technique original";
     const raw=document.createElement("pre");raw.textContent=String(m.texte||"");
@@ -810,13 +811,11 @@ async function nextPollinationsTurn(){
   }catch(e){
     state.messages=state.messages.filter(m=>m!==current);state.auto=false;
     if(e?.code==="POLLINATIONS_CREDITS"){
-      // On conserve le refus comme état de session, sans le transformer en contribution IA.
-      const original=state.messages.at(-1);
-      if(original?.origin==="human"){
-        state.messages.push({origin:"ai",nom:"Pollinations · erreur de crédits",modele:model,
-          heure:new Date().toLocaleTimeString("fr-FR"),
-          texte:"The account behind this API key doesn't have enough credits. This model needs paid Pollen."});
-      }
+      // Une erreur technique explicite, jamais une contribution d'IA ni un tour comptabilisé.
+      state.messages.push({origin:"error",nom:"Pollinations · erreur de crédits",
+        erreurCode:"POLLINATIONS_CREDITS",modele:model,
+        heure:new Date().toLocaleTimeString("fr-FR"),
+        texte:String(e.message||"Crédits Pollen insuffisants.")});
       status("Pollinations : crédits insuffisants pour "+model+
         ". Ce refus n'est pas une réponse scientifique. AUCUN NOUVEL APPEL PAYANT. Utilise « Essayer AI Horde » pour continuer sans Pollen.");
     }else{
