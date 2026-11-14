@@ -103,6 +103,13 @@ for dimension in (32, 180, 192, 512):
 
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
+assert 'id="quotaVoir"' in page
+assert 'id="quotaEtat"' in page
+assert 'value="600" selected' in page
+assert 'tchat-distant.mjs?v=budget-1' in page
+assert (root / "tchat-budget.mjs").is_file()
+assert 'opts.max_tokens=boundedTokens' in (root / "tchat-distant.mjs").read_text(encoding="utf-8")
+
 assert 'id="memoireFil"' in page
 assert 'id="memoireResume"' in page
 assert 'id="memoireInterSalons"' in page
