@@ -1,5 +1,6 @@
 import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=lineage-1";
 import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=lineage-1";
+import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
@@ -268,8 +269,15 @@ async function nextTour(){
       throw new Error("Module documentaire non encore chargé. Les modèles restent disponibles sans document.");
     if(documentManager)prepared=await documentManager.prepare(messages);
     const opts={model:participant.modele,stream:true,signal:state.controller.signal};
-    const long=$("longueur").value;
-    if(long!=="auto")opts.max_tokens=Number(long);
+    opts.max_tokens=boundedTokens($("longueur").value);
+    const size=requestSize(prepared.messages);
+    if(size>18000){
+      state.auto=false;
+      if(!confirm("Le contexte de ce message contient "+size.toLocaleString("fr-FR")+
+        " caractères. Cela peut consommer plus de crédits Puter. Envoyer quand même ?")){
+        throw Error("Envoi annulé : contexte trop volumineux. Votre message reste conservé.");
+      }
+    }
     const stream=await window.puter.ai.chat(prepared.messages,opts);
     let full="";
     if(stream&&typeof stream[Symbol.asyncIterator]==="function"){
@@ -339,6 +347,22 @@ function exportConversation(){
 }
 function init(){
   restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
+  $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
+    const button=$("quotaVoir"),node=$("quotaEtat");
+    if(!node||!button)return;
+    const puter=window.puter;
+    if(!puter?.auth?.isSignedIn?.()||typeof puter.auth.getMonthlyUsage!=="function"){
+      node.textContent="Connectez-vous à Puter pour consulter l’usage de cette application.";return;
+    }
+    button.disabled=true;node.textContent="Lecture du quota Puter, sans requête IA…";
+    try{
+      const data=await puter.auth.getMonthlyUsage();
+      node.textContent="Données de l’application Radio des IA, selon Puter : "+
+        formatUsageSummary(data)+
+        " Pour l’usage global du compte, consultez le tableau de bord Puter.";
+    }catch(e){node.textContent="Quota indisponible : "+String(e?.message||e);}
+    finally{button.disabled=false;}
+  })());
   $("memoireInterSalons")?.addEventListener("change",()=>{
     state.includeArchives=$("memoireInterSalons").checked;save();
     status(state.includeArchives?"Mémoire entre Salons activée.":"Mémoire entre Salons désactivée.");

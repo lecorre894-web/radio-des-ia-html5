@@ -13,6 +13,22 @@ Le site comporte des icônes SVG et PNG (32, 180, 192 et 512 pixels), un `manife
 Aucun changement apporté aux modèles, conversations, clés, API ni règles d'envoi de messages.
 
 
+## Protection de l'allocation Puter
+
+Après un test utilisateur où l'usage normal a presque épuisé le quota affiché,
+la Radio applique un **maximum de 600 tokens par réponse par défaut**, sauf sélection explicite
+de 400, 1 000 ou 2 500 tokens. Sans `max_tokens`, Puter utilise le plafond du modèle,
+ce qui peut entraîner une réservation de crédit inutilement élevée.
+Le fil généalogique est réduit à 3 600 caractères en mode direct et 4 600 en débat,
+en gardant la racine, les réponses et les dernières précisions réelles ; l'historique local
+reste inchangé. Un contexte de requête supérieur à 18 000 caractères entraîne une
+confirmation avant la requête et interrompt les boucles automatiques.
+Le bouton « 📉 Consulter l'usage Puter » appelle `puter.auth.getMonthlyUsage()`
+(sans appel de modèle), dont les chiffres sont propres à l'application selon la
+documentation officielle. Il ne mesure pas à lui seul tous les crédits du compte.
+Ces protections ne constituent ni une garantie de gratuité ni un budget de crédits
+strict, puisque le fournisseur détermine la facturation et la réservation.
+
 ## Fil généalogique et suivi des conversations
 
 Le Salon relie désormais la **question fondatrice**, la réponse de l'IA précédente, les précisions successives des humains et les derniers échanges réels : une réponse courte (« intelligence douée de savoir, par exemple ») est traitée comme une précision à la discussion en cours, et non comme un sujet isolé demandant un nouveau questionnaire.
