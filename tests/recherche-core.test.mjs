@@ -2,6 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchModelConfig,researchPrompts} from "../tchat-recherche-core.mjs";
 
+import {readFileSync} from "node:fs";
+const salonHTML=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
+const salonJS=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
+
+test("Le moteur avancé reste dans la page historique et n'écrase pas les contrôles du Salon",()=>{
+  for(const id of ["modeRecherche","moteurDialogue","modeleRecherche","chargerRecherche",
+    "rechercheEtat","moi","parler","tour","infini","debattre","intervenants","fil"]){
+    assert.match(salonHTML,new RegExp('id="'+id+'"'),"Élément conservé : "+id);
+  }
+  assert.match(salonJS,/function nextResearchTurn\(/);
+  assert.match(salonJS,/if\(isResearchMode\(\)\)return nextResearchTurn\(\)/);
+  assert.match(salonJS,/window\.puter\.ai\.chat\(/);
+  assert.match(salonHTML,/ChatGPT et René Le Corre®/);
+});
 test("Seuls les modèles locaux scientifiques explicitement choisis sont autorisés",()=>{
   assert.equal(RESEARCH_MODELS.length,3);
   assert.ok(RESEARCH_MODELS.every(m=>m.vramMB>=5000));
