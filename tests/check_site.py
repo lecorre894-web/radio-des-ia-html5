@@ -23,7 +23,7 @@ class Check(HTMLParser):
 page = (root / "tchat.html").read_text(encoding="utf-8")
 parser = Check()
 parser.feed(page)
-for required in ("moi","parler","tour","infini","debattre","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue","connected","pieceFichier","pieceDepot","pieceListe","pieceUtiliser","pieceVision","pieceEtat","imagePrompt","imageGenerer","imageModele","imageRatio","imageDemo","imageEtat","imageResult"):
+for required in ("moi","parler","tour","infini","debattre","arreter","connecter","fil","parts","etat","compteur","modeleCatalogue","connected","pieceFichier","pieceDepot","pieceListe","pieceUtiliser","pieceVision","pieceEtat","imagePrompt","imageGenerer","imageModele","imageRatio","imageDemo","imageEtat","imageResult","reactionToggle","reactionBoard","reactionClose","reactionSearch","reactionEmojis","reactionSmileys","reactionGifs","reactionGifFile","reactionGifList","reactionStatus"):
     assert required in parser.ids, f"Élément manquant: {required}"
 for relative in parser.files:
     assert (root / relative).is_file(), f"Script absent: {relative}"
@@ -32,6 +32,8 @@ assert "tchat-distant.mjs" in page
 assert "tchat-images.mjs" in page
 assert "video/" not in page
 assert (root / "tchat-documents.mjs").is_file()
+assert (root / "tchat-reactions.mjs").is_file()
+assert "tchat-reactions.mjs" in (root / "tchat-distant.mjs").read_text(encoding="utf-8")
 core = (root / "tchat-core.mjs").read_text(encoding="utf-8")
 assert "QUESTION HUMAINE ORIGINALE" in core
 assert "buildPrompt" in core
