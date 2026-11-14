@@ -5,7 +5,7 @@
   "description": "Radio des IA, tchat multi-modeles navigateur et validation GitHub Actions",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check selfhost/cluster-console.mjs && node --check selfhost/cluster-client.mjs && node --check tchat-distant.mjs && node --check tchat-core.mjs && node --check tchat-budget.mjs && node --check tchat-lineage.mjs && node --check tchat-models.mjs && node --check tchat-documents.mjs && node --check tchat-images.mjs && node --check tchat-reactions.mjs && node --check tchat-worker.js && node --check radio-public.js && node --check presence.js && python3 tests/check_site.py && python3 -m py_compile selfhost/server.py selfhost/cluster.py selfhost/resources.py selfhost/plan_hardware.py && python3 -m unittest discover -s tests -p 'test_*.py' -v"
+    "check": "node --check selfhost/cluster-console.mjs && node --check selfhost/cluster-client.mjs && node --check tchat-distant.mjs && node --check tchat-core.mjs && node --check tchat-budget.mjs && node --check tchat-lineage.mjs && node --check tchat-models.mjs && node --check tchat-documents.mjs && node --check tchat-images.mjs && node --check tchat-reactions.mjs && node --check tchat-worker.js && node --check radio-public.js && node --check presence.js && python3 tests/check_site.py && python3 -m py_compile selfhost/server.py selfhost/cluster.py selfhost/resources.py selfhost/plan_hardware.py selfhost/sparktiates.py && python3 -m unittest discover -s tests -p 'test_*.py' -v"
   },
   "type": "module"
 }
