@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b29"><meta name="robots" content="noindex,nofollow">
+<title>Laboratoire AI Horde — Radio des IA (expérimental)</title>
+<style>
+:root{color-scheme:dark;font:16px/1.6 system-ui,sans-serif;color:#eef4f5;background:#101824}
+*{box-sizing:border-box}body{margin:0}main{max-width:810px;padding:16px;margin:auto}h1{font-size:clamp(24px,5vw,33px);line-height:1.25}h2{font-size:19px;margin:7px 0}
+a{color:#a5ddfb}p,small{color:#bdcbd6}small{font-size:13px}
+.panel{border:1px solid #455266;background:#1a2534;border-radius:12px;padding:16px;margin:15px 0}
+.green{color:#90e7c0}.alert{background:#342c24;border-left:4px solid #e4ae6e;padding:12px;border-radius:8px}
+button,select,textarea{font:inherit;color:#fff;background:#121e2e;border:1px solid #63758a;border-radius:9px;padding:10px;max-width:100%}
+button{cursor:pointer}button.primary{background:#91d9c2;color:#102321;font-weight:700;border:0}
+button:disabled{opacity:.55;cursor:not-allowed}label{display:block;margin:10px 0}
+textarea{display:block;width:100%;min-height:130px;resize:vertical;color:#9afeae;caret-color:#b7ffc8}
+select{width:100%}.row{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.6 ui-monospace,monospace;background:#121d2b;padding:12px;border-radius:8px}
+#answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+.note{color:#e4c997}.card{margin:16px 0;border-left:3px solid #7fc7ac;padding:5px 15px;background:#162234}
+a.back{display:inline-block;padding:8px 0;font-weight:650}
+</style>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+</head>
+<body><main>
+<a class="back" href="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html">← Retour à la Radio des IA originale (Puter)</a>
+<header class="panel">
+<h1>📻 Laboratoire AI Horde</h1>
+<p class="green"><strong>Prototype séparé · aucun changement à ta Radio</strong></p>
+<p>Un moteur communautaire supplémentaire à l'essai. Les modèles disponibles sont détectés directement chez AI Horde. Aucune conversation Puter n'est importée, modifiée ni supprimée.</p>
+</header>
+<section class="panel">
+<h2>1. Vérifier les modèles disponibles</h2>
+<div class="row"><button type="button" id="discover" class="primary">🔍 Chercher les modèles actifs</button><span id="modelsState" role="status">Aucun modèle chargé.</span></div>
+<label for="model">Modèle réel du réseau de bénévoles</label>
+<select id="model" disabled><option value="">— Charger le catalogue d'abord —</option></select>
+<small>Les GPU bénévoles changent : la liste et la vitesse peuvent évoluer. Un modèle non présent n'est jamais remplacé par une autre marque.</small>
+</section>
+<section class="panel">
+<h2>2. Un seul message d'essai</h2>
+<label for="prompt">Question de test (ne pas utiliser de données personnelles ou confidentielles)</label>
+<textarea id="prompt" maxlength="3600" placeholder="Exemple : En deux phrases, quelle différence fais-tu entre intelligence et savoir ?"></textarea>
+<div class="row">
+<label for="length">Longueur maximale</label>
+<select id="length" style="width:auto"><option value="96">96 tokens</option><option selected value="160">160 tokens</option><option value="240">240 tokens</option></select>
+</div>
+<label><input id="consent" type="checkbox">
+<strong>J'autorise explicitement l'envoi de cette question à AI Horde et à ses travailleurs bénévoles.</strong></label>
+<p class="alert">⚠️ Ce service est indépendant de Puter : ses travailleurs externes traitent les requêtes, et une réponse peut prendre du temps ou ne jamais arriver. Ce n'est pas un accès illimité garanti. Les crédits Puter ne sont pas utilisés par ce laboratoire.</p>
+<div class="row">
+<button type="button" id="send" class="primary" disabled>📨 Envoyer une seule demande</button>
+<button type="button" id="cancel" disabled>Arrêter et annuler</button>
+</div>
+<p id="progress" role="status" aria-live="polite">Prêt à vérifier le réseau.</p>
+</section>
+<section class="panel">
+<h2>3. Réponse du modèle communautaire</h2>
+<div id="answer" aria-live="polite">Aucune réponse générée.</div>
+<p id="provenance" class="note"></p>
+</section>
+<footer><p>Ce laboratoire n'enregistre aucun message dans le navigateur. Il n'exécute aucun débat automatique et ne touche pas aux six intervenants de la Radio principale. Une vérification de fonctionnement ne constitue pas une garantie de disponibilité.</p>
+<p>Radio des IA — Expérience indépendante.</p></footer>
+</main><script type="module" src="./horde-lab.mjs"></script></body>
+</html>

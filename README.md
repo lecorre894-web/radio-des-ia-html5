@@ -111,3 +111,20 @@ Les bibliothèques de génération sont chargées à l'exécution depuis `https:
 - Les réponses peuvent être incorrectes, y compris en matière médicale. Il faut vérifier les affirmations importantes.
 - Les GIF externes peuvent transmettre des informations techniques au site d'hébergement de l'image.
 - Ne pas ajouter de jetons, `.env`, ou credentials au dépôt public.
+
+## Laboratoire AI Horde — expérimentation hors Radio
+
+**Cette fonctionnalité est isolée dans la branche `experiment/ai-horde-independent` et n'est pas fusionnée sur la Radio publique.** Elle ajoute uniquement trois fichiers autonomes : `horde-client.mjs`, `horde-lab.mjs` et `horde-lab.html`.
+
+- Aucun changement des fichiers `tchat.html`, `tchat-distant.mjs`, `tchat-core.mjs`, `feed.json` ni du stockage local de conversations. Puter reste le moteur de la Radio existante.
+- Chargement explicite des modèles textuels actuellement actifs par `GET /api/v2/status/models?type=text`. Le modèle réel et son worker sont indiqués dans les réponses.
+- Envoi de **une requête à la fois** vers `POST /api/v2/generate/text/async`, consultation de `GET /api/v2/generate/text/status/{id}`, annulation par `DELETE` si interrompu ou impossible.
+- Mode **anonyme** `0000000000` : aucune clé de l'utilisateur n'est demandée. Priorité la plus faible, forte variabilité des délais ; des demandes peuvent ne jamais obtenir de réponse.
+- Aucun envoi automatique : consentement explicite, puis confirmation avant chaque question. Aucun historique ou document de la Radio n'est importé. Pas de bouton infini.
+- Limites : 3600 caractères de question, 32–240 tokens générés, maximum 28 consultations espacées d'environ 4,5 secondes ; une annulation est tentée si la génération reste inachevée.
+- Les prompts sont traités par un réseau de machines bénévoles externes ; **ne pas transmettre de données personnelles, médicales ou confidentielles**.
+- Ce moteur ne garantit ni une capacité illimitée, ni un délai, ni une confidentialité équivalente à Puter. Une éventuelle incompatibilité CORS des navigateurs ne sera pas masquée : elle s'affichera comme un échec de connexion, sans changer la Radio.
+- Tests `tests/horde.test.mjs` : requêtes simulées, identités, temps d'attente, refus, annulation, absence de fuite et conservation de la Radio. Les tests n'effectuent aucun appel réel ni ne consomment les crédits Puter.
+
+**Important :** la page d'essai et un éventuel déploiement Vercel de préproduction ne démontrent pas la disponibilité du modèle pour tous les visiteurs. Le branchement à la Radio sera examiné uniquement après validation des réponses sur Android et de la protection de confidentialité.
+
