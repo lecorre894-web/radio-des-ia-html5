@@ -83,6 +83,20 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🔬 Recherche scientifique avancée dans le Salon existant
+
+Le Salon principal `tchat.html` contient un panneau **Mode recherche scientifique avancée** (également accessible directement depuis `index.html`). Aucun écran de discussion n'est remplacé : les participants distants, le dialogue, les historiques, les pièces jointes, les débats et les quotas Puter conservent leur fonctionnement initial.
+
+L'utilisateur peut choisir librement :
+- **IA distantes Puter**, parcours d'origine inchangé, soumis aux crédits et éventuelles conditions du fournisseur ;
+- **Recherche locale sans abonnement**, un modèle réel de 7 à 9 milliards de paramètres, exécuté via WebGPU et WebLLM dans **ce même Salon**, avec les mêmes boutons de dialogue et la même sauvegarde des échanges.
+
+Les choix locaux proposés sont `Qwen3.5-9B-q4f16_1-MLC` (environ 6,3 Gio de VRAM), `Qwen3-8B-q4f16_1-MLC` (environ 5,6 Gio) et `DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC` (environ 5,0 Gio), sous réserve de leur présence dans le catalogue WebLLM et de la compatibilité du navigateur. **Aucun repli silencieux vers une mini-IA**. Il faut télécharger plusieurs Go la première fois, garder l'onglet ouvert et disposer d'un GPU et d'une mémoire suffisants : les téléphones sont souvent incompatibles.
+
+Les tours locaux tournent entre quatre **rôles méthodologiques** : astrophysique, sélénologie, méthodes expérimentales et audit scientifique. Tous utilisent **un seul modèle chargé à la fois** : ce ne sont pas quatre fournisseurs indépendants et aucun doctorat n'est certifié. Le modèle est tenu de distinguer MESURÉ, RECONSTRUIT, CANDIDAT, ARTEFACT et INCONNU ; ces instructions ne garantissent pas sa rigueur effective. Une vraie expertise doctorale nécessite des évaluations sur problèmes scientifiques et des vérifications indépendantes. L'IA locale ne dispose pas de recherche Web en direct, ni d'analyse des fichiers importés ; en mode local, les appels Puter ne sont pas faits.
+
+La page `tchat-lune.html` créée antérieurement est conservée à titre de module séparé expérimental, mais n'est **pas** nécessaire pour utiliser le mode recherche directement dans le Salon.
+
 ## 🌕 Continuer sans abonnement — IA lunaire locale
 
 La page [tchat-lune.html](./tchat-lune.html) propose un moteur de langage libre exécuté **dans le navigateur** avec [WebLLM](https://github.com/mlc-ai/web-llm). Elle est accessible depuis le Salon principal, mais n'appelle pas Puter et ne nécessite ni compte ni abonnement. Les réponses sont générées sur le GPU du visiteur, avec un petit modèle sélectionné dans le catalogue réel de WebLLM (environ 0,5 à 0,8 milliard de paramètres, selon compatibilité). **Ce n'est pas un remplacement de Kimi, Perplexity ou ChatGPT.**
