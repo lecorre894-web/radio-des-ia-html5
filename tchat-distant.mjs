@@ -317,7 +317,7 @@ function exportConversation(){
 function init(){
   restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
-  void import("./tchat-documents.mjs?v=documents-3")
+  void import("./tchat-documents.mjs?v=document-audit-1")
     .then(({createDocumentManager})=>{
       documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
     })
