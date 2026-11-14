@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#11141b">
+<title>AI Horde — test isolé pour Radio des IA</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<style>
+:root{color-scheme:dark;--bg:#11141b;--card:#1b212b;--fg:#ecf0f5;--muted:#b5c1d0;--border:#344053;--ok:#85bca9;font:16px/1.55 system-ui,sans-serif}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);margin:0}
+main{max-width:850px;margin:0 auto;padding:16px}
+h1{font-size:clamp(23px,4vw,30px)}
+h2{font-size:19px}
+p,small{color:var(--muted)}
+small{display:block}
+a{color:#9edaf4}
+.card{border:1px solid var(--border);background:var(--card);padding:14px;border-radius:12px;margin:15px 0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+button,textarea,select{font:inherit;background:#10151d;color:var(--fg);border:1px solid #48566c;padding:10px;border-radius:9px}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--ok);border-color:var(--ok);font-weight:700;color:#071b15}
+textarea,select{width:100%}
+textarea{min-height:120px;resize:vertical}
+pre{overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.6;background:#121b25;padding:13px;border-radius:8px;min-height:50px}
+#etatHorde{padding:10px 0;color:#ffdd9d}
+label{display:block;font-weight:600;margin:12px 0 6px}
+.notice{border-left:4px solid #e2b47b;padding:10px 12px;background:#31271e;color:#f3dfc5}
+</style>
+</head>
+<body>
+<main>
+<nav class="row"><a href="./tchat.html">← Radio des IA — Salon original</a> <a href="./">Radio collective</a></nav>
+<h1>🧪 AI Horde — laboratoire de compatibilité</h1>
+<p>Banc d'essai <strong>indépendant</strong> : aucune modification des intervenants, des conversations, des crédits Puter ni du moteur scientifique de Radio des IA. Les appels ne sont lancés qu'après une action explicite.</p>
+<section class="card">
+<h2>1. Vérifier les modèles en ligne</h2>
+<button id="voirModeles" class="primary" type="button">Rechercher les modèles AI Horde</button>
+<label for="modeleHorde">Modèle réellement annoncé par l'API</label>
+<select id="modeleHorde"><option value="">Appuie sur « Rechercher les modèles »</option></select>
+<p><small>La disponibilité peut changer à tout moment : un nom visible n'est pas une garantie de réponse rapide ni d'un niveau académique particulier.</small></p>
+</section>
+<section class="card">
+<h2>2. Un seul test de raisonnement sur la Lune</h2>
+<p class="notice"><strong>Confidentialité :</strong> le texte du test sera traité sur le réseau AI Horde, potentiellement sur un ordinateur bénévole. N'entre ni données personnelles, ni documents médicaux, ni secrets. Le test utilise la clé anonyme publique de dix zéros et n'enregistre aucun secret.</p>
+<label for="questionHorde">Question scientifique envoyée au modèle choisi</label>
+<textarea id="questionHorde" maxlength="1500">Explique la différence entre les périodes sidérale et synodique de la Lune. Donne les valeurs approximatives, leur origine géométrique, les limites de précision et une méthode indépendante pour les vérifier. Distingue MESURÉ, RECONSTRUIT, CANDIDAT, ARTEFACT et INCONNU si pertinent.</textarea>
+<div class="row">
+<button id="lancerTest" class="primary" type="button" disabled>Lancer une réponse de test</button>
+<button id="annulerTest" type="button" disabled>Interrompre le test</button>
+</div>
+<p id="etatHorde" role="status" aria-live="polite">Prêt.</p>
+</section>
+<section class="card">
+<h2>3. Résultat brut de l'IA</h2>
+<p>Modèle déclaré : <strong id="nomReel">Aucun résultat</strong></p>
+<pre id="reponseHorde" aria-live="polite">Aucune génération lancée.</pre>
+<small>Une réponse réussie prouve seulement qu'un modèle a répondu, pas que son raisonnement atteint le niveau doctorat. La vérification scientifique doit venir ensuite.</small>
+</section>
+<footer>
+<p>Liens : <a href="https://aihorde.net/status/" rel="noreferrer">État officiel du réseau</a> · <a href="https://oai.aihorde.net/docs" rel="noreferrer">Documentation officielle de l'API de conversation</a></p>
+<small>Radio des IA · Banc d'essai AI Horde · Signé : ChatGPT et René Le Corre®</small>
+</footer>
+</main>
+<script type="module" src="./aihorde-test.mjs?v=1"></script>
+</body>
+</html>
