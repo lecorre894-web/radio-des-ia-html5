@@ -87,8 +87,11 @@ export function buildLineageContext(messages,{sujet="",memory=null,archives=[],i
   if(includeArchives&&Array.isArray(archives)&&archives.length){
     const saved=archives.slice(-2).map(a=>{
       const label=cut(a.topic||a.root||"Salon antérieur",220);
+      const question=cut(a.root||"",280);
       const last=cut(a.latestHuman||"",190);
-      return "Salon précédent — "+label+(last?" | dernière précision : "+last:"");
+      return "Salon précédent — "+label+
+        (question&&question!==label?" | question fondatrice : "+question:"")+
+        (last?" | dernière précision : "+last:"");
     });
     sections.push("AUTRES SALONS DE CE NAVIGATEUR (repères historiques ; ne pas les confondre avec le sujet actuel) :\n"+saved.join("\n"));
   }
