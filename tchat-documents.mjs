@@ -295,7 +295,7 @@ async function readCode(file){
   // Le code n'est jamais interprété : ce module fournit seulement du texte aux modèles.
   return {kind:"code",text:raw,warning:"Code source lu comme texte uniquement, non exécuté ni compilé. Les recommandations des IA restent à vérifier."};
 }
-async function decode(file,kind){
+export async function decodeDocument(file,kind=classifyDocument(file?.name)){
   if(kind==="legacyWord")throw new Error("Format Word .doc historique : convertir en .docx ou PDF avant import.");
   if(kind==="video" || String(file.type||"").startsWith("video/"))throw new Error("Vidéo non prise en charge : fichiers vidéo refusés.");
   if(kind==="json")return readJSON(file);
@@ -364,7 +364,7 @@ export function createDocumentManager({getPuter,onStatus}={}){
         if(entries.reduce((n,e)=>n+e.size,0)+file.size>DOCUMENT_LIMITS.maxTotalBytes){report("Limite totale de 48 Mio atteinte.");break;}
         try{
           report("Lecture locale : "+file.name+"…");
-          const decoded=await decode(file,classifyDocument(file.name));
+          const decoded=await decodeDocument(file,classifyDocument(file.name));
           const clipped=trimContent(decoded.text);
           entries.push({id:Date.now()+"-"+Math.random().toString(36).slice(2),name:file.name,
             size:file.size,kind:decoded.kind,text:clipped.text,
