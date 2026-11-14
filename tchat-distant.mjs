@@ -1,4 +1,5 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=qualite-2";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=lineage-1";
+import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=lineage-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
@@ -17,7 +18,8 @@ const START = [
 const state = {
   participants: structuredClone(START), messages: [], sujet:"", next:0, tours:0,
   auto:false, mode:"direct", perplexityIntroduced:true, kimiIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
-  validModels:new Set(), lastRender:0
+  validModels:new Set(), lastRender:0,
+  memory:{root:"",events:[]},archives:[],includeArchives:true
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
@@ -38,14 +40,17 @@ function restoreDraft(){
 }
 function available(){if(!window.puter?.ai?.chat)throw Error("Puter.js indisponible. Vérifie Internet et les bloqueurs de scripts.");return window.puter;}
 function save(){
+  state.memory=updateLineageMemory(state.memory,state.messages);
   try{
     localStorage.setItem(KEY,JSON.stringify({
       participants:state.participants, messages:state.messages.slice(-150),
       sujet:state.sujet, next:state.next, tours:state.tours,
       perplexityIntroduced:state.perplexityIntroduced,
-      kimiIntroduced:state.kimiIntroduced
+      kimiIntroduced:state.kimiIntroduced,
+      memory:state.memory,archives:state.archives,includeArchives:state.includeArchives
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
+  renderLineageStatus();
 }
 function restore(){
   try{
@@ -65,7 +70,22 @@ function restore(){
     state.sujet=String(d.sujet||"").slice(0,4000);
     state.next=Number(d.next)||0;
     state.tours=Number(d.tours)||0;
+    state.memory=updateLineageMemory(d.memory,state.messages);
+    state.archives=Array.isArray(d.archives)?d.archives.slice(-8).filter(x=>x&&typeof x.root==="string"):[];
+    state.includeArchives=d.includeArchives!==false;
   }catch{}
+}
+function renderLineageStatus(){
+  const panel=$("memoireResume");
+  const toggle=$("memoireInterSalons");
+  if(toggle)toggle.checked=state.includeArchives;
+  if(panel){
+    const root=String(state.memory?.root||state.sujet||"Aucune question fondatrice encore enregistrée.");
+    panel.textContent="Racine du fil : "+root.slice(0,240)+
+      (root.length>240?"…":"")+
+      " · "+(state.memory?.events?.length||0)+" jalons locaux"+
+      " · "+state.archives.length+" ancien(s) Salon(s) conservé(s).";
+  }
 }
 function buttonStates(){
   $("tour").disabled=state.busy;
@@ -233,7 +253,8 @@ async function nextTour(){
     participants:state.participants,index:currentIndex,
     messages:state.messages,sujet:state.sujet,mode:state.mode,
     recipient:state.participants[nextIndex<0?currentIndex:nextIndex]?.nom,
-    round:state.tours
+    round:state.tours,memory:state.memory,
+    archives:state.archives,includeArchives:state.includeArchives
   });
   const current={origin:"ai",nom:participant.nom,modele:participant.modele,heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);state.current=current;state.busy=true;
@@ -308,7 +329,9 @@ function stop(){
   buttonStates();
 }
 function exportConversation(){
-  const data={export_date:new Date().toISOString(),participants:state.participants,messages:state.messages};
+  const data={export_date:new Date().toISOString(),participants:state.participants,
+    messages:state.messages,continuity:{memory:state.memory,archives:state.archives,
+      includeArchives:state.includeArchives}};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const href=URL.createObjectURL(blob);const a=document.createElement("a");
   a.href=href;a.download="radio-des-ia-conversation.json";a.click();
@@ -316,6 +339,15 @@ function exportConversation(){
 }
 function init(){
   restore();$("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
+  $("memoireInterSalons")?.addEventListener("change",()=>{
+    state.includeArchives=$("memoireInterSalons").checked;save();
+    status(state.includeArchives?"Mémoire entre Salons activée.":"Mémoire entre Salons désactivée.");
+  });
+  $("memoireEffacer")?.addEventListener("click",()=>{
+    if(!state.archives.length)return;
+    if(!confirm("Effacer les archives généalogiques des anciens Salons sur cet appareil ? Le Salon actuel reste intact."))return;
+    state.archives=[];save();status("Archives anciennes supprimées. Conversation actuelle conservée.");
+  });
   // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
   void import("./tchat-documents.mjs?v=document-audit-1")
     .then(({createDocumentManager})=>{
@@ -379,7 +411,10 @@ function init(){
   $("nouveau").addEventListener("click",()=>{
     if(state.busy)return;
     if(!confirm("Effacer cette conversation locale ? Vous pouvez d'abord l'exporter."))return;
-    state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";documentManager?.clear();render();status("Nouveau Salon prêt");
+    state.archives=archiveLineageSession(state.archives,state.memory,state.sujet);
+    state.memory={root:"",events:[]};
+    state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";documentManager?.clear();render();
+    status("Nouveau Salon prêt. Le fil précédent est archivé localement ; vous pouvez désactiver sa référence.");
   });
   $("exporter").addEventListener("click",exportConversation);
   // Aucun gestionnaire de touche Entrée : le navigateur insère naturellement une nouvelle ligne.

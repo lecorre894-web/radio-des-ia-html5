@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {updateLineageMemory,archiveLineageSession} from "../tchat-lineage.mjs";
 
 const html=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
 const script=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
@@ -28,10 +29,11 @@ function createHarness(){
     .replace(/\ninit\(\);\s*$/,"\nreturn {addHuman,saveDraft,restoreDraft,state};");
   assert.match(source,/return \{addHuman,saveDraft,restoreDraft,state\};/);
   const app=new Function("document","localStorage","window","PERPLEXITY","KIMI",
-      "addPerplexity","addKimi","buildPrompt","responseText","cleanAnswer","qualityIssue",source)(
+      "addPerplexity","addKimi","buildPrompt","responseText","cleanAnswer","qualityIssue",
+      "updateLineageMemory","archiveLineageSession",source)(
     document,localStorage,{}, {nom:"Perplexity",modele:"perplexity/sonar-pro"},
     {nom:"Kimi",modele:"moonshotai/kimi-k3.1-pro"},a=>a,a=>a,()=>[],()=>"",
-    x=>x,()=>false
+    x=>x,()=>false,updateLineageMemory,archiveLineageSession
   );
   app.state.busy=true; // Le message est enregistré sans déclencher un appel au fournisseur.
   return {app,element,values};

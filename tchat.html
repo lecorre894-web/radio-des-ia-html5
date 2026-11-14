@@ -132,6 +132,14 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row"><h2>Conversation</h2><span id="etatMode" class="pill">Salon prêt</span></div>
 <div id="fil" aria-label="Messages de votre Salon" aria-live="polite"></div>
 </section>
+<details class="card" id="memoireFil">
+<summary>🧬 Fil conducteur — continuité des conversations</summary>
+<p id="memoireResume" class="salon-intro" aria-live="polite">Le fil est construit à partir des échanges de ce navigateur, sans inventer de résumé.</p>
+<label class="pieceOption"><input id="memoireInterSalons" type="checkbox" checked>
+<span>Relier également les anciens Salons conservés sur cet appareil</span></label>
+<div class="row"><button type="button" id="memoireEffacer">Effacer les archives des anciens Salons</button></div>
+<small>La question fondatrice, les corrections humaines et les réponses successives alimentent les prochains tours. Les textes transmis aux IA sont limités et identifiés comme des extraits. Le suivi est local à ce navigateur et peut être désactivé pour les anciens Salons.</small>
+</details>
 <section class="card">
 <label for="moi"><strong>Votre message</strong></label>
 <textarea id="moi" rows="5" enterkeyhint="enter" aria-describedby="aideSaisie" placeholder="Écrivez votre message ici… Entrée crée une nouvelle ligne."></textarea>
@@ -246,7 +254,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=diagnostic-1"></script>
+<script type="module" src="./tchat-distant.mjs?v=fil-genealogique-1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>

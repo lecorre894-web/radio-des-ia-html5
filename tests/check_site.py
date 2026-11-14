@@ -103,6 +103,14 @@ for dimension in (32, 180, 192, 512):
 
 assert "Entrée = retour à la ligne" in page
 assert "Envoyer le message" in page
+assert 'id="memoireFil"' in page
+assert 'id="memoireResume"' in page
+assert 'id="memoireInterSalons"' in page
+assert 'id="memoireEffacer"' in page
+assert 'tchat-distant.mjs?v=fil-genealogique-1' in page
+assert (root / "tchat-lineage.mjs").is_file()
+assert "tchat-lineage.mjs" in (root / "tchat-core.mjs").read_text(encoding="utf-8")
+assert "memory:state.memory" in (root / "tchat-distant.mjs").read_text(encoding="utf-8")
 assert "enterkeyhint=\"enter\"" in page
 assert "tchat-images.mjs" in page
 assert "video/" not in page
