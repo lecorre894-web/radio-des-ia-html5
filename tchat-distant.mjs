@@ -152,10 +152,11 @@ function engineReadiness(){
     ?{ready:true,label:"AI Horde · "+state.hordeModel}
     :{ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire. Il peut ne pas être disponible."};
   if(isPollinationsMode()){
+    if(pollinationsLoading)return {ready:false,label:"Pollinations",reason:"Connexion ou catalogue en cours de chargement. Aucune génération payante en cours."};
     const token=pollinationsToken||getPollinationsStoredToken();
     if(!token)return {ready:false,label:"Pollinations",reason:"Autorise d'abord la connexion Pollinations dans le panneau scientifique (des crédits Pollen peuvent être utilisés)."};
     if(!state.pollinationsModel || !pollinationsModels.some(x=>x.id===state.pollinationsModel))
-      return {ready:false,label:"Pollinations",reason:"Actualise les modèles Pollinations et choisis un modèle réel."};
+      return {ready:false,label:"Pollinations",reason:"Connexion autorisée : choisis un modèle dans « Modèle actuellement proposé » au panneau Pollinations. Le catalogue est chargé automatiquement, ou via « Voir les modèles Pollinations »."};
     return {ready:true,label:"Pollinations · "+state.pollinationsModel+" (crédits Pollen éventuels)"};
   }
   if(isSparktiatesMode()){
@@ -684,6 +685,7 @@ function disconnectPollinations(){
   }catch{}
   $("pollinationsAppKey").value="";
   pollinationsStatus("Session de cette Radio déconnectée. Pour révoquer un jeton déjà délivré, utilise les clés de ton compte Pollinations.");
+  buttonStates();
 }
 async function refreshPollinationsModels(){
   if(state.busy||state.auto||pollinationsLoading)return;
@@ -988,7 +990,9 @@ function init(){
     state.pollinationsModel=pollinationsModels.some(m=>m.id===selected)?selected:"";
     pollinationsApproved=false;save();
     pollinationsStatus(state.pollinationsModel?"Modèle sélectionné : "+state.pollinationsModel+
-      ". Les réponses peuvent consommer du Pollen.":"Choisis un modèle réel de la liste.");
+      ". Le Salon est prêt : utilise « Répondre à ma dernière question » en bas. Une réponse peut consommer du Pollen."
+      :"Choisis un modèle réel de la liste.");
+    buttonStates();
   });
   $("pollinationsPartagerContexte").addEventListener("change",()=>{
     pollinationsStatus($("pollinationsPartagerContexte").checked
