@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {buildPrompt,responseText,cleanAnswer,qualityIssue,lastHuman,PERPLEXITY,addPerplexity} from "../tchat-core.mjs";
+import {buildPrompt,responseText,cleanAnswer,qualityIssue,lastHuman,PERPLEXITY,addPerplexity,KIMI,addKimi} from "../tchat-core.mjs";
 
 const people=[
  {nom:"Cairn",role:"Audit de la précision scientifique",modele:"gpt-5.5"},
@@ -96,4 +96,34 @@ test("Perplexity reçoit les instructions de vérification et de sources",()=>{
  assert.match(req[0].content,/sources/);
  assert.match(req[0].content,/tests|test ou un contrôle/);
  assert.match(req[1].content,/Le résultat est certain/);
+});
+
+test("Kimi K3.1 Pro est le cinquième vrai intervenant",()=>{
+ assert.equal(KIMI.nom,"Kimi");
+ assert.equal(KIMI.modele,"moonshotai/kimi-k3.1-pro");
+ const first=addKimi(addPerplexity([
+  {nom:"Cairn",modele:"gpt-5.5"},
+  {nom:"Brume",modele:"claude-sonnet-4-6"},
+  {nom:"Aurore",modele:"gemini-3.1-flash-lite"}
+ ]));
+ assert.deepEqual(first.map(x=>x.nom),["Cairn","Brume","Aurore","Perplexity","Kimi"]);
+ assert.equal(addKimi(first).length,5);
+});
+test("la migration Kimi conserve le véritable fournisseur Moonshot sans duplication",()=>{
+ const custom=addKimi([{nom:"Kimi",modele:"moonshotai/kimi-k3",role:"Recherche scientifique"}]);
+ assert.equal(custom.length,1);
+ assert.equal(custom[0].modele,"moonshotai/kimi-k3");
+ assert.equal(custom[0].role,"Recherche scientifique");
+ const incorrect=addKimi([{nom:"Kimi",modele:"gpt-5.5",role:"Contradiction"}]);
+ assert.equal(incorrect[0].modele,KIMI.modele);
+});
+test("Kimi reçoit les instructions d'analyse et d'expérimentation",()=>{
+ const people=[KIMI,{nom:"Perplexity",modele:"perplexity/sonar-pro",role:"Sources"}];
+ const req=buildPrompt({participants:people,index:0,mode:"debate",recipient:"Perplexity",round:4,
+  messages:[{origin:"human",texte:"Analyse les limites de la preuve."},
+    {origin:"ai",nom:"Perplexity",texte:"La source ne précise pas les conditions expérimentales."}]});
+ assert.match(req[0].content,/Mission particulière Kimi/);
+ assert.match(req[0].content,/protocole de test reproductible/);
+ assert.match(req[1].content,/conditions expérimentales/);
+ assert.match(req[0].content,/Adresse-toi à Perplexity/);
 });
