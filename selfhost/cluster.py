@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from resources import FAMILIES, plan_topology
+from sparktiates import demo as run_sparktiates_demo
 
 BASE = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -355,6 +356,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
             self.cluster.refresh()
             return self.reply(200, self.cluster.status())
+        if path == "/api/v1/sparktiates":
+            if not self.auth_ok():
+                return self.reply(403, {"error": "Origine ou jeton invalide."})
+            try:
+                return self.reply(200, run_sparktiates_demo())
+            except (OSError, ValueError, TypeError) as error:
+                return self.reply(503, {"error": "Simulation indisponible ("+
+                                   type(error).__name__+")."})
         if path == "/api/v1/plan":
             if not self.auth_ok():
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
