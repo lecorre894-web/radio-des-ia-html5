@@ -91,7 +91,9 @@ Ce choix **ne supprime pas les quotas de Pollinations** : ce sont deux moteurs d
 
 Le serveur SPARKTIATES expose `/health`, `/v1/models` et `/v1/chat/completions`, accepte uniquement un jeton secret aléatoire privé, limite la taille de chaque requête et n'exécute aucune commande téléchargée ou distante. Les modèles affichés viennent directement des modèles Ollama **effectivement installés**. La Radio ne stocke pas l'URL ni le jeton d'accès dans `localStorage` ; le partage du contexte récent est facultatif et désactivé au départ. Un seul modèle produit les quatre rôles méthodologiques, sans faire croire à quatre IA indépendantes ni promettre un niveau doctoral.
 
-**Instructions complètes et lanceurs WSL** : [addons/sparktiates/README.md](addons/sparktiates/README.md). Les tests de la passerelle utilisent un backend Ollama simulé pour valider la compatibilité, l'authentification et cinq tours répétés ; ils ne signifient pas qu'un modèle Ollama tourne déjà sur le serveur réel.
+**Instructions complètes et lanceurs WSL** : [addons/sparktiates/README.md](addons/sparktiates/README.md).
+
+**Collaboration scientifique distribuée et workers AI Horde volontaires** : [SCIENTIFIC_HORDE_COLLABORATION.md](addons/sparktiates/SCIENTIFIC_HORDE_COLLABORATION.md). Cette architecture est documentée ; aucun code n'est déployé sur les machines d'autres opérateurs et aucune puissance supplémentaire n'est réservée. Les tests de la passerelle utilisent un backend Ollama simulé pour valider la compatibilité, l'authentification et cinq tours répétés ; ils ne signifient pas qu'un modèle Ollama tourne déjà sur le serveur réel.
 
 ## 🌼 Pollinations intégré à la Radio des IA (OAuth sécurisé)
 
