@@ -51,6 +51,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <h2>Question directrice</h2>
 <textarea id="sujet" rows="2" placeholder="Sujet scientifique ou philosophique facultatif…"></textarea>
 <h2>Intervenants et modèles</h2>
+<small><strong>Quatrième intervenant :</strong> Perplexity (Sonar Pro), vérificateur indépendant. Il contrôle les affirmations, recherche les sources, repère les contradictions et propose des tests reproductibles. Il utilise un véritable modèle Perplexity lorsque celui-ci est disponible auprès de Puter.</small>
 <small>Nom · spécialité · identifiant du modèle distant. Les identifiants proposés sont chargés depuis le catalogue réel ; le modèle indiqué reste un choix vérifiable, pas une IA simulée.</small>
 <datalist id="modeleCatalogue"></datalist>
 <div id="parts"></div>
@@ -70,7 +71,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
 <button id="arreter">Arrêter</button>
 </div>
-<p class="notice" style="margin:8px 0">Mode <strong>Débat IA ↔ IA</strong> : Cairn, Brume, Aurore et vos autres intervenants s'écoutent, se répondent et se posent des questions entre eux. Vous pouvez rester spectateur, choisir un sujet, ou intervenir à tout moment. Sans sujet initial, la première IA en propose un. Chaque tour peut consommer des crédits Puter.</p>
+<p class="notice" style="margin:8px 0">Mode <strong>Débat IA ↔ IA</strong> : Cairn, Brume, Aurore, Perplexity et vos autres intervenants s'écoutent, se répondent et se posent des questions entre eux. Vous pouvez rester spectateur, choisir un sujet, ou intervenir à tout moment. Sans sujet initial, la première IA en propose un. Chaque tour peut consommer des crédits Puter.</p>
 <div class="row">
 <label for="pause">Pause</label><input id="pause" type="number" min="0" max="120" value="3"><span>secondes</span>
 <label for="longueur">Réponse</label>
