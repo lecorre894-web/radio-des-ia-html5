@@ -83,6 +83,16 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🌐 AI Horde intégré au Salon principal (moteur communautaire)
+
+La Radio des IA propose un **troisième moteur sélectionnable dans `tchat.html`**, à côté de Puter et du moteur scientifique local. Le moteur **AI Horde** utilise l'API officielle `https://oai.aihorde.net/v1` avec la clé anonyme publique `0000000000` (aucune clé privée insérée). L'utilisateur clique sur **Actualiser les modèles**, choisit un modèle effectivement signalé comme servi en ligne et utilise les commandes de conversation habituelles (envoyer, tour suivant, débat, arrêt). La page et les participants Puter sont conservés sans modification des identités.
+
+**Confidentialité :** quand le moteur AI Horde est choisi, la question humaine envoyée à ce moteur passe par des ordinateurs communautaires. Le partage des anciens échanges est désactivé par défaut à *chaque* ouverture du Salon ; pour les débats automatiques, il faut l'activer explicitement. Seuls des extraits limités (au plus huit messages, environ 3 000 caractères) peuvent alors être partagés ; ni fichiers joints, ni anciennes archives, ni données du stockage du Salon ne sont envoyés automatiquement. Le moteur refuse l'analyse des pièces jointes au lieu de prétendre les avoir traitées. **Ne pas envoyer de données personnelles ou confidentielles aux travailleurs bénévoles.**
+
+**Identité et méthode :** AI Horde répond sous le nom « AI Horde · rôle scientifique » avec le véritable identifiant du modèle annoncé dans la réponse. Les rôles astrophysique, sélénologie, méthodes et audit utilisent **un seul modèle à la fois** ; ils ne sont pas des experts indépendants et aucune compétence doctorale n'est certifiée. La disponibilité, la taille, le contexte et les délais dépendent de travailleurs bénévoles. En cas d'erreur ou d'arrêt, le Salon conserve les échanges et n'envoie aucun retry automatique. Le fonctionnement direct depuis des navigateurs est permis par la configuration CORS du service, mais la réussite des générations réelles reste dépendante du réseau.
+
+L'ancien banc d'essai isolé `aihorde-test.html` reste disponible, indépendamment des conversations. `npm test` inclut les vérifications de confidentialité, de format de requête et de non-régression du Salon. `npm run check` valide la syntaxe du nouveau module `tchat-horde.mjs`.
+
 ## 🔬 Recherche scientifique avancée dans le Salon existant
 
 Le Salon principal `tchat.html` contient un panneau **Mode recherche scientifique avancée** (également accessible directement depuis `index.html`). Aucun écran de discussion n'est remplacé : les participants distants, le dialogue, les historiques, les pièces jointes, les débats et les quotas Puter conservent leur fonctionnement initial.
