@@ -17,7 +17,18 @@ for(const c of cases){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),45000);
   try{
-    const d=await validateNoaaTides({...c,signal:controller.signal});
+    const d=await validateNoaaTides({...c,signal:controller.signal,
+      fetcher:async(url,options)=>{
+        const result=await fetch(url,{
+          ...options,
+          headers:{...options.headers,Origin:"https://lecorre894-web.github.io"}
+        });
+        const cors=result.headers.get("access-control-allow-origin");
+        console.log("NOAA_BROWSER_CORS",JSON.stringify({product:new URL(url).searchParams.get("product"),
+          station:c.station,allowedOrigin:cors||null}));
+        return result;
+      }
+    });
     succeeded++;
     console.log(JSON.stringify({
       status:d.status,station:d.station,period:d.period,retrievedAt:d.retrievedAt,
