@@ -52,6 +52,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <textarea id="sujet" rows="2" placeholder="Sujet scientifique ou philosophique facultatif…"></textarea>
 <h2>Intervenants et modèles</h2>
 <small><strong>Quatrième intervenant :</strong> Perplexity (Sonar Pro), vérificateur indépendant. Il contrôle les affirmations, recherche les sources, repère les contradictions et propose des tests reproductibles. Il utilise un véritable modèle Perplexity lorsque celui-ci est disponible auprès de Puter.</small>
+<small><strong>Cinquième intervenant :</strong> Kimi K3.1 Pro (Moonshot AI), recherche approfondie, mathématiques, informatique et contre-expertise. Kimi utilise un modèle Moonshot réel, sous réserve de disponibilité dans Puter ; aucun modèle fictif « Kimi 4 » n’est annoncé.</small>
 <small>Nom · spécialité · identifiant du modèle distant. Les identifiants proposés sont chargés depuis le catalogue réel ; le modèle indiqué reste un choix vérifiable, pas une IA simulée.</small>
 <datalist id="modeleCatalogue"></datalist>
 <div id="parts"></div>
@@ -71,7 +72,7 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
 <button id="arreter">Arrêter</button>
 </div>
-<p class="notice" style="margin:8px 0">Mode <strong>Débat IA ↔ IA</strong> : Cairn, Brume, Aurore, Perplexity et vos autres intervenants s'écoutent, se répondent et se posent des questions entre eux. Vous pouvez rester spectateur, choisir un sujet, ou intervenir à tout moment. Sans sujet initial, la première IA en propose un. Chaque tour peut consommer des crédits Puter.</p>
+<p class="notice" style="margin:8px 0">Mode <strong>Débat IA ↔ IA</strong> : Cairn, Brume, Aurore, Perplexity, Kimi et vos autres intervenants s'écoutent, se répondent et se posent des questions entre eux. Vous pouvez rester spectateur, choisir un sujet, ou intervenir à tout moment. Sans sujet initial, la première IA en propose un. Chaque tour peut consommer des crédits Puter.</p>
 <div class="row">
 <label for="pause">Pause</label><input id="pause" type="number" min="0" max="120" value="3"><span>secondes</span>
 <label for="longueur">Réponse</label>
@@ -85,5 +86,5 @@ footer{padding:30px 0;font-size:13px;color:var(--muted)}
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=perplexity-1"></script>
+<script type="module" src="./tchat-distant.mjs?v=kimi-k3-1"></script>
 </body></html>
