@@ -3,6 +3,7 @@
 Un profil est une instruction et non une instance matérielle ou un fournisseur distinct.
 """
 from __future__ import annotations
+from research import RESEARCH_ROLES
 
 LOCAL_AGENTS = {
     "cairn": ("Cairn local", "Structure la question, définit le problème et préserve le fil de raisonnement."),
@@ -16,6 +17,7 @@ LOCAL_AGENTS = {
     "explorateur": ("Explorateur local", "Explore plusieurs interprétations en indiquant les incertitudes.")
 }
 PROFILES = {key: description for key, (_, description) in LOCAL_AGENTS.items()}
+PROFILES.update({key: description for key, (_, description) in RESEARCH_ROLES.items()})
 RADIO_PROFILES = ("cairn", "brume", "aurore", "controle", "recherche", "ia4")
 
 
