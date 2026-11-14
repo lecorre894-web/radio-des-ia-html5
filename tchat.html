@@ -123,6 +123,26 @@ details.card[open]>summary{margin-bottom:14px}
 <div id="etat" role="status"></div>
 <small>Les requêtes sont envoyées à Puter et à ses fournisseurs de modèles ; n'entre pas de données confidentielles. L'historique du Salon est enregistré dans ce navigateur seulement, hors des appels effectués aux modèles.</small>
 </section>
+<section class="card" id="modeRecherche" aria-label="Recherche scientifique avancée dans le Salon">
+<h2>🔬 Mode recherche scientifique avancée — directement dans ce Salon</h2>
+<p><strong>Conserve toutes tes IA, l'historique, le débat et les boutons existants.</strong> Choisis le moteur des prochains tours sans quitter cette page. Le mode local utilise un vrai modèle de 7 à 9 milliards de paramètres et des rôles scientifiques de recherche (astrophysique, sélénologie, méthodologie et audit critique).</p>
+<p class="notice">L'objectif est une démarche de niveau doctoral, <strong>pas une certification de niveau doctorat</strong>. Un modèle local peut se tromper ; plusieurs rôles produits par le même modèle ne constituent pas des expertises indépendantes. L'audit scientifique externe demeure nécessaire.</p>
+<div class="row">
+<label for="moteurDialogue"><strong>Moteur des prochains tours</strong></label>
+<select id="moteurDialogue">
+<option value="puter">IA distantes existantes (Puter, selon crédits)</option>
+<option value="research-local">Recherche locale sans abonnement (GPU de cet appareil)</option>
+</select>
+</div>
+<div class="row">
+<label for="modeleRecherche">Modèle local de recherche</label>
+<select id="modeleRecherche" aria-label="Modèle scientifique local"></select>
+<button type="button" id="chargerRecherche" class="primary">Charger le modèle scientifique</button>
+<button type="button" id="dechargerRecherche" disabled>Décharger</button>
+</div>
+<small id="rechercheEtat" role="status">Moteur distant conservé par défaut. Le mode local demande WebGPU, plusieurs Go de téléchargement et au moins environ 5 à 7 Go de mémoire graphique selon le modèle. Aucune connexion Puter pour les tours locaux.</small>
+<p class="pieceExplication">Les discussions se poursuivent dans la conversation ci-dessous avec les boutons « Envoyer », « Faire parler », « Discussion automatique » et « Débat ». En mode local, tous les rôles sont calculés par un seul modèle explicitement indiqué. Les pièces jointes et la recherche Web ne sont pas analysées par ce moteur local.</p>
+</section>
 <section class="card" aria-label="Continuer sans abonnement">
 <h2>🌕 Continuer à parler de la Lune sans abonnement</h2>
 <p>Un moteur IA local et facultatif fonctionne directement dans ton navigateur, indépendamment de Puter et de ses crédits. Il reprend l'historique du Salon sur ce même appareil.</p>
