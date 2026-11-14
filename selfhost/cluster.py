@@ -20,6 +20,7 @@ from urllib.error import HTTPError, URLError
 from resources import FAMILIES, plan_topology
 from sparktiates import demo as run_sparktiates_demo
 from personas import PROFILES, public_personas
+from research import RESEARCH_ROLES, research_catalog
 
 BASE = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -106,6 +107,7 @@ class Node:
     last_error: str = ""
     hardware_family: str = "auto"
     reported_hardware: dict = field(default_factory=dict)
+    models_installed: tuple = ()
 
     def public(self) -> dict:
         return {"id": self.id, "model": self.model, "configured_slots": self.slots,
@@ -168,6 +170,8 @@ class Cluster:
             token = os.environ.get(node.token_env, "") if node.token_env else ""
             response = self.transport(node.url+"/health", token=token, timeout=3)
             hw = response.get("hardware") if isinstance(response.get("hardware"), dict) else {}
+            installed = tuple(m for m in response.get("models_installed", [])
+                              if isinstance(m, str) and len(m) <= 128)[:64]
             ready = response.get("ready") is True and response.get("model") == node.model
             reason = "Modèle absent ou non prêt" if not ready else ""
             if ready and node.hardware_family != "auto":
@@ -182,9 +186,11 @@ class Cluster:
         except (OSError, HTTPError, URLError, ValueError, TimeoutError, RuntimeError) as exc:
             ready, reason = False, type(exc).__name__
             hw = {}
+            installed = ()
         with self.lock:
             node.ready = ready
             node.reported_hardware = hw if ready else {}
+            node.models_installed = installed if ready else ()
             node.last_error = reason
             if ready:
                 node.cooldown_until = 0
@@ -312,7 +318,9 @@ class Cluster:
                 "model": answer.get("model", node.model), "provider": "Radio des IA WSL — Ollama",
                 "sources": answer.get("sources", [])[:8] if isinstance(answer.get("sources"), list) else [],
                 "web_warnings": answer.get("web_warnings", [])[:5] if isinstance(answer.get("web_warnings"), list) else [],
-                "usage": answer.get("usage", {})
+                "usage": answer.get("usage", {}),
+                "scientific_protocol": answer.get("scientific_protocol") is True,
+                "peer_review_independent": False
             }
         except Exception:
             self.complete(node, False)
@@ -357,6 +365,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
             self.cluster.refresh()
             return self.reply(200, self.cluster.status())
+        if path == "/api/v1/research":
+            if not self.auth_ok():
+                return self.reply(403, {"error": "Origine ou jeton invalide."})
+            self.cluster.refresh()
+            live=[n for n in self.cluster.nodes if n.ready and n.cooldown_until <= self.cluster.clock()]
+            installed=frozenset(name for n in live for name in (n.models_installed or (n.model,)))
+            baseline=live[0].model if live else ""
+            return self.reply(200,research_catalog(installed,baseline))
         if path == "/api/v1/personas":
             if not self.auth_ok():
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
