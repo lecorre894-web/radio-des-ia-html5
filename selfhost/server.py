@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import hmac
 import ipaddress
 import json
 import logging
@@ -19,6 +20,7 @@ from urllib.request import Request, urlopen
 
 APP = Path(__file__).resolve().parent
 MODEL = os.environ.get("RADIO_LOCAL_MODEL", "qwen3:8b").strip()
+NODE_TOKEN = os.environ.get("RADIO_NODE_AUTH_TOKEN", "").strip()
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("RADIO_NODE_PORT", "8765"))
 OLLAMA = "http://127.0.0.1:11434"
@@ -296,6 +298,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/api/chat":
             self.send_json(404, {"error": "Route introuvable."})
             return
+        if NODE_TOKEN and not hmac.compare_digest(
+                self.headers.get("Authorization", ""), "Bearer " + NODE_TOKEN):
+            self.send_json(403, {"error": "Authentification du noeud invalide."})
+            return
         origin = self.headers.get("Origin")
         host = self.headers.get("Host", "")
         if origin and origin not in ("http://" + host, "https://" + host):
@@ -349,6 +355,7 @@ def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"RADIO_WSL_NODE=PRET http://{HOST}:{PORT}", flush=True)
     print(f"MODELE_LOCAL={MODEL}; PORT_PUBLIC=NON; INTERNET_RECHERCHE=OPTIONNEL", flush=True)
+    print("RADIO_NODE_AUTH="+("TOKEN_ACTIVE" if NODE_TOKEN else "LOCAL_SEULEMENT"), flush=True)
     try:
         server.serve_forever(poll_interval=0.5)
     finally:
