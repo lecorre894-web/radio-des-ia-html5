@@ -147,11 +147,22 @@ details.card[open]>summary{margin-bottom:14px}
 <div id="hordeControls" class="card" hidden aria-label="Options du réseau AI Horde">
 <h3 style="font-size:16px;margin:2px 0 7px">🌐 AI Horde — modèle réel du réseau communautaire</h3>
 <p>Les modèles sont servis sur des ordinateurs bénévoles, avec délais et disponibilité variables. Ni identité de Claude/Perplexity/Kimi ni niveau doctoral ne sont garantis. Le réseau ne nécessite pas d'abonnement et ne consomme aucun crédit Puter.</p>
-<div class="row"><button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button></div>
+<div class="row">
+<button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button>
+<button type="button" id="hordeRapide" disabled>⚡ Choisir un modèle avec moins d'attente (≥ 7B)</button>
+</div>
+<small>Le choix rapide examine les files d'attente publiques, si elles sont accessibles. Il ne lance aucune génération et ne garantit pas la vitesse ni un niveau doctoral.</small>
 <label for="hordeModele"><strong>Choisir un modèle effectivement annoncé en ligne</strong></label>
 <select id="hordeModele" style="width:100%;max-width:100%" aria-label="Modèle communautaire AI Horde">
 <option value="">Clique sur « Actualiser les modèles »</option>
 </select>
+<label for="hordeLongueur"><strong>Longueur des réponses AI Horde</strong></label>
+<select id="hordeLongueur" style="width:100%">
+<option value="rapide">⚡ Rapide — bref (180 tokens max)</option>
+<option value="equilibre" selected>Équilibrée — scientifique et concise (280 tokens max)</option>
+<option value="approfondi">Approfondie — plus de détails (400 tokens max)</option>
+</select>
+<small>Une réponse courte se calcule généralement plus vite, mais peut être moins détaillée. Le temps de file reste variable.</small>
 <label class="pieceOption"><input id="hordePartagerContexte" type="checkbox">
 <span><strong>Autoriser l'envoi d'extraits récents du Salon à AI Horde</strong> (jusqu'à 8 messages, taille limitée) pour poursuivre une discussion ou un débat. Désactivé par défaut à chaque ouverture de la page.</span></label>
 <p class="notice">Attention : ton message actuel est envoyé aux travailleurs communautaires lorsque tu demandes une réponse. Si la case ci-dessus est cochée, des extraits des échanges précédents sont également transmis. Ne transmets pas de documents médicaux, de secrets ni d'informations personnelles. Les fichiers joints ne sont jamais transmis par ce moteur.</p>
@@ -353,7 +364,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=2&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
