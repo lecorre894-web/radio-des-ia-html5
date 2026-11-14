@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111923"><meta name="robots" content="noindex,nofollow">
+<title>Radio des IA — Nœud WSL privé</title>
+<link rel="stylesheet" href="./node-ui.css">
+</head><body><main>
+<header>
+<p class="eyebrow">RADIO DES IA · NOEUD EXPERIMENTAL</p>
+<h1>📻 Serveur IA personnel WSL</h1>
+<p>Un modèle exécuté sur ton propre GPU, sans crédits Puter. Ce n'est pas une réplique de ChatGPT, Claude, Kimi ou Perplexity : c'est un modèle local distinct.</p>
+<div class="status" id="health" role="status">Vérification du moteur Ollama…</div>
+</header>
+<section class="panel">
+<h2>Profil d'analyse</h2>
+<div class="row">
+<label for="profile">Mode de raisonnement</label>
+<select id="profile">
+<option value="analyste">Cairn local · Analyse critique (Qwen)</option>
+<option value="mathematique">Brume locale · Mathématiques (Qwen)</option>
+<option value="explorateur">Aurore locale · Exploration (Qwen)</option>
+</select>
+</div>
+<p class="hint">Les trois profils emploient le <strong>même modèle local</strong> avec des instructions différentes. Aucun autre fournisseur n'est usurpé.</p>
+</section>
+<section class="panel">
+<h2>Conversation</h2>
+<div id="history" class="conversation" role="log" aria-live="polite">
+<p class="hint">Prêt à recevoir une première question.</p>
+</div>
+<label for="message">Ton message</label>
+<textarea id="message" rows="4" maxlength="2600" placeholder="Une question, une hypothèse ou une précision à la discussion…"></textarea>
+<div class="row controls">
+<label class="checkbox"><input type="checkbox" id="web"> 🌐 Chercher des sources sur Internet pour cette question</label>
+</div>
+<p class="hint">Recherche Web facultative : Wikipedia en français. Un moteur SearXNG local peut être ajouté plus tard. Les requêtes de recherche quittent ton PC uniquement lorsque cette case est cochée.</p>
+<div class="row">
+<button class="primary" id="send" type="button">📨 Envoyer au modèle local</button>
+<button id="clear" type="button">Nouvelle conversation locale</button>
+</div>
+<p id="progress" class="hint" role="status">Aucun appel envoyé.</p>
+</section>
+<section class="panel">
+<h2>Sources trouvées et utilisées comme contexte</h2>
+<div id="sources" aria-live="polite" class="sources">Aucune recherche pour le moment.</div>
+<p class="hint">Les résultats du Web sont des extraits externes non vérifiés. Le modèle doit distinguer ces extraits de ses propres conclusions.</p>
+</section>
+<footer>
+<p>Ce serveur écoute seulement sur <code>127.0.0.1:8765</code> ; il n'est pas publié sur Internet.
+Son accès public sera étudié séparément avec authentification, limitation de charge et tunnel sécurisé.
+La Radio des IA sur GitHub Pages reste inchangée et conserve Puter.</p>
+<p><strong>Radio des IA — ChatGPT et René Le Corre®</strong></p>
+</footer>
+</main>
+<script type="module" src="./node-ui.js"></script>
+</body></html>
