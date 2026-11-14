@@ -274,7 +274,7 @@ function exportConversation(){
 function init(){
   restore();$("sujet").value=state.sujet;renderParts();render();buttonStates();
   // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
-  void import("./tchat-documents.mjs?v=documents-2")
+  void import("./tchat-documents.mjs?v=documents-3")
     .then(({createDocumentManager})=>{
       documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
     })
@@ -285,7 +285,7 @@ function init(){
       if($("pieceUtiliser"))$("pieceUtiliser").checked=false;
     });
   // Le tableau de réactions est facultatif et ne peut pas bloquer le moteur IA.
-  void import("./tchat-reactions.mjs?v=reactions-1")
+  void import("./tchat-reactions.mjs?v=reactions-2")
     .then(({createReactionBoard})=>{
       reactionBoard=createReactionBoard({
         onInsert:(value)=>{
@@ -298,10 +298,11 @@ function init(){
         onSendGif:({id,name})=>{
           state.messages.push({
             origin:"human",nom:"Vous",gifId:String(id),
-            texte:"[GIF animé local partagé : "+String(name).slice(0,120)+". Les pixels de ce GIF ne sont pas transmis aux modèles IA.]",
+            texte:"🎞️ GIF animé partagé. Aperçu local uniquement : les images ne sont pas visibles des modèles IA.",
             heure:new Date().toLocaleTimeString("fr-FR")
           });
           render();
+          $("fil").lastElementChild?.scrollIntoView({behavior:"smooth",block:"nearest"});
           status("GIF ajouté à votre conversation personnelle ; aucun appel IA ni crédit consommé.");
         }
       });
