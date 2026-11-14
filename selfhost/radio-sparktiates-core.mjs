@@ -12,10 +12,14 @@ export const LOCAL_SPEAKERS=Object.freeze([
 export const STORAGE_KEY="radio:sparktiates:salon:v1";
 export function normalizedTranscript(items){
   if(!Array.isArray(items))return [];
-  return items.slice(-150).filter(x=>x&&["human","local"].includes(x.kind)
+  const valid=items.filter(x=>x&&["human","local"].includes(x.kind)
     &&typeof x.text==="string"&&x.text.length<=12000&&typeof x.name==="string")
     .map(x=>({kind:x.kind,text:x.text,name:x.name.slice(0,80),
       model:String(x.model||"").slice(0,128),at:String(x.at||"").slice(0,50)}));
+  if(valid.length<=150)return valid;
+  const last=valid.slice(-149);
+  const root=valid.find(x=>x.kind==="human");
+  return root&&!last.includes(root)?[root,...last]:valid.slice(-150);
 }
 export function buildLocalHistory(transcript){
   const items=normalizedTranscript(transcript);
