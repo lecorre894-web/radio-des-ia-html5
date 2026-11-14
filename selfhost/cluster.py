@@ -388,7 +388,8 @@ class Handler(BaseHTTPRequestHandler):
             "/node-ui.css": ("node-ui.css", "text/css; charset=utf-8"),
             "/radio": ("radio-sparktiates.html", "text/html; charset=utf-8"),
             "/radio-sparktiates.mjs": ("radio-sparktiates.mjs", "text/javascript; charset=utf-8"),
-            "/radio-sparktiates-core.mjs": ("radio-sparktiates-core.mjs", "text/javascript; charset=utf-8")
+            "/radio-sparktiates-core.mjs": ("radio-sparktiates-core.mjs", "text/javascript; charset=utf-8"),
+            "/radio-sparktiates.css": ("radio-sparktiates.css", "text/css; charset=utf-8")
         }
         if path not in assets:
             return self.reply(404, {"error": "Route inconnue."})
