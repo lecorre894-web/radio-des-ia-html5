@@ -83,6 +83,20 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🌼 Pollinations intégré à la Radio des IA (OAuth sécurisé)
+
+Dans **la même page `tchat.html`**, le sélecteur propose désormais quatre moteurs : Puter, recherche locale WebGPU, AI Horde et Pollinations. Les intervenants et conversations existants ne sont ni supprimés ni rebaptisés. L'accès Pollinations est activé à la demande ; il ne déclenche aucune requête payante à l'ouverture.
+
+**Conditions vérifiées dans la documentation officielle au 14 novembre 2026 :** Pollinations demande un jeton utilisateur autorisé pour `POST https://gen.pollinations.ai/v1/chat/completions`. Le catalogue public des modèles texte se consulte gratuitement via `GET https://gen.pollinations.ai/text/models`. Un identifiant `pk_` d'application n'autorise *pas* à lui seul les appels IA depuis le 1er novembre 2026. Pollinations n'est donc **pas** une génération gratuite illimitée : les requêtes peuvent consommer des crédits Pollen.
+
+La Radio utilise **OAuth Authorization Code + PKCE S256** (aucune clé secrète publiée), avec une clé d'application publique `pk_` créée par l'utilisateur dans le tableau de bord Pollinations. L'utilisateur doit enregistrer exactement l'URI de retour :
+`https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html`.
+Le consentement préremplit un budget maximal de **1 Pollen** et une durée d'**1 jour**, modifiables par l'utilisateur sur l'écran du fournisseur. Le jeton temporaire `sk_` reçu après autorisation est conservé uniquement dans `sessionStorage` du navigateur, jamais dans `localStorage`, dans le dépôt GitHub ni dans l'URL. Une déconnexion du Salon efface localement le jeton mais ne le révoque pas auprès de Pollinations : la révocation se fait dans son tableau de bord.
+
+Les tours utilisent le modèle réellement choisi dans la liste du fournisseur. Le partage d'extraits anciens est **désactivé par défaut**, y compris après actualisation de la page ; lorsqu'il est accepté, seuls des extraits bornés sont envoyés. Les pièces jointes ne sont pas transmises en mode Pollinations. Les discussions automatiques sont limitées à **trois tours par déclenchement** pour réduire le risque de consommation involontaire des crédits. Les rôles scientifiques sont méthodologiques, **pas un doctorat certifié**.
+
+**Chargement allégé pour Android :** `puter-lazy.mjs` ne charge plus le SDK Puter dès l'ouverture. Il est requis uniquement lorsqu'un utilisateur souhaite se connecter à Puter ou le consulter. Cela réduit les ressources et dépendances initiales, sans garantir la résolution de tous les plantages de navigateur.
+
 ## 🌐 AI Horde intégré au Salon principal (moteur communautaire)
 
 La Radio des IA propose un **troisième moteur sélectionnable dans `tchat.html`**, à côté de Puter et du moteur scientifique local. Le moteur **AI Horde** utilise l'API officielle `https://oai.aihorde.net/v1` avec la clé anonyme publique `0000000000` (aucune clé privée insérée). L'utilisateur clique sur **Actualiser les modèles**, choisit un modèle effectivement signalé comme servi en ligne et utilise les commandes de conversation habituelles (envoyer, tour suivant, débat, arrêt). La page et les participants Puter sont conservés sans modification des identités.
