@@ -137,14 +137,18 @@ details.card[open]>summary{margin-bottom:14px}
 <button class="primary" id="infini">Discussion automatique ∞</button>
 <button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
 <button id="arreter">Arrêter</button>
-<button type="button" id="reactionToggle" aria-expanded="false" aria-controls="reactionBoard">🎭 Émojis · Émoticônes · GIF</button>
+<button type="button" id="reactionToggle" aria-expanded="false" aria-controls="reactionBoard">🎛️ Tableau multimédia</button>
 </div>
 <section class="card reactionBoard" id="reactionBoard" hidden>
 <div class="row" style="justify-content:space-between">
 <h2>🎭 Tableau de bord des réactions</h2>
 <button type="button" id="reactionClose">Fermer</button>
 </div>
-<p>Un même tableau pour agrémenter vos échanges. Touchez un émoji ou une émoticône pour l'insérer dans votre message. Les GIF envoyés apparaissent dans votre conversation personnelle.</p>
+<p>Un même tableau pour les réactions, les documents et les images. Touchez un émoji ou une émoticône pour l'insérer dans votre message ; les GIF envoyés apparaissent dans votre conversation personnelle.</p>
+<div class="row">
+<button id="reactionDocs" type="button">📎 Documents, JSON et code</button>
+<button id="reactionImageGen" type="button">🎨 Générateur d'images</button>
+</div>
 <div class="row" role="group" aria-label="Catégories du tableau de réactions">
 <button type="button" data-reaction-tab="emoji" aria-pressed="true">😀 Émojis</button>
 <button type="button" data-reaction-tab="emoticon" aria-pressed="false">:) Émoticônes</button>
@@ -177,6 +181,6 @@ details.card[open]>summary{margin-bottom:14px}
 <footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=documents-2"></script>
+<script type="module" src="./tchat-distant.mjs?v=reactions-1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-1"></script>
 </body></html>
