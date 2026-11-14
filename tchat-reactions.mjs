@@ -189,6 +189,14 @@ export function createReactionBoard({onInsert,onSendGif,onStatus}={}){
     img.loading="lazy";img.className="reactionMessageGif";
     holder.append(img);
   }
+  const openMediaSection=(id)=>{
+    const section=$(id);
+    if(!section){say("Section multimédia indisponible.");return;}
+    section.open=true;
+    section.scrollIntoView({behavior:"smooth",block:"start"});
+  };
+  $("reactionDocs")?.addEventListener("click",()=>openMediaSection("documents"));
+  $("reactionImageGen")?.addEventListener("click",()=>openMediaSection("imagesGenerateur"));
   toggle.addEventListener("click",()=>{
     board.hidden=!board.hidden;toggle.setAttribute("aria-expanded",String(!board.hidden));
     if(!board.hidden){selectTab(tab);board.scrollIntoView({block:"nearest",behavior:"smooth"});}
