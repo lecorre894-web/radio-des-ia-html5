@@ -4,6 +4,7 @@ import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
 import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
+import {addHordeAvailability,chooseResponsiveHorde,getHordeAvailability,modelSizeB,HORDE_WAIT_LIMIT_MS} from "./tchat-horde-availability.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
@@ -16,6 +17,7 @@ let researchEngine=null;
 let researchLoading=false;
 let hordeModels=[];
 let hordeLoading=false;
+let hordeStatusVerified=false;
 let pollinationsModels=[];
 let pollinationsToken="";
 let pollinationsLoading=false;
@@ -148,9 +150,16 @@ function engineReadiness(){
   if(isResearchMode())return researchEngine
     ?{ready:true,label:"Recherche locale · "+researchEngine.modelId}
     :{ready:false,label:"Recherche locale",reason:"Charge d'abord le modèle WebGPU dans le panneau scientifique. Il faut assez de mémoire sur cet appareil."};
-  if(isHordeMode())return state.hordeModel && hordeModels.some(x=>x.id===state.hordeModel)
-    ?{ready:true,label:"AI Horde · "+state.hordeModel}
-    :{ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire. Il peut ne pas être disponible."};
+  if(isHordeMode()){
+    const chosen=hordeModels.find(x=>x.id===state.hordeModel);
+    if(!chosen)return {ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire."};
+    if(chosen.workers===0)return {ready:false,label:"AI Horde · "+chosen.id,
+      reason:"Aucun travailleur actif annoncé pour ce modèle. Choisis un autre modèle."};
+    const size=modelSizeB(chosen.id);
+    return {ready:true,label:"AI Horde · "+chosen.id+
+      (size!==null&&size>64?" · modèle très lourd : attente potentiellement longue":"")+
+      " (sélectionné, disponibilité instantanée non garantie)"};
+  }
   if(isPollinationsMode()){
     if(pollinationsLoading)return {ready:false,label:"Pollinations",reason:"Connexion ou catalogue en cours de chargement. Aucune génération payante en cours."};
     const token=pollinationsToken||getPollinationsStoredToken();
@@ -216,7 +225,10 @@ function buttonStates(){
   const readiness=engineReadiness();
   const indicator=$("moteurComposer");
   if(indicator)indicator.textContent=readiness.ready
-    ?"Moteur sélectionné : "+readiness.label+" · prêt à recevoir la demande."
+    ?"Moteur sélectionné : "+readiness.label+
+      (isHordeMode()&&unansweredHuman()
+        ?" · Ton dernier message attend une réponse : utilise « Répondre à ma dernière question »."
+        :" · tu peux demander une réponse.")
     :"Moteur sélectionné : "+readiness.label+" · PAS ENCORE PRÊT. "+readiness.reason;
   const retry=$("reessayerDernier");
   if(retry)retry.disabled=state.busy || state.auto || !unansweredHuman();
@@ -240,6 +252,8 @@ function buttonStates(){
   }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
+  $("hordeRapide").disabled=state.busy || state.auto || hordeLoading ||
+    !chooseResponsiveHorde(hordeModels);
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
@@ -570,36 +584,66 @@ async function refreshHordeModels(){
   hordeStatus("Interrogation du catalogue des travailleurs AI Horde en ligne…");
   try{
     const available=await listHordeModels();
-    hordeModels=available;
+    // Cette sonde ne transmet ni question ni historique. Son échec ne bloque pas le Salon.
+    let stats=[];
+    try {
+      const timeout=typeof AbortSignal.timeout==="function"?AbortSignal.timeout(4500):undefined;
+      stats=await getHordeAvailability({signal:timeout});
+    }catch{}
+    hordeStatusVerified=stats.length>0;
+    hordeModels=addHordeAvailability(available,stats);
     const node=$("hordeModele");
     node.replaceChildren();
     const placeholder=document.createElement("option");
     placeholder.value="";placeholder.textContent="Choisissez un modèle réellement disponible";
     node.append(placeholder);
-    for(const item of available){
+    for(const item of hordeModels){
       const option=document.createElement("option");
       option.value=item.id;
-      option.textContent=item.id+(item.workers!==null?" · "+item.workers+" travailleurs":"")+
+      option.textContent=item.id+
+        (item.workers!==null?" · "+item.workers+" travailleurs":" · travailleurs inconnus")+
+        (Number.isFinite(item.etaSeconds)?" · file indiquée ~"+Math.ceil(item.etaSeconds/60)+" min":"")+
         (item.context!==null?" · contexte "+item.context:"");
       node.append(option);
     }
-    if(available.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
+    if(hordeModels.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
     else {
       node.value="";
       state.hordeModel="";
     }
     save();
     hordeStatus(available.length
-      ?available.length+" modèles communautaires annoncés en ligne. Choisis-en un. Leur qualité scientifique et disponibilité ne sont pas garanties."
-      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; Puter et le mode local restent disponibles.");
+      ?available.length+" modèles annoncés en ligne. "+
+       (hordeStatusVerified?"Files estimatives reçues. ":"Statistiques de file indisponibles. ")+
+       "Le modèle choisi peut rester en attente ; un modèle 128B exige beaucoup de ressources. "+
+       "Utilise le bouton ⚡ pour sélectionner un modèle moins encombré, puis reprends ta dernière question."
+      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; les autres moteurs restent disponibles.");
   }catch(e){
     hordeModels=[];
+    hordeStatusVerified=false;
     $("hordeModele").replaceChildren();
     const option=document.createElement("option");option.value="";option.textContent="Catalogue indisponible";$("hordeModele").append(option);
     state.hordeModel="";
     hordeStatus("Catalogue AI Horde indisponible : "+String(e?.message||e)+
       ". Si le navigateur bloque CORS, aucun appel de génération n'est lancé. Les autres moteurs sont préservés.");
   }finally{hordeLoading=false;buttonStates();}
+}
+function selectResponsiveHorde(){
+  if(state.busy || state.auto || hordeLoading)return;
+  const selected=chooseResponsiveHorde(hordeModels);
+  if(!selected){
+    hordeStatus("Aucun modèle de 7 à 32B avec travailleur actif connu : impossible de garantir un choix rapide. Actualise les modèles ou sélectionne manuellement.");
+    return;
+  }
+  state.hordeModel=selected.id;
+  $("hordeModele").value=selected.id;
+  save();buttonStates();
+  const eta=Number.isFinite(selected.etaSeconds)
+    ?" · file indicative ~"+Math.ceil(selected.etaSeconds/60)+" min"
+    :" · "+selected.workers+" travailleur(s), délai non vérifié";
+  hordeStatus("Choix de disponibilité : "+selected.id+eta+
+    ". Modèle simplement sélectionné : aucun nouveau message envoyé. "+
+    "Utilise « Répondre à ma dernière question ».");
 }
 async function nextHordeTurn(){
   if(state.busy)return;
@@ -624,7 +668,21 @@ async function nextHordeTurn(){
   state.busy=true;
   state.controller=new AbortController();
   render();buttonStates();
-  status("AI Horde · "+model+" : attente d'un travailleur bénévole. Tu peux arrêter.");
+  let elapsedSeconds=0;
+  let timedOut=false;
+  const start=Date.now();
+  status("AI Horde · "+model+" : requête envoyée, en file ou génération. "+
+    "Arrêt automatique dans 180 s si aucune réponse ; tu peux choisir un autre modèle.");
+  const progressTimer=setInterval(()=>{
+    elapsedSeconds=Math.floor((Date.now()-start)/1000);
+    if(state.busy&&isHordeMode())
+      status("AI Horde · "+model+" : "+elapsedSeconds+
+        " s écoulées. La file communautaire peut être longue ; Arrêter reste disponible.");
+  },10000);
+  const deadline=setTimeout(()=>{
+    timedOut=true;
+    state.controller?.abort();
+  },HORDE_WAIT_LIMIT_MS);
   try{
     const answer=await chatWithHorde({
       model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
@@ -643,11 +701,15 @@ async function nextHordeTurn(){
   }catch(e){
     state.messages=state.messages.filter(m=>m!==current);
     state.auto=false;
-    const reason=e?.name==="AbortError"
-      ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
-      :String(e?.message||e);
+    const reason=timedOut
+      ?"attente de 180 s dépassée. Ce modèle n'a pas répondu à temps ; choisis un modèle moins encombré puis relance ta dernière question"
+      :e?.name==="AbortError"
+        ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
+        :String(e?.message||e);
     status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
   }finally{
+    clearInterval(progressTimer);
+    clearTimeout(deadline);
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;
     render();buttonStates();
   }
@@ -1060,13 +1122,19 @@ function init(){
   });
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
+  $("hordeRapide").addEventListener("click",selectResponsiveHorde);
   $("hordeModele").addEventListener("change",()=>{
     const selected=$("hordeModele").value;
     state.hordeModel=hordeModels.some(m=>m.id===selected)?selected:"";
     save();
     hordeStatus(state.hordeModel
-      ?"Modèle choisi : "+state.hordeModel+". Les requêtes sont envoyées seulement quand tu demandes une réponse."
+      ?"Modèle choisi : "+state.hordeModel+
+        (modelSizeB(state.hordeModel)>64
+          ?" (très lourd : disponibilité incertaine et attente potentiellement longue)."
+          :" (disponibilité instantanée non garantie).")+
+        " Les requêtes sont envoyées seulement quand tu demandes une réponse."
       :"Sélectionne un modèle annoncé par AI Horde.");
+    buttonStates();
   });
   $("hordePartagerContexte").addEventListener("change",()=>{
     hordeStatus($("hordePartagerContexte").checked
