@@ -252,8 +252,14 @@ function buttonStates(){
   }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
-  $("hordeRapide").disabled=state.busy || state.auto || hordeLoading ||
-    !hordeModels.length || !chooseResponsiveHorde(hordeModels);
+  const canSelectHorde=Boolean(!state.busy && !state.auto && !hordeLoading &&
+    hordeModels.length && chooseResponsiveHorde(hordeModels));
+  $("hordeRapide").disabled=!canSelectHorde;
+  const quickComposer=$("hordeRapideComposer");
+  if(quickComposer){
+    quickComposer.hidden=!isHordeMode();
+    quickComposer.disabled=!canSelectHorde;
+  }
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
@@ -641,9 +647,11 @@ function selectResponsiveHorde(){
   const eta=Number.isFinite(selected.etaSeconds)
     ?" · file indicative ~"+Math.ceil(selected.etaSeconds/60)+" min"
     :" · "+selected.workers+" travailleur(s), délai non vérifié";
-  hordeStatus("Choix de disponibilité : "+selected.id+eta+
+  const msg="Choix de disponibilité : "+selected.id+eta+
     ". Modèle simplement sélectionné : aucun nouveau message envoyé. "+
-    "Utilise « Répondre à ma dernière question ».");
+    "Utilise « Répondre à ma dernière question ».";
+  hordeStatus(msg);
+  status(msg);
 }
 async function nextHordeTurn(){
   if(state.busy)return;
@@ -1123,6 +1131,7 @@ function init(){
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
   $("hordeRapide").addEventListener("click",selectResponsiveHorde);
+  $("hordeRapideComposer").addEventListener("click",selectResponsiveHorde);
   $("hordeModele").addEventListener("change",()=>{
     const selected=$("hordeModele").value;
     state.hordeModel=hordeModels.some(m=>m.id===selected)?selected:"";
@@ -1169,7 +1178,10 @@ function init(){
   $("dechargerRecherche").addEventListener("click",()=>void unloadResearch());
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
-  if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
+  if(isHordeMode()){
+    hordeStatus("Mode AI Horde : récupération du catalogue public, sans envoyer tes conversations.");
+    void refreshHordeModels();
+  }
   if(isSparktiatesMode())sparktiatesStatus("Mode SPARKTIATES sélectionné, serveur non encore vérifié : renseigne l'adresse et le jeton.");
   if(isPollinationsMode())pollinationsStatus(pollinationsToken
     ?"Session Pollinations disponible : actualise les modèles et choisis-en un."
