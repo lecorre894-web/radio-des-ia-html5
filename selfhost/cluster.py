@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+from resources import FAMILIES
 
 BASE = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -56,6 +57,9 @@ def parse_nodes(document: dict) -> list["Node"]:
         except (TypeError, ValueError) as exc:
             raise ConfigError("slots doit etre un entier.") from exc
         token_env = str(entry.get("token_env", "")).strip()
+        family = str(entry.get("hardware_family", "auto")).strip()
+        if family not in ("auto", *FAMILIES):
+            raise ConfigError("Famille de processeur inconnue. Selectionner un profil materiel reel.")
         if not ID_PATTERN.fullmatch(name) or name in names:
             raise ConfigError("Identifiant de noeud invalide ou duplique.")
         parts = urlsplit(url)
@@ -71,7 +75,7 @@ def parse_nodes(document: dict) -> list["Node"]:
         if not model or len(model) > 128 or not 1 <= slots <= MAX_SLOTS_PER_NODE:
             raise ConfigError("Modele ou capacite physique du noeud incorrects.")
         names.add(name)
-        nodes.append(Node(name, url, model, slots, token_env))
+        nodes.append(Node(name, url, model, slots, token_env, hardware_family=family))
     return nodes
 
 
@@ -98,13 +102,23 @@ class Node:
     errors: int = 0
     cooldown_until: float = 0.0
     last_error: str = ""
+    hardware_family: str = "auto"
+    reported_hardware: dict = field(default_factory=dict)
 
     def public(self) -> dict:
         return {"id": self.id, "model": self.model, "configured_slots": self.slots,
                 "ready": self.ready, "active": self.active,
                 "free_slots": max(0, self.slots-self.active) if self.ready else 0,
                 "completed": self.completed, "failures": self.errors,
-                "cooldown": self.cooldown_until > time.monotonic()}
+                "cooldown": self.cooldown_until > time.monotonic(),
+                "hardware_family_expected": self.hardware_family,
+                "hardware_family_reported": self.reported_hardware.get("family") if self.ready else None,
+                "cpu_arch_reported": self.reported_hardware.get("arch") if self.ready else None,
+                "cpu_logical_threads_reported": self.reported_hardware.get("cpu_logical_threads") if self.ready else None,
+                "ram_total_bytes_reported": self.reported_hardware.get("ram_total_bytes") if self.ready else None,
+                "ram_available_bytes_reported": self.reported_hardware.get("ram_available_bytes") if self.ready else None,
+                "gpus_reported": len(self.reported_hardware.get("gpus", [])) if self.ready else 0,
+                "resource_source": "worker_os_report" if self.ready and self.reported_hardware else "unmeasured"}
 
 
 def fetch_json(url: str, *, payload: dict | None = None, token: str = "", timeout: float = 4) -> dict:
@@ -149,13 +163,26 @@ class Cluster:
         try:
             if node.token_env and len(os.environ.get(node.token_env, "")) < 32:
                 raise RuntimeError("Jeton distant absent, nœud indisponible.")
-            response = self.transport(node.url+"/health", timeout=3)
+            token = os.environ.get(node.token_env, "") if node.token_env else ""
+            response = self.transport(node.url+"/health", token=token, timeout=3)
+            hw = response.get("hardware") if isinstance(response.get("hardware"), dict) else {}
             ready = response.get("ready") is True and response.get("model") == node.model
             reason = "Modèle absent ou non prêt" if not ready else ""
+            if ready and node.hardware_family != "auto":
+                profile=FAMILIES[node.hardware_family]
+                if hw.get("family") != node.hardware_family or hw.get("arch") != profile["arch"]:
+                    ready=False
+                    reason="Profil physique non détecté : noeud exclu du cluster"
+            if ready and hw and hw.get("measurement") != "worker_os_report":
+                ready=False
+                reason="Rapport materiel sans provenance instrumentee"
+
         except (OSError, HTTPError, URLError, ValueError, TimeoutError, RuntimeError) as exc:
             ready, reason = False, type(exc).__name__
+            hw = {}
         with self.lock:
             node.ready = ready
+            node.reported_hardware = hw if ready else {}
             node.last_error = reason
             if ready:
                 node.cooldown_until = 0
@@ -196,14 +223,28 @@ class Cluster:
                 "failed_jobs": sum(n["failures"] for n in result),
                 "requests": self.total_requests,
                 "nodes": result,
-                "notice": "Les slots sont des limites d'ordonnancement, pas des coeurs physiques."
+                "reported_ram_gb_online_separate_pools": round(
+                    sum(n.reported_hardware.get("ram_total_bytes", 0) or 0
+                        for n in self.nodes if n.ready and n.cooldown_until <= self.clock())/1024**3,2),
+                "reported_free_ram_gb_online_separate_pools": round(
+                    sum(n.reported_hardware.get("ram_available_bytes", 0) or 0
+                        for n in self.nodes if n.ready and n.cooldown_until <= self.clock())/1024**3,2),
+                "online_hardware_families": sorted(set(n.reported_hardware.get("family")
+                    for n in self.nodes if n.ready and n.reported_hardware.get("family"))),
+                "notice": "Les slots sont des limites d'ordonnancement et les RAM restent separees par machine ; rapports fournis par les OS des noeuds, sans certification tierce."
             }
 
-    def reserve(self, profile: str | None = None) -> Node | None:
+    def reserve(self, profile: str | None = None, hardware_family: str | None = None,
+                min_available_ram_gb: int = 0) -> Node | None:
         with self.lock:
             now = self.clock()
             candidates = [n for n in self.nodes if n.ready and n.cooldown_until <= now
-                          and n.active < n.slots and (not profile or profile in ("analyste", "mathematique", "explorateur"))]
+                          and n.active < n.slots
+                          and (not profile or profile in ("analyste", "mathematique", "explorateur"))
+                          and (not hardware_family or n.reported_hardware.get("family")==hardware_family)
+                          and (min_available_ram_gb == 0 or
+                               (n.reported_hardware.get("ram_available_bytes") or 0)
+                               >= min_available_ram_gb*1024**3)]
             if not candidates:
                 return None
             # Moins occupe par slot, egalite avec rotation deterministe.
@@ -243,8 +284,14 @@ class Cluster:
             if not isinstance(entry, dict) or entry.get("role") not in ("user", "assistant") \
                or not isinstance(entry.get("content"), str) or len(entry["content"]) > 900:
                 raise ValueError("Un element de l'historique est incorrect.")
+        family = payload.get("hardware_family")
+        if family is not None and family not in FAMILIES:
+            raise ValueError("Famille materielle inconnue.")
+        min_ram = payload.get("min_available_ram_gb", 0)
+        if type(min_ram) is not int or min_ram < 0 or min_ram > 8192:
+            raise ValueError("Memoire RAM demandee incorrecte.")
         self.refresh()
-        node = self.reserve(profile)
+        node = self.reserve(profile, family, min_ram)
         if node is None:
             raise RuntimeError("Tous les noeuds reels sont hors ligne ou occupes.")
         try:
