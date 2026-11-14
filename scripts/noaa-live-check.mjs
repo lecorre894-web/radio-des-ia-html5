@@ -6,7 +6,9 @@
 import {validateNoaaTides,NOAA_REFERENCE_URL} from "../science-noaa.mjs";
 const cases=[
   {station:"9414290",period:"20250915"},
-  {station:"8518750",period:"20250915"}
+  {station:"8518750",period:"20250915"},
+  {station:"9414290",period:"20250414"},
+  {station:"8518750",period:"20250414"}
 ];
 console.log("SPARKTIATES — observational verification (NOAA instrument data)");
 console.log("Official documentation:",NOAA_REFERENCE_URL);
