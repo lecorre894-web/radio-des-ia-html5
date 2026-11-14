@@ -83,6 +83,28 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🌊 Validation observationnelle SPARKTIATES — NOAA CO-OPS
+
+**Mesures réelles, non simulées :** le 14 novembre 2026, le script [scripts/noaa-live-check.mjs](scripts/noaa-live-check.mjs) a récupéré auprès de l'API officielle NOAA CO-OPS les hauteurs d'eau horaires vérifiées (`hourly_height`) et les prédictions harmoniques (`predictions&interval=h`) sur **deux stations et deux semaines**. Les quatre comparaisons ont réussi : [rapport d'exécution GitHub Actions](https://github.com/lecorre894-web/radio-des-ia-html5/actions/runs/43628535631), avec des URL source et valeurs reproductibles dans [l'archive JSON](research/noaa-observations-2026-11-14-replicated.json).
+
+| Station | Période | Paires mesurées/prédites | Biais obs−pred | MAE | RMSE | r |
+|---|---|---:|---:|---:|---:|---:|
+| San Francisco (9414290) | 14–20 avril 2025 | 168/168 | +9,959 cm | 9,959 cm | 10,472 cm | 0,99788 |
+| New York, The Battery (8518750) | 14–20 avril 2025 | 168/168 | +5,499 cm | 11,261 cm | 14,125 cm | 0,95484 |
+| San Francisco | 15–21 septembre 2025 | 168/168 | +8,355 cm | 8,377 cm | 9,111 cm | 0,99781 |
+| New York, The Battery | 15–21 septembre 2025 | 168/168 | +19,674 cm | 19,674 cm | 20,733 cm | 0,99097 |
+
+**Total : 672 paires exactement alignées**, format GMT, altitude en mètres, même datum vertical **MLLW**, sans interpolation. L'interface Radio propose de relancer explicitement chaque comparaison depuis **SPARKTIATES → Contrôle par de vraies observations NOAA**, de consulter les URL d'origine et de copier le rapport. La connexion ne requiert ni jeton personnel, ni crédits AI Horde/Pollinations/Puter. Si le navigateur bloque le réseau ou les requêtes croisées, aucun chiffre n'est inventé ; les résultats historiques du test GitHub restent disponibles dans une section clairement datée.
+
+Protocole :
+- **MESURÉ** : `hourly_height`, produit NOAA dont les données horaires sont vérifiées.
+- **RECONSTRUIT** : `predictions` NOAA, modèle harmonique, non une mesure supplémentaire.
+- **COMPARAISON** : résidu observation moins prédiction, biais, MAE, RMSE, corrélation Pearson et Nash–Sutcliffe NSE.
+- **INCONNU** : causes physiques de chaque résidu si météorologie, calibration, bathymétrie, incertitudes instrumentales et ajustement harmonique ne sont pas évalués indépendamment.
+- **NON DÉMONTRÉ** : validation expérimentale directe de la loi de gravitation lunaire, audit de reproductibilité interinstitutionnel et qualification doctorale d'un modèle de langage.
+
+La validation est une **vérification observationnelle de prédictions de marée** et ne remplace ni une expertise océanographique indépendante, ni un test à l'aveugle sur des données externes inédites. Les modèles harmoniques NOAA peuvent provenir d'observations antérieures de stations ; la séparation des deux produits et des horodatages ne prouve pas une indépendance institutionnelle ou une prédiction réellement hors échantillon. Voir [documentation de l'API CO-OPS](https://api.tidesandcurrents.noaa.gov/api/dev/).
+
 ## 🔬 Coordinateur scientifique SPARKTIATES — analyse quantifiée V1
 
 Dans **le Salon Radio des IA existant**, ouvre le panneau **« 🔬 SPARKTIATES — coordonner, comparer et auditer les calculs scientifiques »**. Aucun des cinq moteurs n'est remplacé et les conversations ne sont pas modifiées par l'audit.
