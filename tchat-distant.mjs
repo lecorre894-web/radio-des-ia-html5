@@ -40,7 +40,13 @@ const state = {
   hordeModel:"",hordeIndex:0,pollinationsModel:"",pollinationsIndex:0,
   sparktiatesModel:"",sparktiatesIndex:0
 };
-function status(value){$("etat").textContent=value;}
+function status(value){
+  const text=String(value);
+  $("etat").textContent=text;
+  // Les messages d'erreur ne doivent pas rester cachés à 4 écrans du formulaire.
+  const near=$("etatComposer");
+  if(near)near.textContent=text;
+}
 function saveDraft(){
   // Le brouillon ne doit jamais dépendre du succès de la génération IA.
   try{
@@ -134,7 +140,64 @@ function pollinationsStatus(message){
 }
 function hordeStatus(value){const node=$("hordeEtat");if(node)node.textContent=value;}
 function researchStatus(value){const indicator=$("rechercheEtat");if(indicator)indicator.textContent=value;}
+/**
+ * A selected provider is not necessarily a connected provider.
+ * Do not submit a chargeable or remote generation when it cannot reply.
+ */
+function engineReadiness(){
+  if(isResearchMode())return researchEngine
+    ?{ready:true,label:"Recherche locale · "+researchEngine.modelId}
+    :{ready:false,label:"Recherche locale",reason:"Charge d'abord le modèle WebGPU dans le panneau scientifique. Il faut assez de mémoire sur cet appareil."};
+  if(isHordeMode())return state.hordeModel && hordeModels.some(x=>x.id===state.hordeModel)
+    ?{ready:true,label:"AI Horde · "+state.hordeModel}
+    :{ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire. Il peut ne pas être disponible."};
+  if(isPollinationsMode()){
+    const token=pollinationsToken||getPollinationsStoredToken();
+    if(!token)return {ready:false,label:"Pollinations",reason:"Autorise d'abord la connexion Pollinations dans le panneau scientifique (des crédits Pollen peuvent être utilisés)."};
+    if(!state.pollinationsModel || !pollinationsModels.some(x=>x.id===state.pollinationsModel))
+      return {ready:false,label:"Pollinations",reason:"Actualise les modèles Pollinations et choisis un modèle réel."};
+    return {ready:true,label:"Pollinations · "+state.pollinationsModel+" (crédits Pollen éventuels)"};
+  }
+  if(isSparktiatesMode()){
+    const configured=state.sparktiatesModel &&
+      sparktiatesModelsReady.some(x=>x.id===state.sparktiatesModel) &&
+      $("sparktiatesAdresse")?.value.trim() && $("sparktiatesToken")?.value.trim();
+    return configured
+      ?{ready:true,label:"SPARKTIATES · "+state.sparktiatesModel}
+      :{ready:false,label:"SPARKTIATES",reason:"Le serveur SPARKTIATES et un modèle Ollama doivent réellement être démarrés et vérifiés. Depuis le téléphone, utilise son URL HTTPS et un jeton privé."};
+  }
+  let loggedIn=false;
+  try{loggedIn=Boolean(window.puter?.auth?.isSignedIn?.());}catch{}
+  if(!loggedIn)return {ready:false,label:"Puter",reason:"Tu n'es pas connecté à Puter dans ce navigateur. Appuie sur « Se connecter à Puter » dans la section de connexion en haut de la page."};
+  if(!state.validModels.size)return {ready:false,label:"Puter",reason:"Le catalogue Puter n'a pas encore été chargé. Appuie sur « Actualiser les modèles » dans la section de connexion."};
+  return {ready:true,label:"Puter · modèle distant disponible (crédits éventuels)"};
+}
+function unansweredHuman(){
+  return state.messages.length>0 && state.messages.at(-1)?.origin==="human";
+}
+function retryLastHuman(){
+  if(state.busy || state.auto)return;
+  if(!unansweredHuman()){
+    status("Aucune question humaine sans réponse à relancer. Écris d'abord ton message.");return;
+  }
+  const readiness=engineReadiness();
+  if(!readiness.ready){
+    status("Dernière question conservée, mais aucune génération envoyée : "+readiness.reason);
+    buttonStates();
+    return;
+  }
+  status("Nouvelle tentative pour la dernière question enregistrée, avec "+readiness.label+"…");
+  void nextTour();
+}
+
 function buttonStates(){
+  const readiness=engineReadiness();
+  const indicator=$("moteurComposer");
+  if(indicator)indicator.textContent=readiness.ready
+    ?"Moteur sélectionné : "+readiness.label+" · prêt à recevoir la demande."
+    :"Moteur sélectionné : "+readiness.label+" · PAS ENCORE PRÊT. "+readiness.reason;
+  const retry=$("reessayerDernier");
+  if(retry)retry.disabled=state.busy || state.auto || !unansweredHuman();
   $("tour").disabled=state.busy;
   $("infini").disabled=state.busy || state.auto;
   $("debattre").disabled=state.busy || state.auto;
@@ -228,8 +291,20 @@ function addHuman(){
   render();
   $("moi").value="";
   saveDraft();
-  status("Message enregistré avec ses retours à la ligne. Réponse prioritaire au prochain tour.");
-  if(!state.busy&&!state.auto)void nextTour();
+  if(!state.busy&&!state.auto){
+    const readiness=engineReadiness();
+    if(!readiness.ready){
+      status("Message bien enregistré, mais AUCUNE RÉPONSE IA envoyée : "+readiness.reason+
+        " Une fois le moteur configuré, utilise « Répondre à ma dernière question » sans la ressaisir.");
+      buttonStates();return;
+    }
+    status("Message enregistré. Demande de réponse envoyée à "+readiness.label+"…");
+    buttonStates();
+    void nextTour();
+  }else{
+    status("Message enregistré. Un tour IA est déjà en cours ; ta question sera disponible dans le fil.");
+    buttonStates();
+  }
 }
 async function signIn(){
   try{
@@ -293,6 +368,13 @@ function speech(name,text){
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function nextTour(){
   if(state.busy)return;
+  const readiness=engineReadiness();
+  if(!readiness.ready){
+    state.auto=false;
+    status("Aucun appel IA lancé : "+readiness.reason+" Ton message reste conservé.");
+    buttonStates();
+    return;
+  }
   if(isResearchMode())return nextResearchTurn();
   if(isHordeMode())return nextHordeTurn();
   if(isPollinationsMode())return nextPollinationsTurn();
@@ -1028,6 +1110,7 @@ function init(){
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
+  $("reessayerDernier").addEventListener("click",retryLastHuman);
   $("moi").addEventListener("input",saveDraft);
   $("tour").addEventListener("click",()=>{if(!state.auto)state.mode="direct";void nextTour()});
   $("infini").addEventListener("click",()=>void launchInfinity("direct"));
