@@ -14,6 +14,7 @@ export function validatedImageRequest({prompt,model,ratio,testMode}){
   return {prompt:text,options:{model,ratio:{w,h},test_mode:Boolean(testMode)}};
 }
 export function createImageGenerator(){
+  if(typeof document==="undefined")return null;
   const prompt=$("imagePrompt"),model=$("imageModele"),ratio=$("imageRatio"),btn=$("imageGenerer");
   const demo=$("imageDemo"),status=$("imageEtat"),result=$("imageResult"),save=$("imageEnregistrer");
   if(!prompt||!model||!ratio||!btn||!demo||!status||!result||!save)return null;
