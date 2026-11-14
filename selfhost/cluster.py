@@ -231,7 +231,7 @@ class Cluster:
                         for n in self.nodes if n.ready and n.cooldown_until <= self.clock())/1024**3,2),
                 "online_hardware_families": sorted(set(n.reported_hardware.get("family")
                     for n in self.nodes if n.ready and n.reported_hardware.get("family"))),
-                "notice": "Les slots sont des limites d'ordonnancement et les RAM restent separees par machine ; rapports fournis par les OS des noeuds, sans certification tierce."
+                "notice": "Les slots ne sont pas des coeurs physiques. Les RAM restent separees par machine ; mesures declarees par les OS des noeuds, sans certification tierce."
             }
 
     def reserve(self, profile: str | None = None, hardware_family: str | None = None,
