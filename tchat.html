@@ -5,7 +5,33 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#11141b">
-<title>Radio des IA · Salon distant multi-modèles</title>
+<title>Radio des IA | Salon et débats d’intelligence artificielle</title>
+
+<meta name="description" content="Radio des IA : un salon de discussion et de débats entre modèles d'intelligence artificielle. Échangez, comparez les idées et explorez les documents et images depuis votre navigateur.">
+<meta name="robots" content="index, follow, max-snippet:-1">
+<meta name="keywords" content="IA, intelligence artificielle, radio des IA, discussion IA, débat entre IA, LLM, salon multi-modèles">
+<link rel="canonical" href="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html">
+<link rel="sitemap" type="application/xml" href="./sitemap.xml">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Radio des IA">
+<meta property="og:title" content="Radio des IA | Salon et débats d'intelligence artificielle">
+<meta property="og:description" content="Un salon de discussion où plusieurs intelligences artificielles peuvent débattre. Accessible sur téléphone et ordinateur.">
+<meta property="og:url" content="https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebApplication",
+  "name":"Radio des IA — Salon",
+  "url":"https://lecorre894-web.github.io/radio-des-ia-html5/tchat.html",
+  "inLanguage":"fr",
+  "applicationCategory":"CommunicationApplication",
+  "operatingSystem":"Navigateur web",
+  "description":"Salon personnel de discussion et de débat entre plusieurs modèles d'intelligence artificielle, avec espace documents, GIF et générateur d'images optionnels.",
+  "creator":[{"@type":"Person","name":"René Le Corre"},{"@type":"Organization","name":"ChatGPT"}]
+}
+</script>
 <style>
 :root{color-scheme:dark;font:16px/1.5 system-ui,"Segoe UI Emoji",sans-serif;--bg:#11141b;--card:#1b212b;--line:#344053;--fg:#e9edf2;--muted:#aab6c7;--green:#85bca9;--orange:#d8b177}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
@@ -18,7 +44,12 @@ button,input,textarea,select{border:1px solid #47536a;border-radius:9px;backgrou
 button{background:#303c4f;cursor:pointer}button.primary{background:var(--green);color:#081b14;border-color:var(--green);font-weight:700}
 button:disabled{opacity:.5;cursor:not-allowed}
 input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:vertical;min-height:75px}
-#sujet{width:100%}#moi{width:100%;min-height:105px}
+#sujet{width:100%}#moi{width:100%;min-height:105px;color:#8dffad;caret-color:#d5ffe0;font:500 1.08rem/1.7 ui-monospace,"Cascadia Code","Consolas",monospace;letter-spacing:.01em}
+#moi::placeholder{color:#9daeb4;opacity:1}
+#moi:focus-visible{outline:2px solid #8dffad;outline-offset:2px}
+.msg .body{color:var(--fg);font-family:system-ui,"Segoe UI Emoji",sans-serif}
+.jump-link{display:inline-block;color:#b7e5e5;padding:5px 0;font-size:14px}
+.salon-intro{font-size:14px;color:#c0ced2}
 #parts{display:grid;gap:12px}.part{display:grid;grid-template-columns:minmax(95px,.8fr) minmax(130px,1.4fr) minmax(160px,1.25fr) auto;gap:9px;align-items:start}
 .part input,.part textarea{width:100%;min-width:0}.part textarea{min-height:46px}
 .msg{border-left:4px solid var(--green);padding:14px;background:var(--card);border-radius:8px;margin:12px 0;overflow-wrap:anywhere}
@@ -58,7 +89,9 @@ details.card[open]>summary{margin-bottom:14px}
 <nav class="row"><a href="./">📻 Radio collective</a><a href="./tchat-local.html">Ancien moteur local expérimental</a><a href="https://github.com/lecorre894-web/radio-des-ia-html5">GitHub</a></nav>
 <header>
 <h1>🧠 Radio des IA — Salon personnel</h1>
-<p>Vrais modèles IA distants. Chaque navigateur possède sa conversation, et chaque intervenant peut choisir un modèle différent. Ton PC WSL n'est pas nécessaire.</p>
+<p>Salon de discussion et de débats entre intelligences artificielles (IA et LLM). Échangez avec plusieurs modèles, explorez des idées et comparez leurs réponses, sur téléphone comme sur ordinateur. Aucun PC WSL personnel n'est nécessaire.</p>
+<p class="salon-intro">Une expérience ouverte au dialogue entre générations, des curieux aux passionnés. L'accès aux modèles suit les conditions de leurs fournisseurs.</p>
+<a class="jump-link" href="#intervenants">⚙️ Choisir ou modifier les IA en bas de page</a>
 <div class="row"><span class="pill">∞ tours sans plafond programmé</span><span class="pill">🗣️ Débat IA ↔ IA</span><span class="pill">👁️ Spectateur ou intervenant</span><span class="pill">🌐 Multi-modèles</span><span class="pill"><strong id="connected">—</strong> visiteurs récents (≈ 2 min)</span></div>
 </header>
 <section class="card">
@@ -73,61 +106,11 @@ details.card[open]>summary{margin-bottom:14px}
 <section class="card">
 <h2>Question directrice</h2>
 <textarea id="sujet" rows="2" placeholder="Sujet scientifique ou philosophique facultatif…"></textarea>
-<h2>Intervenants et modèles</h2>
-<small><strong>Quatrième intervenant :</strong> Perplexity (Sonar Pro), vérificateur indépendant. Il contrôle les affirmations, recherche les sources, repère les contradictions et propose des tests reproductibles. Il utilise un véritable modèle Perplexity lorsque celui-ci est disponible auprès de Puter.</small>
-<small><strong>Cinquième intervenant :</strong> Kimi K3.1 Pro (Moonshot AI), recherche approfondie, mathématiques, informatique et contre-expertise. Kimi utilise un modèle Moonshot réel, sous réserve de disponibilité dans Puter ; aucun modèle fictif « Kimi 4 » n’est annoncé.</small>
-<small>Nom · spécialité · identifiant du modèle distant. Les identifiants proposés sont chargés depuis le catalogue réel ; le modèle indiqué reste un choix vérifiable, pas une IA simulée.</small>
-<datalist id="modeleCatalogue"></datalist>
-<div id="parts"></div>
-<div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button id="ajouter">Ajouter une IA</button></div>
+<a class="jump-link" href="#conversation">Aller directement à la conversation</a>
 </section>
-<details class="card" id="documents">
-<summary>📎 Documents et imagerie — Espace d’analyse (ouvrir)</summary>
-<p>Glissez vos fichiers ou choisissez-les sur votre téléphone. Le Salon reste utilisable sans aucun document.</p>
-<label id="pieceDepot" class="pieceDepot" for="pieceFichier">
-<strong>Importer PDF, Word, Excel, JSON, codes sources, GIF, images, TIFF ou DICOM</strong>
-<input id="pieceFichier" type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.xlsb,.ods,.csv,.json,.jsonl,.ndjson,.geojson,.ipynb,.txt,.md,.tsv,.log,.js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.c,.h,.cpp,.cc,.cxx,.hpp,.rs,.go,.java,.kt,.swift,.cs,.php,.rb,.sh,.bash,.ps1,.bat,.cmd,.sql,.r,.lua,.dart,.scala,.pl,.asm,.gradle,.toml,.yaml,.yml,.xml,.html,.htm,.css,.scss,.vue,.svelte,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.dcm,.dicom,image/png,image/jpeg,image/gif,image/webp,application/pdf">
-<span class="pieceExplication">Jusqu'à 6 fichiers, 20 Mio chacun, 48 Mio au total. Extraction locale ; les fichiers ne sont pas publiés sur GitHub.</span>
-</label>
-<div class="row"><button id="pieceAutoTest" type="button">🔍 Vérifier les 5 bibliothèques de documents</button></div>
-<pre id="pieceAutoResult" class="pieceExtrait" aria-live="polite"></pre>
-<div id="pieceListe" aria-label="Pièces jointes importées"></div>
-<div class="row">
-<button id="pieceEffacer" type="button">Retirer toutes les pièces</button>
-<span id="pieceEtat" role="status">Aucun fichier importé.</span>
-</div>
-<label class="pieceOption"><input type="checkbox" id="pieceUtiliser"> <span><strong>Inclure les textes extraits et légendes dans les prochaines réponses des IA</strong> — données transmises à Puter uniquement après activation</span></label>
-<label class="pieceOption"><input type="checkbox" id="pieceVision"> <span><strong>Autoriser l'envoi d'aperçus visuels aux IA</strong> — jusqu'à 2 images par tour, via stockage Puter temporaire puis tentative de suppression</span></label>
-<p class="pieceExplication">PDF : texte extrait et aperçu première page ; Word .docx : texte ; Excel .xlsx/.xls/.csv : valeurs, sans calcul de macros ; JSON/JSONL et notebooks Jupyter : lecture structurée ; code Python, JavaScript, C/C++, Rust, Java, SQL, HTML/CSS et autres : analyse textuelle sans exécution ; JPEG/PNG/WebP/GIF : aperçus ; TIFF : première page ; DICOM : aperçu expérimental des images monochromes non compressées. Les .doc anciens sont à convertir en .docx ou PDF. Les vidéos ne sont pas acceptées. Pas d’OCR automatique pour les scans PDF.</p>
-<p class="notice">Confidentialité : les pièces restent dans la mémoire de cet onglet jusqu'à leur retrait ou fermeture. Lorsque vous cochez les autorisations, leur contenu extrait et, éventuellement, des aperçus d'images peuvent être envoyés au fournisseur IA. N'ajoutez pas de documents confidentiels sans autorisation. Les images DICOM ne doivent pas être utilisées pour un diagnostic médical.</p>
-</details>
-<details class="card" id="imagesGenerateur">
-<summary>🎨 Générateur d’images (ouvrir)</summary>
-<p>Décrivez une image et demandez sa création à Puter. L'atelier est indépendant des conversations des IA. <strong>Aucune vidéo n'est générée.</strong></p>
-<label for="imagePrompt"><strong>Description de l'image</strong></label>
-<textarea id="imagePrompt" rows="3" maxlength="1500" style="width:100%" placeholder="Exemple : représentation scientifique de la face cachée de la Lune, style illustration réaliste, légendes absentes…"></textarea>
-<div class="row">
-<label for="imageModele">Modèle</label>
-<select id="imageModele">
-<option value="openai/gpt-image-2.6-flare">GPT Image 2.6 Flare</option>
-<option value="google/gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
-<option value="black-forest-labs/flux-schnell">FLUX.1 Schnell</option>
-</select>
-<label for="imageRatio">Format</label>
-<select id="imageRatio">
-<option value="1:1">Carré 1:1</option>
-<option value="16:9">Paysage 16:9</option>
-<option value="9:16">Portrait 9:16</option>
-<option value="3:2">Photo 3:2</option>
-</select>
-</div>
-<label class="pieceOption"><input id="imageDemo" type="checkbox"> <span>Mode démonstration (image de test fournie par Puter, sans crédit de génération)</span></label>
-<div class="row"><button class="primary" type="button" id="imageGenerer">Générer une image</button><button type="button" id="imageEnregistrer" hidden>Enregistrer l'image</button></div>
-<div id="imageEtat" role="status"></div>
-<div id="imageResult"></div>
-<p class="pieceExplication">Les descriptions sont envoyées à Puter uniquement lorsque vous lancez la génération. Les images réelles peuvent consommer des crédits Puter ; un accord explicite vous sera demandé. Sauvegardez les images obtenues, car certains liens sont temporaires.</p>
-</details>
-<section>
+
+
+<section id="conversation">
 <div class="row"><h2>Conversation</h2><span id="etatMode" class="pill">Salon prêt</span></div>
 <div id="fil" aria-label="Messages de votre Salon" aria-live="polite"></div>
 </section>
@@ -182,7 +165,67 @@ details.card[open]>summary{margin-bottom:14px}
 <small>Les pièces jointes incluses peuvent augmenter fortement le nombre de tokens et le coût de chaque tour. Vous pouvez les retirer ou décocher leur inclusion à tout moment.</small>
 <small>Les deux modes ∞ n'imposent aucune limite de tours : le mode débat fait dialoguer les IA entre elles. La page doit cependant rester ouverte. Chaque appel peut consommer l'allocation du visiteur ; les quotas, coûts, limites de contexte et éventuelles interruptions restent fixés par Puter et ses fournisseurs. Les réponses ne sont pas garanties exactes : une vérification indépendante demeure nécessaire.</small>
 </section>
-<footer>Radio des IA · Version publique avancée · GitHub Pages + Puter.js. La Radio collective et son compteur sont conservés séparément.</footer>
+<details class="card" id="documents">
+<summary>📎 Documents et imagerie — Espace d’analyse (ouvrir)</summary>
+<p>Glissez vos fichiers ou choisissez-les sur votre téléphone. Le Salon reste utilisable sans aucun document.</p>
+<label id="pieceDepot" class="pieceDepot" for="pieceFichier">
+<strong>Importer PDF, Word, Excel, JSON, codes sources, GIF, images, TIFF ou DICOM</strong>
+<input id="pieceFichier" type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.xlsb,.ods,.csv,.json,.jsonl,.ndjson,.geojson,.ipynb,.txt,.md,.tsv,.log,.js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.c,.h,.cpp,.cc,.cxx,.hpp,.rs,.go,.java,.kt,.swift,.cs,.php,.rb,.sh,.bash,.ps1,.bat,.cmd,.sql,.r,.lua,.dart,.scala,.pl,.asm,.gradle,.toml,.yaml,.yml,.xml,.html,.htm,.css,.scss,.vue,.svelte,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.dcm,.dicom,image/png,image/jpeg,image/gif,image/webp,application/pdf">
+<span class="pieceExplication">Jusqu'à 6 fichiers, 20 Mio chacun, 48 Mio au total. Extraction locale ; les fichiers ne sont pas publiés sur GitHub.</span>
+</label>
+<div class="row"><button id="pieceAutoTest" type="button">🔍 Vérifier les 5 bibliothèques de documents</button></div>
+<pre id="pieceAutoResult" class="pieceExtrait" aria-live="polite"></pre>
+<div id="pieceListe" aria-label="Pièces jointes importées"></div>
+<div class="row">
+<button id="pieceEffacer" type="button">Retirer toutes les pièces</button>
+<span id="pieceEtat" role="status">Aucun fichier importé.</span>
+</div>
+<label class="pieceOption"><input type="checkbox" id="pieceUtiliser"> <span><strong>Inclure les textes extraits et légendes dans les prochaines réponses des IA</strong> — données transmises à Puter uniquement après activation</span></label>
+<label class="pieceOption"><input type="checkbox" id="pieceVision"> <span><strong>Autoriser l'envoi d'aperçus visuels aux IA</strong> — jusqu'à 2 images par tour, via stockage Puter temporaire puis tentative de suppression</span></label>
+<p class="pieceExplication">PDF : texte extrait et aperçu première page ; Word .docx : texte ; Excel .xlsx/.xls/.csv : valeurs, sans calcul de macros ; JSON/JSONL et notebooks Jupyter : lecture structurée ; code Python, JavaScript, C/C++, Rust, Java, SQL, HTML/CSS et autres : analyse textuelle sans exécution ; JPEG/PNG/WebP/GIF : aperçus ; TIFF : première page ; DICOM : aperçu expérimental des images monochromes non compressées. Les .doc anciens sont à convertir en .docx ou PDF. Les vidéos ne sont pas acceptées. Pas d’OCR automatique pour les scans PDF.</p>
+<p class="notice">Confidentialité : les pièces restent dans la mémoire de cet onglet jusqu'à leur retrait ou fermeture. Lorsque vous cochez les autorisations, leur contenu extrait et, éventuellement, des aperçus d'images peuvent être envoyés au fournisseur IA. N'ajoutez pas de documents confidentiels sans autorisation. Les images DICOM ne doivent pas être utilisées pour un diagnostic médical.</p>
+</details>
+<details class="card" id="imagesGenerateur">
+<summary>🎨 Générateur d’images (ouvrir)</summary>
+<p>Décrivez une image et demandez sa création à Puter. L'atelier est indépendant des conversations des IA. <strong>Aucune vidéo n'est générée.</strong></p>
+<label for="imagePrompt"><strong>Description de l'image</strong></label>
+<textarea id="imagePrompt" rows="3" maxlength="1500" style="width:100%" placeholder="Exemple : représentation scientifique de la face cachée de la Lune, style illustration réaliste, légendes absentes…"></textarea>
+<div class="row">
+<label for="imageModele">Modèle</label>
+<select id="imageModele">
+<option value="openai/gpt-image-2.6-flare">GPT Image 2.6 Flare</option>
+<option value="google/gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
+<option value="black-forest-labs/flux-schnell">FLUX.1 Schnell</option>
+</select>
+<label for="imageRatio">Format</label>
+<select id="imageRatio">
+<option value="1:1">Carré 1:1</option>
+<option value="16:9">Paysage 16:9</option>
+<option value="9:16">Portrait 9:16</option>
+<option value="3:2">Photo 3:2</option>
+</select>
+</div>
+<label class="pieceOption"><input id="imageDemo" type="checkbox"> <span>Mode démonstration (image de test fournie par Puter, sans crédit de génération)</span></label>
+<div class="row"><button class="primary" type="button" id="imageGenerer">Générer une image</button><button type="button" id="imageEnregistrer" hidden>Enregistrer l'image</button></div>
+<div id="imageEtat" role="status"></div>
+<div id="imageResult"></div>
+<p class="pieceExplication">Les descriptions sont envoyées à Puter uniquement lorsque vous lancez la génération. Les images réelles peuvent consommer des crédits Puter ; un accord explicite vous sera demandé. Sauvegardez les images obtenues, car certains liens sont temporaires.</p>
+</details>
+<section class="card" id="intervenants">
+<div class="row" style="justify-content:space-between"><h2>⚙️ Intervenants et modèles</h2><a class="jump-link" href="#conversation">↑ Revenir au tchat</a></div>
+<details><summary>À propos de Perplexity et Kimi</summary>
+<p class="pieceExplication"><strong>Perplexity :</strong> contrôle des sources et des arguments. <strong>Kimi :</strong> recherche approfondie et contre-expertise. Leur participation exige la disponibilité d'un véritable modèle correspondant dans le catalogue Puter.</p>
+</details>
+<small>Nom · spécialité · identifiant du modèle distant. Les identifiants proposés sont chargés depuis le catalogue réel ; le modèle indiqué reste un choix vérifiable, pas une IA simulée.</small>
+<datalist id="modeleCatalogue"></datalist>
+<div id="parts"></div>
+<div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button id="ajouter">Ajouter une IA</button></div>
+</section>
+<footer>
+<div>Radio des IA — un espace de dialogue autour de l'intelligence artificielle, pensé pour différentes générations.</div>
+<div>Version publique · GitHub Pages + Puter.js. La Radio collective reste distincte.</div>
+<div><strong>Signé : ChatGPT et René Le Corre®</strong></div>
+</footer>
 </main>
 <script defer src="./presence.js"></script>
 <script type="module" src="./tchat-distant.mjs?v=diagnostic-1"></script>
