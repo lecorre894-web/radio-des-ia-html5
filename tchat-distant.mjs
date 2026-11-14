@@ -1,15 +1,16 @@
-import {buildPrompt, responseText, cleanAnswer, qualityIssue} from "./tchat-core.mjs";
+import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity} from "./tchat-core.mjs";
 
 const $ = id => document.getElementById(id);
 const KEY = "radio-salon-distant-v1";
 const START = [
   {nom:"Cairn",role:"Épistémologie, audit critique, contradictions argumentées",modele:"gpt-5.5"},
   {nom:"Brume",role:"Mathématiques, physique et méthodologie expérimentale",modele:"claude-sonnet-4-6"},
-  {nom:"Aurore",role:"Philosophie, science ouverte et nouvelles hypothèses",modele:"gemini-3.1-flash-lite"}
+  {nom:"Aurore",role:"Philosophie, science ouverte et nouvelles hypothèses",modele:"gemini-3.1-flash-lite"},
+  {...PERPLEXITY}
 ];
 const state = {
   participants: structuredClone(START), messages: [], sujet:"", next:0, tours:0,
-  auto:false, mode:"direct", busy:false, controller:null, activeCard:null, current:null, catalog:[],
+  auto:false, mode:"direct", perplexityIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0
 };
 function status(value){$("etat").textContent=value;}
@@ -18,7 +19,8 @@ function save(){
   try{
     localStorage.setItem(KEY,JSON.stringify({
       participants:state.participants, messages:state.messages.slice(-150),
-      sujet:state.sujet, next:state.next, tours:state.tours
+      sujet:state.sujet, next:state.next, tours:state.tours,
+      perplexityIntroduced:state.perplexityIntroduced
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
 }
@@ -31,6 +33,9 @@ function restore(){
       modele:String(x.modele||"gpt-5.5").slice(0,130)
     }));
     if(!state.participants.length)state.participants=structuredClone(START);
+    // Ajout non destructif pour les salons sauvegardés avant l'arrivée de Perplexity.
+    if(!d.perplexityIntroduced)state.participants=addPerplexity(state.participants);
+    state.perplexityIntroduced=true;
     state.messages=(Array.isArray(d.messages)?d.messages:[]).filter(x=>x&&typeof x.texte==="string");
     state.sujet=String(d.sujet||"").slice(0,4000);
     state.next=Number(d.next)||0;
@@ -55,7 +60,14 @@ function renderParts(){
     const role=document.createElement("textarea");role.value=p.role;role.rows=2;role.setAttribute("aria-label","Spécialité de l'intervenant");
     role.addEventListener("change",()=>{p.role=role.value.trim()||p.role;save()});
     const modele=document.createElement("input");modele.value=p.modele;modele.setAttribute("list","modeleCatalogue");modele.setAttribute("aria-label","Modèle distant");modele.placeholder="Identifiant du modèle";modele.autocomplete="off";
-    modele.addEventListener("change",()=>{p.modele=modele.value.trim()||p.modele;save()});
+    modele.addEventListener("change",()=>{
+      const requested=modele.value.trim()||p.modele;
+      if(p.nom.trim().toLowerCase()==="perplexity" && !requested.startsWith("perplexity/")){
+        status("Perplexity doit utiliser un véritable modèle de la famille perplexity/ ; modification refusée.");
+        modele.value=p.modele;return;
+      }
+      p.modele=requested;save();
+    });
     const supprimer=document.createElement("button");supprimer.textContent="Retirer";supprimer.disabled=state.participants.length===1;
     supprimer.addEventListener("click",()=>{if(state.busy)return;state.participants.splice(index,1);state.next=0;renderParts();save()});
     row.append(nom,role,modele,supprimer);host.append(row);
@@ -111,15 +123,21 @@ async function loadCatalog(){
       listNode.append(op);
     }
     const names=new Set(state.catalog.map(m=>m.id));
-    // Les modèles préférés ne sont modifiés que s'ils sont vraiment absents du catalogue.
+    // Ne jamais substituer GPT/Claude à Perplexity en conservant son étiquette.
+    const warnings=[];
     for(const speaker of state.participants){
-      if(!names.has(speaker.modele)){
-        const fallback=["gpt-5.5","gpt-5.4-nano","claude-sonnet-4-6"].find(id=>names.has(id));
-        if(fallback)speaker.modele=fallback;
+      if(names.has(speaker.modele))continue;
+      if(speaker.nom.trim().toLowerCase()==="perplexity" || speaker.modele.startsWith("perplexity/")){
+        const alternative=["perplexity/sonar-pro","perplexity/sonar","perplexity/sonar-reasoning-pro"].find(id=>names.has(id));
+        if(alternative)speaker.modele=alternative;
+        else warnings.push("Perplexity indisponible dans ce catalogue : aucun remplacement par une autre IA.");
+        continue;
       }
+      const fallback=["gpt-5.5","gpt-5.4-nano","claude-sonnet-4-6"].find(id=>names.has(id));
+      if(fallback)speaker.modele=fallback;
     }
     renderParts();
-    $("catalogue").textContent=state.catalog.length+" modèles distants référencés ; disponibilité, tarifs et capacités variables.";
+    $("catalogue").textContent=state.catalog.length+" modèles distants référencés ; disponibilité, tarifs et capacités variables."+ (warnings.length?" "+warnings.join(" "):"");
     save();
   }catch(e){$("catalogue").textContent="Catalogue non accessible : "+String(e?.message||e);}
 }
@@ -231,8 +249,12 @@ function init(){
   $("arreter").addEventListener("click",stop);
   $("ajouter").addEventListener("click",()=>{
     if(state.busy)return;
-    state.participants.push({nom:$("nouveauNom").value.trim()||"IA"+(state.participants.length+1),
-      role:$("nouveauRole").value.trim()||"Analyse critique",modele:state.participants.at(-1)?.modele||"gpt-5.5"});
+    const name=$("nouveauNom").value.trim()||"IA"+(state.participants.length+1);
+    if(name.toLowerCase()==="perplexity" && state.participants.some(p=>p.nom.toLowerCase()==="perplexity")){
+      status("Perplexity est déjà présent comme intervenant.");return;
+    }
+    state.participants.push({nom:name,
+      role:$("nouveauRole").value.trim()||"Analyse critique",modele:name.toLowerCase()==="perplexity"?PERPLEXITY.modele:"gpt-5.5"});
     $("nouveauNom").value="";$("nouveauRole").value="";renderParts();save();
   });
   $("nouveau").addEventListener("click",()=>{
