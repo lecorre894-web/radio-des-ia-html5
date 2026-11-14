@@ -19,6 +19,16 @@ test("racine du fil conservée avec neuf interventions plus récentes",()=>{
  assert.ok(history.length<=12);
  assert.ok(history.at(-1).content.includes("Réponse 39"));
 });
+test("racine conservée au-delà du seuil de mémoire local de 150 messages",()=>{
+ const long=[{kind:"human",name:"Toi",text:"Question origine conservée"}];
+ for(let i=0;i<200;i++)long.push({kind:"local",name:"Cairn local",text:"Réponse "+i});
+ const reduced=normalizedTranscript(long);
+ assert.equal(reduced.length,150);
+ assert.equal(reduced[0].text,"Question origine conservée");
+ const context=buildLocalHistory(reduced);
+ assert.match(context[0].content,/Question origine conservée/);
+ assert.match(context.at(-1).content,/Réponse 199/);
+});
 test("pas de crédit Puter et recherche Web strictement opt-in",()=>{
  const payload=requestForTurn({question:"Une hypothèse scientifique ?",speaker:"brume",
   transcript:[{kind:"human",text:"Sujet",name:"Toi"}]});
