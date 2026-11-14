@@ -1,5 +1,5 @@
 import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=kimi-k3-1";
-import {createDocumentManager} from "./tchat-documents.mjs?v=documents-1";
+// Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
 let documentManager=null;
@@ -193,6 +193,8 @@ async function nextTour(){
   let prepared={messages,cleanup:async()=>{}};
   try{
     // Le module externe ne touche pas au moteur de dialogue : aucun document = chemin IA d'origine.
+    if($("pieceUtiliser")?.checked && !documentManager)
+      throw new Error("Module documentaire non encore chargé. Les modèles restent disponibles sans document.");
     if(documentManager)prepared=await documentManager.prepare(messages);
     const opts={model:participant.modele,stream:true,signal:state.controller.signal};
     const long=$("longueur").value;
@@ -264,7 +266,17 @@ function exportConversation(){
 }
 function init(){
   restore();$("sujet").value=state.sujet;renderParts();render();buttonStates();
-  documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
+  // Module externe chargé à part : même si le CDN ou un format échoue, les cinq IA restent actives.
+  void import("./tchat-documents.mjs?v=documents-2")
+    .then(({createDocumentManager})=>{
+      documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
+    })
+    .catch(error=>{
+      const indicator=$("pieceEtat");
+      if(indicator)indicator.textContent="Analyse documentaire indisponible : "+String(error?.message||error);
+      if($("pieceFichier"))$("pieceFichier").disabled=true;
+      if($("pieceUtiliser"))$("pieceUtiliser").checked=false;
+    });
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
