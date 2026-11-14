@@ -9,6 +9,17 @@ export const LOCAL_SPEAKERS=Object.freeze([
   Object.freeze({id:"recherche",name:"Chercheur local",task:"Recherche"}),
   Object.freeze({id:"ia4",name:"IA4 locale",task:"Synthèse"})
 ]);
+export const RESEARCH_SPEAKERS=Object.freeze([
+  Object.freeze({id:"these",name:"Analyse doctorale",task:"Hypothèses et réfutabilité"}),
+  Object.freeze({id:"postdoc",name:"Contre-expertise postdoctorale",task:"Contre-exemples"}),
+  Object.freeze({id:"mathsup",name:"Mathématiques avancées",task:"Démonstrations"}),
+  Object.freeze({id:"methodes",name:"Méthodologie expérimentale",task:"Protocoles"}),
+  Object.freeze({id:"systemes",name:"Architecture systèmes",task:"Ressources réelles"}),
+  Object.freeze({id:"pairs",name:"Relecture scientifique",task:"Objections"}),
+  Object.freeze({id:"epistemologie",name:"Audit épistémologique",task:"Statuts probants"}),
+  Object.freeze({id:"jury",name:"Jury scientifique",task:"Verdict provisoire"})
+]);
+export const ALL_SPEAKERS=Object.freeze([...LOCAL_SPEAKERS,...RESEARCH_SPEAKERS]);
 export const STORAGE_KEY="radio:sparktiates:salon:v1";
 export function normalizedTranscript(items){
   if(!Array.isArray(items))return [];
@@ -36,7 +47,7 @@ export function buildLocalHistory(transcript){
 export function requestForTurn({question,transcript=[],speaker="cairn",web=false}={}){
   const topic=String(question||"").trim();
   if(!topic||topic.length>2600)throw new Error("Question requise (2 600 caractères maximum).");
-  if(!LOCAL_SPEAKERS.some(p=>p.id===speaker))throw new Error("Intervenant inconnu.");
+  if(!ALL_SPEAKERS.some(p=>p.id===speaker))throw new Error("Intervenant inconnu.");
   return {
     message:topic,
     profile:speaker,
