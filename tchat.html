@@ -250,6 +250,23 @@ details.card[open]>summary{margin-bottom:14px}
 <small>Une seule demande par fournisseur coché, aucune relance automatique. Le résultat ne modifie pas ton Salon ni ses archives. Les tests numériques sont RECONSTRUITS, non des mesures d'amplitudes océaniques. Le calcul est possible même si aucun serveur IA n'est prêt.</small>
 <p id="scienceEtat" role="status" aria-live="polite">Initialisation du coordinateur scientifique…</p>
 <div id="scienceResultats" aria-live="polite"></div>
+<hr>
+<h3>🌊 Contrôle par de vraies observations NOAA</h3>
+<p>Comparer des <strong>hauteurs d'eau horaires vérifiées</strong> (MESURÉ) aux <strong>prévisions harmoniques</strong> (RECONSTRUIT) de la NOAA. Données historiques, GMT, mètres et datum MLLW. Ce contrôle n'exécute pas d'IA et ne consomme aucun crédit Pollen ni Puter.</p>
+<div class="row">
+<label for="scienceNoaaStation">Station de mesure</label>
+<select id="scienceNoaaStation"></select>
+<label for="scienceNoaaPeriode">Période historique vérifiée</label>
+<select id="scienceNoaaPeriode"></select>
+</div>
+<div class="row">
+<button type="button" id="scienceNoaaLancer" class="primary">🌊 Comparer observations et prévisions NOAA</button>
+<button type="button" id="scienceNoaaStop" disabled>Annuler NOAA</button>
+<button type="button" id="scienceNoaaCopier" disabled>Copier les résultats mesurés</button>
+</div>
+<p id="scienceNoaaEtat" role="status" aria-live="polite">Aucun jeu de données instrumentales téléchargé.</p>
+<div id="scienceNoaaResultats" aria-live="polite"></div>
+<small>Les données viennent de l'API officielle NOAA CO-OPS. Si le réseau ou le navigateur interdit l'accès, aucune statistique n'est affichée. Ce banc vérifie des prédictions de niveau d'eau, pas la loi de gravitation elle-même.</small>
 </details>
 <section class="card" aria-label="Continuité des discussions lunaires">
 <h2>🌕 Discuter de la Lune ici, sans changer de page</h2>
@@ -396,7 +413,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=1&amp;pollinations=4&amp;sparktiates=2&amp;diagnostic=3&amp;science=1"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=1&amp;pollinations=4&amp;sparktiates=2&amp;diagnostic=3&amp;science=2"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
