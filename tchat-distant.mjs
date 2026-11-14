@@ -24,7 +24,7 @@ const state = {
   auto:false, mode:"direct", perplexityIntroduced:true, kimiIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0,
   memory:{root:"",events:[]},archives:[],includeArchives:true,
-  researchIndex:0,engineChoice:"puter",researchModelChoice:RESEARCH_MODELS[0].id
+  researchIndex:0,engineChoice:"puter",researchModelChoice:"Qwen3.5-9B-q4f16_1-MLC"
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
