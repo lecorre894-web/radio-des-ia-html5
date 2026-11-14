@@ -7,7 +7,11 @@ function drawNode(node){
  const article=document.createElement("article");article.className="turn "+(node.ready?"assistant":"user");
  const name=document.createElement("div");name.className="who";name.textContent=node.id+" · "+node.model;
  const body=document.createElement("div");body.className="body";
+ const ram=Number.isFinite(node.ram_total_bytes_reported)?
+    " · RAM OS : "+(node.ram_total_bytes_reported/1024**3).toFixed(1)+" Gio":" · RAM non mesurée";
  body.textContent=(node.ready&&!node.cooldown?"✓ disponible":"✕ indisponible")+
+  " · "+(node.hardware_family_reported||"matériel non identifié")+
+  " · "+(node.cpu_arch_reported||"architecture inconnue")+ram+
   " · "+node.active+"/"+node.configured_slots+" slots occupés"+
   " · "+node.completed+" requêtes réussies · "+node.failures+" échecs";
  article.append(name,body);return article;
@@ -15,6 +19,7 @@ function drawNode(node){
 function metricsText(status){
  const n=status;
  return "Nœuds en ligne : "+n.online_nodes+"/"+n.registered_nodes+
+  " · RAM signalée par les nœuds (non mutualisée) : "+(n.reported_ram_gb_online_separate_pools??0)+" Gio"+
   " · Slots utilisables : "+n.usable_slots+
   " · Libres : "+n.free_slots+
   " · Calculs en cours : "+n.running_jobs+
