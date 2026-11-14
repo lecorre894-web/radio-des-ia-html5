@@ -2,79 +2,63 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {
-  enrichHordeModels,hordeLunarScienceKickoff,buildHordeMessages,
-  recommendHordeModel,hordeTokenBudget,hordeModelSizeB,
-  normalizeHordeModels,HORDE_MODEL_STATUS_URL
+  normalizeHordeModels,buildHordeMessages,listHordeModels,chatWithHorde,
+  HORDE_BASE,HORDE_ANONYMOUS_KEY
 } from "../tchat-horde.mjs";
 
-test("Les modèles sont réels : aucun fournisseur ou travailleur n'est créé artificiellement",()=>{
-  const source=normalizeHordeModels({data:[
+test("Version restaurée : modèles AI Horde annoncés, pas de travailleurs fictifs",()=>{
+  const values=normalizeHordeModels({data:[
     {id:"lmstudio/Qwen3.5-9B",x_horde:{worker_count:1}},
     {id:"Community/fast-8B",x_horde:{worker_count:2}},
-    {id:"Community/tiny-3B",x_horde:{worker_count:5}}
+    {id:"Community/fast-8B",x_horde:{worker_count:2}}
   ]});
-  const ranked=enrichHordeModels(source,[
-    {name:"lmstudio/Qwen3.5-9B",count:1,eta:250,jobs:5,performance:20},
-    {name:"Community/fast-8B",count:2,eta:12,jobs:1,performance:30},
-    {name:"Community/tiny-3B",count:5,eta:0,jobs:0,performance:50}
-  ]);
-  assert.equal(ranked.length,3);
-  assert.equal(ranked[0].id,"Community/tiny-3B");
-  const recommended=recommendHordeModel(ranked,{minimumB:7});
-  assert.equal(recommended.id,"Community/fast-8B");
-  assert.equal(recommended.etaSeconds,12);
-  assert.equal(recommended.workers,2);
-  assert.equal(HORDE_MODEL_STATUS_URL,"https://aihorde.net/api/v2/status/models?type=text");
+  assert.equal(values.length,2);
+  assert.equal(values[0].id,"Community/fast-8B");
+  assert.equal(values[0].workers,2);
 });
-
-test("Pas de faux classement rapide quand les données de capacité manquent",()=>{
-  const items=normalizeHordeModels({data:[
-    {id:"Qwen3.5-9B"}, {id:"Qwen3-8B"}, {id:"tiny-3B"}
-  ]});
-  assert.equal(recommendHordeModel(items,{minimumB:7}),null);
-  assert.equal(hordeModelSizeB("lmstudio/Qwen3.5-9B"),9);
-  assert.equal(hordeModelSizeB("model-inconnu"),null);
+test("Questions humaines reprises fidèlement et contexte partagé uniquement sur consentement",()=>{
+  const history=[
+    {origin:"human",texte:"Une ancienne information privée"},
+    {origin:"ai",nom:"Cairn",texte:"Réponse ancienne"},
+    {origin:"human",texte:"Quel rôle joue la Lune dans les marées terrestres ?"}
+  ];
+  const minimum=buildHordeMessages({history,topic:"La Lune",includeHistory:false});
+  const text=JSON.stringify(minimum);
+  assert.match(text,/Quel rôle joue la Lune/);
+  assert.doesNotMatch(text,/information privée/);
+  assert.match(text,/MESURÉ/);
+  const shared=buildHordeMessages({history,topic:"La Lune",includeHistory:true});
+  assert.match(JSON.stringify(shared),/information privée/);
 });
-
-test("Budget des sorties à trois niveaux : la réduction reste volontaire et bornée",()=>{
-  assert.equal(hordeTokenBudget("rapide"),180);
-  assert.equal(hordeTokenBudget("equilibre"),280);
-  assert.equal(hordeTokenBudget("approfondi"),400);
-  assert.equal(hordeTokenBudget("valeur-inconnue"),280);
+test("Catalogue et génération via le fournisseur AI Horde sans Puter ni Pollen",async()=>{
+  const list=await listHordeModels({fetcher:async(url,opts)=>{
+    assert.equal(url,HORDE_BASE+"/models");
+    assert.equal(opts.method,"GET");
+    return {ok:true,async text(){return JSON.stringify({data:[{id:"lmstudio/Qwen3.5-9B",x_horde:{worker_count:1}}]});}};
+  }});
+  assert.equal(list[0].id,"lmstudio/Qwen3.5-9B");
+  const result=await chatWithHorde({
+    model:list[0].id,messages:[{role:"user",content:"Lune"}],maxTokens:9999,
+    fetcher:async(url,opts)=>{
+      assert.equal(url,HORDE_BASE+"/chat/completions");
+      assert.equal(opts.headers.Authorization,"Bearer "+HORDE_ANONYMOUS_KEY);
+      const body=JSON.parse(opts.body);
+      assert.equal(body.max_tokens,400);
+      assert.equal(body.model,list[0].id);
+      return {ok:true,async text(){return JSON.stringify({choices:[{message:{content:"La Lune influence les marées."}}]});}};
+    }
+  });
+  assert.match(result.text,/La Lune/);
 });
-
-test("Un bonsoir déclenche un vrai problème de marée et non une demande de précision",()=>{
-  assert.match(hordeLunarScienceKickoff("Bonsoir"),/2 G M_L R_T \/ d³/);
-  assert.match(hordeLunarScienceKickoff("Bonjour !"),/accélération différentielle/);
-  assert.equal(hordeLunarScienceKickoff("Quel est le rayon lunaire ?"),"");
-  const out=buildHordeMessages({topic:"La Lune",history:[{origin:"human",texte:"Bonsoir"}]});
-  const serialized=JSON.stringify(out);
-  assert.match(serialized,/DÉMARRAGE SCIENTIFIQUE IMMÉDIAT/);
-  assert.match(serialized,/marées terrestres/);
-  assert.match(serialized,/sans récapituler ton identité/);
-  const detailed=buildHordeMessages({topic:"La Lune",history:[{origin:"human",texte:"Calcule le rayon"}]});
-  assert.doesNotMatch(JSON.stringify(detailed),/DÉMARRAGE SCIENTIFIQUE IMMÉDIAT/);
-});
-
-test("La page préserve tous les moteurs et l'identité des intervenants",()=>{
+test("Le Salon fonctionnel conserve les cinq moteurs et les anciens messages",()=>{
   const html=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
   const js=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
   for(const engine of ["puter","horde","pollinations","research-local","sparktiates"])
     assert.ok(html.includes('value="'+engine+'"'),engine);
-  for(const id of ["hordeRapide","hordeLongueur","hordeActualiser","hordeModele",
-    "hordePartagerContexte","fil","reessayerDernier"])
+  for(const id of ["hordeActualiser","hordeModele","hordePartagerContexte","fil","reessayerDernier","parler"])
     assert.ok(html.includes('id="'+id+'"'),id);
-  assert.match(js,/function chooseFasterHorde\(\)/);
-  assert.match(js,/hordeTokenBudget\(responseMode\)/);
-  assert.match(js,/setInterval\(\(\)=>\{/);
-  assert.match(js,/clearInterval\(waitingIndicator\)/);
-  assert.match(js,/window\.puter\.ai\.chat\(/);
+  assert.match(js,/if\(isHordeMode\(\)\)return nextHordeTurn\(\)/);
+  assert.match(js,/window\.puter\.ai\.chat/);
+  assert.doesNotMatch(js,/initScientificCoordinator|initNoaaValidation/);
   assert.match(html,/ChatGPT et René Le Corre®/);
-});
-
-test("L'approximation dimensionnelle des marées possède une unité d'accélération",()=>{
-  const G=6.67430e-11,M=7.342e22,R=6.371e6,d=3.844e8;
-  const a=2*G*M*R/(d**3);
-  assert.ok(a>1.0e-6 && a<1.2e-6);
-  assert.ok(Number.isFinite(a));
 });
