@@ -19,6 +19,7 @@ from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 from resources import detect_resources
 from personas import PROFILES, LOCAL_AGENTS
+from research import RESEARCH_ROLES, RESEARCH_PROTOCOL, installed_names, select_model
 
 APP = Path(__file__).resolve().parent
 MODEL = os.environ.get("RADIO_LOCAL_MODEL", "qwen3:8b").strip()
@@ -188,7 +189,11 @@ def prompt_messages(user: str, history: list, profile: str, sources: list[dict])
             continue
         if content.strip():
             valid.append({"role": role, "content": content[:900]})
-    system = SYSTEM + "\nProfil de rôle local: " + LOCAL_AGENTS[profile][0] + ". Spécialité: " + PROFILES[profile] + "\nTu peux voir les interventions des autres profils dans l’historique. N’usurpe pas leur identité."
+    role_label = (LOCAL_AGENTS[profile][0] if profile in LOCAL_AGENTS
+                  else RESEARCH_ROLES[profile][0])
+    system = SYSTEM + "\nProfil de rôle local: " + role_label + ". Spécialité: " + PROFILES[profile] + "\nTu peux voir les interventions des autres profils dans l’historique. N’usurpe pas leur identité."
+    if profile in RESEARCH_ROLES:
+        system += RESEARCH_PROTOCOL
     if sources:
         references = "\n".join(
             "[" + str(i) + "] " + r["title"] + " | " + r["url"] + " | " + r["snippet"]
@@ -204,11 +209,15 @@ def prompt_messages(user: str, history: list, profile: str, sources: list[dict])
     return [{"role": "system", "content": system}, *valid, {"role": "user", "content": user}]
 
 
-def inference(messages: list[dict]) -> tuple[str, dict]:
+def inference(messages: list[dict], selected_model: str | None = None,
+              scientific: bool = False) -> tuple[str, dict]:
+    actual_model = selected_model or MODEL
     payload = {
-        "model": MODEL, "messages": messages,
-        "stream": False, "think": False,
-        "options": {"num_predict": MAX_REPLY_TOKENS, "num_ctx": 4096, "temperature": 0.55},
+        "model": actual_model, "messages": messages,
+        "stream": False, "think": scientific,
+        "options": {"num_predict": 1152 if scientific else MAX_REPLY_TOKENS,
+                    "num_ctx": 8192 if scientific else 4096,
+                    "temperature": 0.25 if scientific else 0.55},
         "keep_alive": "5m",
     }
     data = fetch_json(OLLAMA + "/api/chat", data=payload, timeout=180)
@@ -288,6 +297,7 @@ class Handler(BaseHTTPRequestHandler):
                 available = any(x.get("name") == MODEL or x.get("model") == MODEL
                     for x in tags.get("models", []) if isinstance(x, dict))
                 self.send_json(200, {"ready": available, "ollama": True, "model": MODEL,
+                    "models_installed": sorted(installed_names(tags)),
                     "web": "Wikipedia + SearXNG facultatif" if SEARXNG else "Wikipedia",
                     "exposure": "localhost_only", "hardware": measured_hardware()})
             except Exception:
@@ -350,8 +360,15 @@ class Handler(BaseHTTPRequestHandler):
             with_web = payload.get("web", False) is True
             sources, warnings = web_sources(message) if with_web else ([], [])
             messages = prompt_messages(message, history, profile, sources)
-            answer, usage = inference(messages)
-            self.send_json(200, {"answer": answer, "model": MODEL,
+            research = profile in RESEARCH_ROLES
+            selected = MODEL
+            if research:
+                models = installed_names(fetch_json(OLLAMA + "/api/tags", timeout=4))
+                selected = select_model(profile, models, MODEL)
+            answer, usage = inference(messages,selected_model=selected,scientific=research)
+            self.send_json(200, {"answer": answer, "model": selected,
+                "scientific_protocol": research,
+                "peer_review_independent": False,
                 "profile": profile, "sources": sources,
                 "web_warnings": warnings, "usage": usage,
                 "provider": "Ollama WSL local"})
