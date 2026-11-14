@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from resources import FAMILIES, plan_topology
 from sparktiates import demo as run_sparktiates_demo
+from personas import PROFILES, public_personas
 
 BASE = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -241,7 +242,7 @@ class Cluster:
             now = self.clock()
             candidates = [n for n in self.nodes if n.ready and n.cooldown_until <= now
                           and n.active < n.slots
-                          and (not profile or profile in ("analyste", "mathematique", "explorateur"))
+                          and (not profile or profile in PROFILES)
                           and (not hardware_family or n.reported_hardware.get("family")==hardware_family)
                           and (min_available_ram_gb == 0 or
                                (n.reported_hardware.get("ram_available_bytes") or 0)
@@ -276,7 +277,7 @@ class Cluster:
         if not isinstance(message, str) or not 1 <= len(message.strip()) <= 2600:
             raise ValueError("Message requis, longueur maximale de 2600 caracteres.")
         profile = payload.get("profile", "analyste")
-        if profile not in ("analyste", "mathematique", "explorateur"):
+        if profile not in PROFILES:
             raise ValueError("Profil inconnu.")
         history = payload.get("history", [])
         if not isinstance(history, list) or len(history) > 12:
@@ -356,6 +357,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
             self.cluster.refresh()
             return self.reply(200, self.cluster.status())
+        if path == "/api/v1/personas":
+            if not self.auth_ok():
+                return self.reply(403, {"error": "Origine ou jeton invalide."})
+            self.cluster.refresh()
+            active=next((n for n in self.cluster.nodes if n.ready and n.cooldown_until <= self.cluster.clock()),None)
+            return self.reply(200, public_personas(active.model if active else "aucun modèle actif"))
         if path == "/api/v1/sparktiates":
             if not self.auth_ok():
                 return self.reply(403, {"error": "Origine ou jeton invalide."})
@@ -378,7 +385,9 @@ class Handler(BaseHTTPRequestHandler):
         assets = {
             "/": ("cluster-console.html", "text/html; charset=utf-8"),
             "/cluster-console.mjs": ("cluster-console.mjs", "text/javascript; charset=utf-8"),
-            "/node-ui.css": ("node-ui.css", "text/css; charset=utf-8")
+            "/node-ui.css": ("node-ui.css", "text/css; charset=utf-8"),
+            "/radio": ("radio-sparktiates.html", "text/html; charset=utf-8"),
+            "/radio-sparktiates.mjs": ("radio-sparktiates.mjs", "text/javascript; charset=utf-8")
         }
         if path not in assets:
             return self.reply(404, {"error": "Route inconnue."})
