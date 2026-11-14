@@ -3,6 +3,7 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
+import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -10,6 +11,8 @@ let documentManager=null;
 let reactionBoard=null;
 let researchEngine=null;
 let researchLoading=false;
+let hordeModels=[];
+let hordeLoading=false;
 const KEY = "radio-salon-distant-v1";
 const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
@@ -24,7 +27,8 @@ const state = {
   auto:false, mode:"direct", perplexityIntroduced:true, kimiIntroduced:true, busy:false, controller:null, activeCard:null, current:null, catalog:[],
   validModels:new Set(), lastRender:0,
   memory:{root:"",events:[]},archives:[],includeArchives:true,
-  researchIndex:0,engineChoice:"puter",researchModelChoice:"Qwen3.5-9B-q4f16_1-MLC"
+  researchIndex:0,engineChoice:"puter",researchModelChoice:"Qwen3.5-9B-q4f16_1-MLC",
+  hordeModel:"",hordeIndex:0
 };
 function status(value){$("etat").textContent=value;}
 function saveDraft(){
@@ -54,7 +58,8 @@ function save(){
       kimiIntroduced:state.kimiIntroduced,
       memory:state.memory,archives:state.archives,includeArchives:state.includeArchives,
       researchIndex:state.researchIndex,engineChoice:state.engineChoice,
-      researchModelChoice:state.researchModelChoice
+      researchModelChoice:state.researchModelChoice,
+      hordeModel:state.hordeModel,hordeIndex:state.hordeIndex
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
   renderLineageStatus();
@@ -81,7 +86,9 @@ function restore(){
     state.archives=Array.isArray(d.archives)?d.archives.slice(-8).filter(x=>x&&typeof x.root==="string"):[];
     state.includeArchives=d.includeArchives!==false;
     state.researchIndex=Math.max(0,Number(d.researchIndex)||0);
-    state.engineChoice=d.engineChoice==="research-local"?"research-local":"puter";
+    state.engineChoice=["puter","research-local","horde"].includes(d.engineChoice)?d.engineChoice:"puter";
+    state.hordeModel=String(d.hordeModel||"").slice(0,200);
+    state.hordeIndex=Math.max(0,Number(d.hordeIndex)||0);
     state.researchModelChoice=RESEARCH_MODELS.some(m=>m.id===d.researchModelChoice)
       ?d.researchModelChoice:RESEARCH_MODELS[0].id;
   }catch{}
@@ -99,6 +106,8 @@ function renderLineageStatus(){
   }
 }
 function isResearchMode(){return state.engineChoice==="research-local";}
+function isHordeMode(){return state.engineChoice==="horde";}
+function hordeStatus(value){const node=$("hordeEtat");if(node)node.textContent=value;}
 function researchStatus(value){const indicator=$("rechercheEtat");if(indicator)indicator.textContent=value;}
 function buttonStates(){
   $("tour").disabled=state.busy;
@@ -107,11 +116,14 @@ function buttonStates(){
   $("arreter").disabled=!state.busy&&!state.auto;
   $("nouveau").disabled=state.busy;
   $("connecter").disabled=state.busy;
-  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading;
+  $("moteurDialogue").disabled=state.busy || state.auto || researchLoading || hordeLoading;
+  $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
+  $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
+  $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
   $("dechargerRecherche").disabled=state.busy || researchLoading || !researchEngine;
-  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":"Salon prêt";
+  $("etatMode").textContent=state.auto?(state.mode==="debate"?"∞ Débat IA ↔ IA":"∞ Discussion automatique"):state.busy?"IA en cours de réponse":isResearchMode()?"Salon scientifique local":isHordeMode()?"Salon AI Horde":"Salon prêt";
 }
 function renderParts(){
   const host=$("parts");host.replaceChildren();
@@ -251,6 +263,7 @@ function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function nextTour(){
   if(state.busy)return;
   if(isResearchMode())return nextResearchTurn();
+  if(isHordeMode())return nextHordeTurn();
   try{
     const p=available();
     if(!p.auth.isSignedIn()){
@@ -394,12 +407,108 @@ async function nextResearchTurn(){
     state.busy=false;state.current=null;state.activeCard=null;render();buttonStates();
   }
 }
+async function refreshHordeModels(){
+  if(state.busy || state.auto || hordeLoading)return;
+  hordeLoading=true;buttonStates();
+  hordeStatus("Interrogation du catalogue des travailleurs AI Horde en ligne…");
+  try{
+    const available=await listHordeModels();
+    hordeModels=available;
+    const node=$("hordeModele");
+    node.replaceChildren();
+    const placeholder=document.createElement("option");
+    placeholder.value="";placeholder.textContent="Choisissez un modèle réellement disponible";
+    node.append(placeholder);
+    for(const item of available){
+      const option=document.createElement("option");
+      option.value=item.id;
+      option.textContent=item.id+(item.workers!==null?" · "+item.workers+" travailleurs":"")+
+        (item.context!==null?" · contexte "+item.context:"");
+      node.append(option);
+    }
+    if(available.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
+    else {
+      node.value="";
+      state.hordeModel="";
+    }
+    save();
+    hordeStatus(available.length
+      ?available.length+" modèles communautaires annoncés en ligne. Choisis-en un. Leur qualité scientifique et disponibilité ne sont pas garanties."
+      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; Puter et le mode local restent disponibles.");
+  }catch(e){
+    hordeModels=[];
+    $("hordeModele").replaceChildren();
+    const option=document.createElement("option");option.value="";option.textContent="Catalogue indisponible";$("hordeModele").append(option);
+    state.hordeModel="";
+    hordeStatus("Catalogue AI Horde indisponible : "+String(e?.message||e)+
+      ". Si le navigateur bloque CORS, aucun appel de génération n'est lancé. Les autres moteurs sont préservés.");
+  }finally{hordeLoading=false;buttonStates();}
+}
+async function nextHordeTurn(){
+  if(state.busy)return;
+  if(hordeLoading){state.auto=false;status("Actualisation des modèles AI Horde en cours.");buttonStates();return;}
+  const model=state.hordeModel;
+  if(!model || !hordeModels.some(m=>m.id===model)){
+    state.auto=false;status("Sélectionne d'abord un modèle du catalogue AI Horde actualisé.");buttonStates();return;
+  }
+  if($("pieceUtiliser")?.checked && documentManager?.hasAttachments?.()){
+    state.auto=false;status("AI Horde ne reçoit pas les pièces jointes. Désactive l'inclusion des documents pour continuer.");buttonStates();return;
+  }
+  const shareHistory=Boolean($("hordePartagerContexte")?.checked);
+  const role=RESEARCH_ROLES[state.hordeIndex%RESEARCH_ROLES.length];
+  const prompt=buildHordeMessages({
+    history:state.messages,topic:$("sujet").value||state.sujet,
+    role:role.nom+" — "+role.specialite,includeHistory:shareHistory
+  });
+  const current={origin:"ai",nom:"AI Horde · "+role.nom,modele:model,
+    heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
+  state.messages.push(current);
+  state.current=current;
+  state.busy=true;
+  state.controller=new AbortController();
+  render();buttonStates();
+  status("AI Horde · "+model+" : attente d'un travailleur bénévole. Tu peux arrêter.");
+  try{
+    const answer=await chatWithHorde({
+      model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
+      signal:state.controller.signal
+    });
+    const normalized=cleanAnswer(answer.text,state.participants);
+    const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
+    if(issue)throw Error("Réponse rejetée : "+issue);
+    current.texte=normalized;
+    current.modele=answer.model;
+    state.hordeIndex++;
+    state.tours++;
+    status("AI Horde : réponse réelle de "+answer.model+
+      " enregistrée. Tour n°"+state.tours+". Aucun crédit Puter utilisé.");
+    speech(current.nom,current.texte);
+  }catch(e){
+    state.messages=state.messages.filter(m=>m!==current);
+    state.auto=false;
+    const reason=e?.name==="AbortError"
+      ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
+      :String(e?.message||e);
+    status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
+  }finally{
+    state.busy=false;state.controller=null;state.current=null;state.activeCard=null;
+    render();buttonStates();
+  }
+}
 async function launchInfinity(mode="direct"){
   if(state.auto || state.busy)return;
-  if(researchLoading){status("Le moteur local charge encore. Attends son initialisation.");return;}
+  if(researchLoading || hordeLoading){status("Un catalogue ou moteur est en cours de chargement.");return;}
   if(isResearchMode()){
     if(!researchEngine){status("Charge le modèle scientifique local avant de lancer un débat.");return;}
     if(!confirm("Lancer les tours scientifiques locaux ? Un unique modèle réel animera différents rôles méthodologiques : cela ne constitue pas une validation indépendante. Les calculs utilisent le GPU tant que l'onglet reste ouvert ; aucune facturation Puter."))return;
+  }else if(isHordeMode()){
+    if(!state.hordeModel || !hordeModels.some(m=>m.id===state.hordeModel)){
+      status("Actualise les modèles AI Horde et sélectionne un modèle en ligne.");return;
+    }
+    if(!$("hordePartagerContexte").checked){
+      status("Pour un débat AI Horde cohérent, autorise explicitement l'envoi des extraits récents du Salon. Sinon, utilise un tour manuel.");return;
+    }
+    if(!confirm("Activer le débat AI Horde ? Les extraits récents des échanges seront transmis au réseau de travailleurs bénévoles à chaque tour. Les rôles scientifiques utilisent le même modèle sélectionné, pas des IA indépendantes. La file et les délais sont variables. Continuer ?"))return;
   }else{
     if(!window.puter?.auth?.isSignedIn()){status("Connecte Puter avant de lancer ∞.");return;}
     const question=mode==="debate"
@@ -427,7 +536,10 @@ function stop(){
   if(state.controller)state.controller.abort();
   if(isResearchMode())researchEngine?.interrupt();
   if("speechSynthesis" in window)speechSynthesis.cancel();
-  status(isResearchMode()?"Arrêt du débat local demandé. Le calcul GPU peut encore se terminer.":"Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
+  status(isResearchMode()
+    ?"Arrêt du débat local demandé. Le calcul GPU peut encore se terminer."
+    :isHordeMode()?"AI Horde : arrêt demandé. Une requête acceptée peut se poursuivre chez le travailleur."
+    :"Arrêt demandé. Une génération déjà envoyée au fournisseur peut rester comptabilisée.");
   buttonStates();
 }
 function exportConversation(){
@@ -450,12 +562,32 @@ function init(){
   }
   selection.value=state.researchModelChoice;
   $("moteurDialogue").value=state.engineChoice;
+  $("hordeControls").hidden=!isHordeMode();
+  $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
+  $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
+  $("hordeModele").addEventListener("change",()=>{
+    const selected=$("hordeModele").value;
+    state.hordeModel=hordeModels.some(m=>m.id===selected)?selected:"";
+    save();
+    hordeStatus(state.hordeModel
+      ?"Modèle choisi : "+state.hordeModel+". Les requêtes sont envoyées seulement quand tu demandes une réponse."
+      :"Sélectionne un modèle annoncé par AI Horde.");
+  });
+  $("hordePartagerContexte").addEventListener("change",()=>{
+    hordeStatus($("hordePartagerContexte").checked
+      ?"Partage des extraits récents autorisé : ils pourront être traités par des travailleurs bénévoles."
+      :"Partage des anciens messages désactivé ; seul le nouveau message et le sujet seront transmis.");
+  });
   $("moteurDialogue").addEventListener("change",()=>{
-    state.engineChoice=$("moteurDialogue").value==="research-local"?"research-local":"puter";
+    const requested=$("moteurDialogue").value;
+    state.engineChoice=["puter","research-local","horde"].includes(requested)?requested:"puter";
+    $("hordeControls").hidden=!isHordeMode();
     save();buttonStates();
     status(isResearchMode()
       ?"Moteur scientifique local sélectionné : charge un modèle puis utilise les commandes habituelles."
-      :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
+      :isHordeMode()
+        ?"AI Horde choisi : actualise les modèles disponibles et sélectionne un modèle réel. Les anciens échanges ne sont pas envoyés sans ton accord."
+        :"Moteur Puter restauré ; aucun modèle distant n'a été supprimé.");
   });
   selection.addEventListener("change",()=>{
     if(researchEngine){selection.value=researchEngine.modelId;return;}
@@ -465,6 +597,7 @@ function init(){
   $("dechargerRecherche").addEventListener("click",()=>void unloadResearch());
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
+  if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
   $("quotaVoir")?.addEventListener("click",()=>void(async()=>{
     const button=$("quotaVoir"),node=$("quotaEtat");
     if(!node||!button)return;
@@ -571,12 +704,14 @@ function init(){
   if(!window.puter){
     status(isResearchMode()
       ?"Mode local disponible : charge le modèle scientifique. Puter n'est pas requis."
+      :isHordeMode()?"AI Horde disponible indépendamment de Puter : actualise son catalogue."
       :"Bibliothèque Puter.js indisponible. Un bloqueur de script ou le réseau peut être en cause.");
   }else if(puter.auth.isSignedIn()){
     $("connexion").textContent="Session Puter existante";
     void loadCatalog();
   }else status(isResearchMode()
     ?"Mode de recherche local sélectionné : charge un modèle scientifique pour parler sans Puter."
+    :isHordeMode()?"AI Horde : actualise le catalogue et choisis un modèle pour commencer."
     :"Connecte Puter pour utiliser des modèles distants. Le Salon public ne dépend pas de WSL.");
 }
 init();
