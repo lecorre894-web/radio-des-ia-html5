@@ -73,3 +73,17 @@ Sources constructeur :
 - https://www.amd.com/en/products/processors/server/epyc/9005-series/amd-epyc-9965.html
 
 Statut : infrastructure expérimentale sur GitHub seulement, aucune machine DGX Spark ou EPYC ajoutée ni validation physique exécutée sur WSL.
+
+## SPARKTIATES — émulateur de répartition, pas émulateur de GPU
+
+SPARKTIATES est notre **simulation à événements discrets** du cluster Spark + EPYC. Il représente une file de requêtes fictives, leur sélection de nœuds, les slots de calcul, l'occupation de RAM par machine et la perte de serveurs. Il ne simule pas les instructions ARM, x86, CUDA ou les performances des GPU : ce serait une autre catégorie d'émulation.
+
+Fichier : selfhost/sparktiates.py ; tests : tests/test_sparktiates.py ; console : http://127.0.0.1:8766/ puis bouton « Lancer le scénario simulé » ; endpoint local de lecture : GET /api/v1/sparktiates.
+
+Commande WSL facultative depuis selfhost : python3 sparktiates.py. Cette commande n'a besoin ni de GPU, ni de modèle Ollama, ni d'accès réseau. Elle ne construit aucune VM, aucun CPU et aucune mémoire physique.
+
+Par défaut, 640 tâches synthétiques sont réparties entre les 64 Spark et 32 EPYC du plan. Les durées et mémoires de ces tâches sont des **hypothèses configurables** ; elles ne proviennent d'aucun benchmark. Les slots simultanés sont volontairement inférieurs au nombre de VM/conteneurs projetés : une VM n'ajoute pas de ressource physique. La RAM est vérifiée par hôte ; une requête nécessitant 70 Gio ne peut pas être placée sur un Spark dont seuls 64 Gio sont réservés aux calculs, même si 64 autres Spark sont disponibles.
+
+À la fin, le rapport indique toujours status=SIMULE_NON_MESURE, provisioned_hardware=false, real_models_executed=0, requests_sent_to_internet=0. Les résultats de l'émulateur ne doivent JAMAIS alimenter les indicateurs de performance mesurée du cluster.
+
+Les futurs tests physiques compareront, sur un vrai Spark ou un vrai serveur EPYC, les latences, la saturation mémoire et le nombre de calculs simultanés ; seul cet étalonnage permettra d'améliorer les hypothèses de SPARKTIATES.
