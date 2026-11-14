@@ -8,11 +8,12 @@
 </head><body><main>
 <header class="hero">
 <p class="eyebrow">RADIO DES IA · SPARKTIATES · WSL</p>
-<h1>📻 Radio des IA locale</h1>
+<h1>📻 Radio des IA locale · Comité scientifique</h1>
 <p>Un salon avec six profils, répartis sur les <strong>vrais nœuds du cluster</strong>. Fonctionne sans crédit Puter quand Ollama et un modèle sont installés.</p>
 <p class="notice">Les six profils peuvent utiliser le <strong>même modèle local</strong> : ce ne sont pas six modèles propriétaires différents. L'émulation des serveurs NVIDIA/EPYC ne génère aucune réponse IA à elle seule.</p>
 <div class="status" id="health" role="status">Interrogation de l'ordonnanceur…</div>
 <div class="stats" id="identity">Moteur réel : en attente de vérification.</div>
+<div class="status" id="researchStatus" role="status">Modèles de recherche : vérification locale.</div>
 </header>
 <section class="panel">
 <h2>Salon et fil conducteur</h2>
@@ -29,13 +30,24 @@
 <option value="controle">Vérificateur local · audit</option>
 <option value="recherche">Chercheur local · recherche</option>
 <option value="ia4">IA4 locale · synthèse</option>
+<optgroup label="Comité scientifique — protocole doctoral et postdoctoral">
+<option value="these">Analyse doctorale · hypothèses</option>
+<option value="postdoc">Contre-expertise postdoctorale · objections</option>
+<option value="mathsup">Mathématiques avancées · preuves</option>
+<option value="methodes">Méthodologie expérimentale · tests</option>
+<option value="systemes">Architecture systèmes · faisabilité</option>
+<option value="pairs">Relecture scientifique · critiques</option>
+<option value="epistemologie">Audit épistémologique · niveaux de preuve</option>
+<option value="jury">Jury scientifique · synthèse provisoire</option>
+</optgroup>
 </select>
 <label class="checkbox"><input id="web" type="checkbox">
 🌐 Rechercher des sources Web pour cette question</label>
 <p class="hint">Sans cette case : aucun appel de recherche Internet. Les connexions à Ollama et entre les nœuds restent locales ou privées. Les modèles doivent déjà être installés.</p>
 <div class="row actions">
 <button id="send" type="button" class="primary">📨 Envoyer au rôle choisi</button>
-<button id="cycle" type="button">🔄 Un tour des six rôles</button>
+<button id="cycle" type="button">🔄 Six intervenants habituels</button>
+<button id="doctoral" type="button" class="primary">🎓 Comité scientifique · huit étapes</button>
 <button id="stop" type="button" disabled>Arrêter après ce rôle</button>
 </div>
 <p id="progress" role="status" aria-live="polite">Aucun appel envoyé.</p>
@@ -44,6 +56,7 @@
 <button id="new" type="button">Nouveau salon local</button>
 </div>
 <p class="hint">Ce salon utilise sa propre mémoire dans ce navigateur, indépendante du Salon Puter. Le code ne lit ni ne modifie les archives de la Radio publique.</p>
+<p class="notice">Le niveau doctoral est ici un <strong>protocole méthodologique exigeant</strong>, pas une qualification académique du logiciel. Un jury de huit rôles fondé sur le même modèle n'est pas une validation indépendante. Seules les observations effectivement mesurées sont présentées comme telles.</p>
 </section>
 <section class="panel">
 <h2>Sources du dernier tour</h2>
