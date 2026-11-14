@@ -156,6 +156,24 @@ export async function listPollinationsModels({fetcher=fetch,signal}={}){
   if(!response.ok)throw Error("Catalogue Pollinations HTTP "+response.status);
   return normalizePollinationsModels(json);
 }
+/**
+ * Pollinations peut renvoyer une erreur de facturation comme une réponse textuelle
+ * de l'API compatible chat (HTTP 200). Ce texte n'est PAS une réponse scientifique.
+ * La détection reste ciblée : des échanges ordinaires sur les crédits restent permis.
+ */
+export function isPollinationsCreditRefusal(content) {
+  if(typeof content!=="string")return false;
+  const first=content.trim().slice(0,700);
+  return /^the account behind this api key (?:doesn't|does not) have enough credits\b/i.test(first) ||
+    /^this model needs paid pollen\b/i.test(first) ||
+    /^(?:error[:\s-]*)?(?:insufficient|not enough) (?:pollen|credits|balance)\b/i.test(first) ||
+    /^you (?:do not|don't) have enough (?:pollen|credits)\b/i.test(first);
+}
+function creditRefusalError(){
+  const error=new Error("Pollinations refuse ce modèle : crédits Pollen insuffisants. Aucune réponse IA n'a été produite. Choisis AI Horde pour essayer sans crédits Pollen, ou vérifie les conditions d'un autre modèle.");
+  error.code="POLLINATIONS_CREDITS";
+  return error;
+}
 export async function chatWithPollinations({model,messages,token,maxTokens=MAX_REPLY_TOKENS,signal,fetcher=fetch}={}){
   if(!model||!Array.isArray(messages)||!messages.length)throw Error("Modèle Pollinations et messages requis.");
   if(!/^sk_[A-Za-z0-9_-]{4,}$/.test(String(token||"")))
@@ -168,10 +186,15 @@ export async function chatWithPollinations({model,messages,token,maxTokens=MAX_R
   });
   const data=await parseJSON(response);
   if(!response.ok){
-    const reason=String(data?.error?.message||data?.message||data?.detail||"requête refusée").slice(0,250);
+    const reason=String(data?.error?.message||data?.error||data?.message||data?.detail||"requête refusée").slice(0,250);
+    if(response.status===402 || isPollinationsCreditRefusal(reason) ||
+       /(?:not enough|insufficient) (?:credits|pollen|balance)/i.test(reason))
+      throw creditRefusalError();
     throw Error("Pollinations HTTP "+response.status+" : "+reason+". Aucun réessai automatique.");
   }
   const answer=data?.choices?.[0]?.message?.content;
   if(typeof answer!=="string"||!answer.trim())throw Error("Réponse Pollinations vide ou non textuelle.");
+  // Le fournisseur peut signaler un paiement manquant sous la forme d'un message assistant.
+  if(isPollinationsCreditRefusal(answer))throw creditRefusalError();
   return {text:answer.trim(),model:String(data?.model||model)};
 }
