@@ -83,6 +83,16 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🌕 Continuer sans abonnement — IA lunaire locale
+
+La page [tchat-lune.html](./tchat-lune.html) propose un moteur de langage libre exécuté **dans le navigateur** avec [WebLLM](https://github.com/mlc-ai/web-llm). Elle est accessible depuis le Salon principal, mais n'appelle pas Puter et ne nécessite ni compte ni abonnement. Les réponses sont générées sur le GPU du visiteur, avec un petit modèle sélectionné dans le catalogue réel de WebLLM (environ 0,5 à 0,8 milliard de paramètres, selon compatibilité). **Ce n'est pas un remplacement de Kimi, Perplexity ou ChatGPT.**
+
+Le premier chargement demande une connexion Internet pour la bibliothèque et les fichiers volumineux du modèle, qui peuvent rester en cache. Le navigateur doit prendre en charge WebGPU, l'appareil doit avoir assez de mémoire et de stockage ; certaines configurations, notamment mobiles, ne pourront pas exécuter le modèle. Une fois chargé, le moteur répond sans appel IA facturé, mais la page doit rester active et la réponse peut être lente ou erronée.
+
+La page utilise la même clé `radio-salon-distant-v1` que le Salon Puter : même navigateur, même appareil, historique préservé et repris au retour. Seuls les derniers échanges pertinents sont transmis au modèle local, pour contenir sa fenêtre de contexte. Les données conservées dans ce navigateur peuvent être supprimées par l'utilisateur. Il ne s'agit pas d'une synchronisation entre appareils, et les modèles locaux ne disposent pas de recherche Web ni de vérification scientifique en temps réel.
+
+**Tests :** `npm test` inclut `tests/lune-locale.test.mjs` ; `npm run check` vérifie également la syntaxe des modules ajoutés. Le chargement réel du modèle WebGPU doit être testé dans un navigateur compatible.
+
 ## Confidentialité et tarification
 
 La connexion Puter est faite **par l'utilisateur**, via le navigateur. Aucune clé de fournisseur n'est publiée dans le dépôt. L'historique personnel est stocké dans le navigateur et transmis à Puter uniquement lors des demandes de génération. Les conversations ne sont pas partagées entre visiteurs.
