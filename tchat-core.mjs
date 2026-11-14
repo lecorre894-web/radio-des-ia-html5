@@ -15,6 +15,23 @@ export function addPerplexity(participants) {
   return all;
 }
 
+export const KIMI = Object.freeze({
+  nom: "Kimi",
+  role: "Recherche approfondie, synthèse interdisciplinaire, mathématiques et informatique ; contre-expertise des arguments, hypothèses testables et méthode expérimentale.",
+  modele: "moonshotai/kimi-k3.1-pro"
+});
+
+export function addKimi(participants) {
+  const all=Array.isArray(participants)?participants.map(x=>({...x})):[];
+  const found=all.find(x=>String(x?.nom||"").trim().toLocaleLowerCase("fr")==="kimi");
+  if(found){
+    // Ne jamais attribuer le nom Kimi à un modèle concurrent.
+    if(!String(found.modele||"").startsWith("moonshotai/kimi-"))found.modele=KIMI.modele;
+    if(!String(found.role||"").trim())found.role=KIMI.role;
+  }else all.push({...KIMI});
+  return all;
+}
+
 export function lastHuman(messages) {
   return [...messages].reverse().find(m => m && m.origin === "human" && String(m.texte || "").trim()) || null;
 }
@@ -38,6 +55,10 @@ export function buildPrompt({participants, index, messages, sujet, mode="direct"
     "N'affirme pas avoir effectué des mesures ou consulté des sources sans l'avoir réellement fait.",
     "Utilise la langue de la question humaine, sinon le français."
   ];
+  if (String(p.modele || "").startsWith("moonshotai/kimi-")) {
+    base.push("Mission particulière Kimi : recherche approfondie et raisonnement de longue portée. Confronte les hypothèses, introduis un angle mathématique ou technique nouveau et propose un protocole de test reproductible.");
+    base.push("Sépare explicitement résultats établis, hypothèses plausibles et éléments incertains. Une démonstration doit respecter ses conditions ; ne prétends pas avoir vérifié une source ou exécuté du code si ce n'est pas le cas.");
+  }
   if (String(p.modele || "").startsWith("perplexity/")) {
     base.push("Mission particulière : évaluer les affirmations des autres IA, vérifier les contradictions, chercher les sources et signaler explicitement les affirmations non vérifiées.");
     base.push("Quand tu cites une source, donne une référence identifiable et si possible son URL ; si tu ne peux pas la confirmer, dis-le. Distingue les faits établis, les reconstructions, les candidats, les artefacts et les inconnues.");
