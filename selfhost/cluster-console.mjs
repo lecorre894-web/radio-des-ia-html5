@@ -118,5 +118,34 @@ $("clear").addEventListener("click",()=>{
  $("transcript").append(p);
  phrase("Console locale réinitialisée.");
 });
+$("sparktiates-demo").addEventListener("click",async()=>{
+ const btn=$("sparktiates-demo"),out=$("sparktiates-output");
+ btn.disabled=true;out.textContent="Simulation déterministe en cours, aucun matériel sollicité…";
+ try{
+   const response=await fetch("/api/v1/sparktiates",{cache:"no-store"});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||"HTTP "+response.status);
+   if(result.identity!=="SPARKTIATES"||result.status!=="SIMULE_NON_MESURE"||
+      result.provisioned_hardware!==false||result.real_models_executed!==0)
+      throw Error("Rapport non reconnu comme simulation isolée.");
+   const inf=result.simulated_jobs.inference,calc=result.simulated_jobs.compute;
+   out.textContent=
+    "SPARKTIATES — SIMULÉ / NON MESURÉ\n"+
+    "Systèmes du scénario : "+result.configured_plan.spark+" Spark + "+
+      result.configured_plan.epyc+" EPYC\n"+
+    "Hôtes virtuels simulés : "+result.simulated_hosts+
+      " ; machines physiques créées : "+result.physical_processors_created+"\n"+
+    "Slots inférence hypothétiques : "+result.simulated_inference_slots+
+    " ; slots calcul hypothétiques : "+result.simulated_compute_slots+"\n"+
+    "Inférence : "+inf.completed+" tâches simulées terminées / "+inf.submitted+
+    ", temps moyen d'attente simulé "+inf.mean_queue_wait_ms+" ms\n"+
+    "CPU : "+calc.completed+" tâches simulées terminées / "+calc.submitted+
+    ", temps moyen d'attente simulé "+calc.mean_queue_wait_ms+" ms\n"+
+    "Temps total simulé : "+result.simulated_completion_time_ms+" ms\n"+
+    "RAM partagée réelle : AUCUNE · Appels IA réels : "+result.real_models_executed+
+    "\nAttention : ces temps ne sont PAS des benchmarks, ni des performances garanties.";
+ }catch(error){out.textContent="Simulation indisponible : "+String(error?.message||error);}
+ finally{btn.disabled=false;}
+});
 refresh();
 void refreshPlan();
