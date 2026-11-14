@@ -53,6 +53,11 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 #sujet{width:100%}#moi{width:100%;min-height:105px;color:#8dffad;caret-color:#d5ffe0;font:500 1.08rem/1.7 ui-monospace,"Cascadia Code","Consolas",monospace;letter-spacing:.01em}
 #moi::placeholder{color:#9daeb4;opacity:1}
 #moi:focus-visible{outline:2px solid #8dffad;outline-offset:2px}
+#scienceResultats .science-reponse{padding:12px;background:#0e1520;border:1px solid #425066;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:38rem;overflow:auto;font:inherit}
+#scienceResultats h4{margin:18px 0 6px}
+#scienceResultats .science-erreur{color:#ffcd91}
+#scienceEtat{color:#d4e5f0;overflow-wrap:anywhere}
+
 .composer-status{font-size:14px;color:#e6d6ad;background:#282d37;border-left:3px solid #d8b177;padding:10px;border-radius:7px;margin:9px 0;overflow-wrap:anywhere}
 .composer-mode{font-size:14px;color:#b8dcca;line-height:1.5;margin:9px 0}
 .composer-actions{align-items:center;gap:8px}
@@ -219,6 +224,33 @@ details.card[open]>summary{margin-bottom:14px}
 <small id="rechercheEtat" role="status">Moteur distant conservé par défaut. Le mode local demande WebGPU, plusieurs Go de téléchargement et au moins environ 5 à 7 Go de mémoire graphique selon le modèle. Aucune connexion Puter pour les tours locaux.</small>
 <p class="pieceExplication">Les discussions se poursuivent dans la conversation ci-dessous avec les boutons « Envoyer », « Faire parler », « Discussion automatique » et « Débat ». En mode local, tous les rôles sont calculés par un seul modèle explicitement indiqué. Les pièces jointes et la recherche Web ne sont pas analysées par ce moteur local.</p>
 </section>
+<details class="card" id="scienceCoord" aria-label="Coordinateur scientifique SPARKTIATES">
+<summary>🔬 SPARKTIATES — coordonner, comparer et auditer les calculs scientifiques</summary>
+<p>Premier protocole reproductible : la physique des marées lunaires. Tu peux interroger AI Horde et, si tu as effectivement démarré ton serveur Ollama personnel, obtenir une seconde analyse en parallèle. Un calcul numérique indépendant sert de référence.</p>
+<p class="notice">Les ordinateurs AI Horde restent la propriété des bénévoles : aucun logiciel n'y est installé. Les modèles ne sont pas des docteurs certifiés. Un accord de deux IA n'est pas une preuve expérimentale.</p>
+<label for="scienceCas"><strong>Protocole</strong></label>
+<select id="scienceCas" style="width:100%">
+<option value="lunar_tides">Marées lunaires — calcul contrôlable (référence NASA/DLR)</option>
+<option value="open_research">Question scientifique libre — réponses candidates seulement</option>
+</select>
+<div id="scienceQuestionWrap" hidden>
+<label for="scienceQuestion"><strong>Question à examiner</strong></label>
+<textarea id="scienceQuestion" rows="4" maxlength="1500" placeholder="Écris une question scientifique précise, sans donnée confidentielle."></textarea>
+</div>
+<div class="row"><button id="scienceDerniere" type="button">Reprendre ma dernière question dans cet audit</button></div>
+<label class="pieceOption"><input type="checkbox" id="scienceHorde" checked>
+<span>Interroger le modèle AI Horde déjà sélectionné (question envoyée à un travailleur bénévole). Aucun échange précédent du Salon n'est envoyé.</span></label>
+<label class="pieceOption"><input type="checkbox" id="scienceSparktiates">
+<span>Interroger aussi le modèle personnel SPARKTIATES/Ollama, uniquement si son serveur et son jeton ont été vérifiés dans le panneau des moteurs.</span></label>
+<div class="row">
+<button id="scienceLancer" class="primary" type="button">🧪 Lancer l'audit scientifique</button>
+<button id="scienceStop" type="button" disabled>Arrêter l'audit</button>
+<button id="scienceCopier" type="button" disabled>Copier le rapport</button>
+</div>
+<small>Une seule demande par fournisseur coché, aucune relance automatique. Le résultat ne modifie pas ton Salon ni ses archives. Les tests numériques sont RECONSTRUITS, non des mesures d'amplitudes océaniques. Le calcul est possible même si aucun serveur IA n'est prêt.</small>
+<p id="scienceEtat" role="status" aria-live="polite">Initialisation du coordinateur scientifique…</p>
+<div id="scienceResultats" aria-live="polite"></div>
+</details>
 <section class="card" aria-label="Continuité des discussions lunaires">
 <h2>🌕 Discuter de la Lune ici, sans changer de page</h2>
 <p>Sélectionne « Recherche locale » dans le <a href="#modeRecherche">panneau scientifique ci-dessus</a>, indique le thème lunaire dans la question directrice, puis utilise les commandes habituelles du Salon. Les réponses restent intégrées à la même conversation et à son historique.</p>
@@ -364,7 +396,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=1&amp;pollinations=4&amp;sparktiates=2&amp;diagnostic=3&amp;science=1"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
