@@ -1,6 +1,8 @@
 import {buildPrompt, responseText, cleanAnswer, qualityIssue, PERPLEXITY, addPerplexity, KIMI, addKimi} from "./tchat-core.mjs?v=kimi-k3-1";
+import {createDocumentManager} from "./tchat-documents.mjs?v=documents-1";
 
 const $ = id => document.getElementById(id);
+let documentManager=null;
 const KEY = "radio-salon-distant-v1";
 const START = [
   {nom:"Cairn",role:"Épistémologie, audit critique, contradictions argumentées",modele:"gpt-5.5"},
@@ -100,8 +102,12 @@ function render(){
   save();
 }
 function addHuman(){
-  const value=$("moi").value.trim();
+  let value=$("moi").value.trim();
+  if(!value && documentManager?.hasAttachments() && $("pieceUtiliser")?.checked){
+    value="Analyse les documents et images joints : précise les éléments vérifiables, les informations manquantes et les limites de leur interprétation.";
+  }
   if(!value)return;
+  if(documentManager?.isReading()){status("Lecture du document en cours : réessayer lorsque l'import est terminé.");return;}
   $("moi").value="";
   state.messages.push({origin:"human",nom:"Vous",texte:value,heure:new Date().toLocaleTimeString("fr-FR")});
   render();status("Question enregistrée exactement : réponse prioritaire au prochain tour.");
@@ -184,11 +190,14 @@ async function nextTour(){
   state.controller=new AbortController();
   render();buttonStates();
   status(participant.nom+" réfléchit avec "+participant.modele+"…");
+  let prepared={messages,cleanup:async()=>{}};
   try{
+    // Le module externe ne touche pas au moteur de dialogue : aucun document = chemin IA d'origine.
+    if(documentManager)prepared=await documentManager.prepare(messages);
     const opts={model:participant.modele,stream:true,signal:state.controller.signal};
     const long=$("longueur").value;
     if(long!=="auto")opts.max_tokens=Number(long);
-    const stream=await window.puter.ai.chat(messages,opts);
+    const stream=await window.puter.ai.chat(prepared.messages,opts);
     let full="";
     if(stream&&typeof stream[Symbol.asyncIterator]==="function"){
       for await(const chunk of stream){
@@ -213,6 +222,7 @@ async function nextTour(){
     state.auto=false;
     status("Réponse interrompue ou refusée : "+String(e?.message||e)+". Vérifie la connexion, les crédits Puter et le modèle choisi.");
   }finally{
+    try{await prepared.cleanup();}catch{} // La suppression distante est tentée même en cas d'échec du modèle.
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;render();buttonStates();
   }
 }
@@ -254,6 +264,7 @@ function exportConversation(){
 }
 function init(){
   restore();$("sujet").value=state.sujet;renderParts();render();buttonStates();
+  documentManager=createDocumentManager({getPuter:()=>window.puter,onStatus:message=>status(message)});
   $("connecter").addEventListener("click",signIn);
   $("catalogueBouton").addEventListener("click",loadCatalog);
   $("parler").addEventListener("click",addHuman);
@@ -275,7 +286,7 @@ function init(){
   $("nouveau").addEventListener("click",()=>{
     if(state.busy)return;
     if(!confirm("Effacer cette conversation locale ? Vous pouvez d'abord l'exporter."))return;
-    state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";render();status("Nouveau Salon prêt");
+    state.messages=[];state.next=0;state.tours=0;state.mode="direct";state.sujet="";$("sujet").value="";documentManager?.clear();render();status("Nouveau Salon prêt");
   });
   $("exporter").addEventListener("click",exportConversation);
   $("moi").addEventListener("keydown",event=>{
