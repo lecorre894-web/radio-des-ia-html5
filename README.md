@@ -83,6 +83,33 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
+## 🔬 Coordinateur scientifique SPARKTIATES — analyse quantifiée V1
+
+Dans **le Salon Radio des IA existant**, ouvre le panneau **« 🔬 SPARKTIATES — coordonner, comparer et auditer les calculs scientifiques »**. Aucun des cinq moteurs n'est remplacé et les conversations ne sont pas modifiées par l'audit.
+
+Le banc d'essai scientifique initial est l'**accélération différentielle de marée lunaire**, calculée avec deux expressions indépendantes du texte généré par une IA :
+
+- premier ordre : \`a ≈ 2 G M_L R_T / d³\` ;
+- calcul non linéarisé le long de l'axe proche de la Lune : \`a = G M_L [1/(d−R_T)² − 1/d²]\`.
+
+Avec les constantes de référence documentées, le premier calcul produit environ **1,10022 × 10⁻⁶ m/s²**, contre **1,12819 × 10⁻⁶ m/s²** pour le second (écart ≈ **2,54 %**). Il s'agit d'une **reconstruction analytique**, et non d'une mesure océanographique. Le calcul ne permet pas, à lui seul, de prévoir la hauteur d'eau d'un port ou de démontrer la théorie complète des marées.
+
+**Sources des constantes :** [NASA — Moon by the numbers](https://science.nasa.gov/moon/by-the-numbers/), [DLR — The Moon](https://www.dlr.de/en/research-and-transfer/featured-topics/mission-moon/the-moon), [NIST — constante gravitationnelle](https://physics.nist.gov/cgi-bin/cuu/Value?bg).
+
+### Utilisation
+
+1. Sélectionner **Marées lunaires** ou **Question scientifique libre**. Seul le premier protocole dispose d'un oracle quantitatif.
+2. Cocher volontairement **AI Horde**, qui utilise le modèle effectivement sélectionné dans son catalogue. Le texte est transmis à des bénévoles ; les anciens messages du Salon ne sont **jamais** transmis par l'audit.
+3. Cocher facultativement **SPARKTIATES / Ollama** seulement si un vrai serveur personnel, un jeton et un modèle ont été vérifiés. Aucune installation n'est effectuée sur les ordinateurs AI Horde.
+4. Lancer l'audit. Les deux demandes, si disponibles, sont envoyées simultanément, une seule fois chacune. L'annulation est proposée. Aucun appel Pollinations/Puter, ni relance automatique.
+5. Lire le rapport et le copier. Il distingue **RECONSTRUIT** (oracle calculé), **CANDIDAT** (texte IA), **COMPATIBLE_NUMERIQUEMENT**, **ECART_NUMERIQUE** et **INCONNU**.
+
+Le rapport mentionne les modèles réellement servis, le temps de réponse, la valeur numérique **explicitement étiquetée** par chaque modèle et un éventuel désaccord. La comparaison d'une valeur avec un oracle ne certifie pas l'ensemble des affirmations du modèle ; même deux moteurs différents ne constituent **pas une validation scientifique indépendante**. Une question libre n'obtient aucune fausse note de précision numérique.
+
+**Statut des validations :** tests mathématiques de référence et essais automatisés d'intégration avec **deux fournisseurs simulés** ; les modèles d'AI Horde et le GPU Ollama réel ne sont pas exécutés dans les tests GitHub. Aucune qualification « niveau doctorat » n'est attribuée automatiquement. Pour une revue de recherche, il faudra ajouter des jeux de données instrumentaux, des procédures statistiques, des sources primaires et un audit externe.
+
+**Code :** [science-coordinator.mjs](science-coordinator.mjs), [science-panel.mjs](science-panel.mjs), [tests/science-coordinator.test.mjs](tests/science-coordinator.test.mjs), [tests/science-panel-flow.test.mjs](tests/science-panel-flow.test.mjs).
+
 ## 🖥️ SPARKTIATES avec tours sans plafond logiciel (moteur Ollama personnel)
 
 La Radio des IA propose maintenant **cinq moteurs indépendants** dans le Salon `tchat.html` : Puter, AI Horde, Pollinations, recherche WebGPU locale et **SPARKTIATES / Ollama**. Ce dernier relie le même tchat, la mémoire, les intervenants et les commandes de débat à un vrai modèle Ollama hébergé sur le PC de l'utilisateur. Uniquement lorsque ce moteur a été sélectionné, les tours automatiques ne sont pas limités en nombre par le logiciel et ne sollicitent ni Puter ni Pollinations.
