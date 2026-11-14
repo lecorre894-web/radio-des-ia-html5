@@ -114,7 +114,7 @@ assert 'id="memoireFil"' in page
 assert 'id="memoireResume"' in page
 assert 'id="memoireInterSalons"' in page
 assert 'id="memoireEffacer"' in page
-assert 'tchat-distant.mjs?v=fil-genealogique-1' in page
+assert 'tchat-distant.mjs?v=budget-1' in page
 assert (root / "tchat-lineage.mjs").is_file()
 assert "tchat-lineage.mjs" in (root / "tchat-core.mjs").read_text(encoding="utf-8")
 assert "memory:state.memory" in (root / "tchat-distant.mjs").read_text(encoding="utf-8")
