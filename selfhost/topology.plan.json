@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "kind": "capacity_plan_only_not_live_cluster",
+  "assumptions": {
+    "spark": 64,
+    "epyc": 32,
+    "epyc_sockets": 2,
+    "epyc_ram_gb": 2048,
+    "spark_containers": 4,
+    "spark_container_ram_gb": 16,
+    "epyc_vms": 16,
+    "epyc_vm_ram_gb": 64
+  },
+  "disclosure": "Ce fichier ne cree aucun Spark, CPU EPYC, GPU, serveur, RAM ou VM. Ces machines doivent exister pour servir la Radio."
+}
