@@ -1,9 +1,11 @@
 /* Générateur d'images indépendant du tchat. Aucun chargement de modèles vidéo. */
 const $=id=>document.getElementById(id);
 const MODELS=Object.freeze([
+  "openai/gpt-image-2.6-flare",
+  "google/gemini-3.1-flash-image",
+  "black-forest-labs/flux-schnell",
   "gpt-image-2.6-flare",
-  "gemini-3.1-flash-image",
-  "@cf/black-forest-labs/flux-1-schnell"
+  "gemini-3.1-flash-image"
 ]);
 export function validatedImageRequest({prompt,model,ratio,testMode}){
   const text=String(prompt||"").trim();
@@ -11,7 +13,9 @@ export function validatedImageRequest({prompt,model,ratio,testMode}){
   if(!MODELS.includes(model))throw new Error("Modèle de génération d'images non reconnu.");
   if(!["1:1","16:9","9:16","3:2"].includes(ratio))throw new Error("Format d'image non reconnu.");
   const [w,h]=ratio.split(":").map(Number);
-  return {prompt:text,options:{model,ratio:{w,h},test_mode:Boolean(testMode)}};
+  const edge=1024;
+  const dims=w>=h?{w:edge,h:Math.round(edge*h/w)}:{w:Math.round(edge*w/h),h:edge};
+  return {prompt:text,options:{model,ratio:dims,test_mode:Boolean(testMode)}};
 }
 export function createImageGenerator(){
   if(typeof document==="undefined")return null;
@@ -37,7 +41,12 @@ export function createImageGenerator(){
     busy=true;btn.disabled=true;clearPrevious();
     say(request.options.test_mode?"Création d'une image de démonstration (mode test)…":"Génération distante en cours ; les crédits du fournisseur peuvent être débités…");
     try{
-      const output=await puter.ai.txt2img(request.prompt,request.options);
+      // Puter documente le mode d'essai comme deuxième argument booléen.
+      const output=request.options.test_mode
+        ? await puter.ai.txt2img(request.prompt,true)
+        : await puter.ai.txt2img(request.prompt,{
+            model:request.options.model,ratio:request.options.ratio
+          });
       const url=String(output?.src||"");
       if(!/^(https:\/\/|http:\/\/|data:image\/|blob:)/i.test(url))throw new Error("Le fournisseur n'a retourné aucune image exploitable.");
       src=url;
