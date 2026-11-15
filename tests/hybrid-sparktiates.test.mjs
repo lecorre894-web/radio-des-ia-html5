@@ -54,7 +54,7 @@ test("Répartition déterministe de 64 calculs entre 1, 2, 4, 8 workers",async()
     assert.equal(last,64);
     assert.equal(made,count);
     assert.equal(checksumResults(jobs,actual),expected);
-    assert.deepEqual(verifySamples(jobs,actual),{pass:true,checked:8,failedJob:null});
+    assert.deepEqual(verifySamples(jobs,actual,{sampleCount:8}),{pass:true,checked:8,failedJob:null});
     counts.push(made);
   }
   assert.deepEqual(counts,[1,2,4,8]);
@@ -100,8 +100,8 @@ test("Essaim P2P privé : consentement des deux onglets, calcul distribué, arr�
 });
 test("Essaim : validation des tâches uniquement numériques, aucune mémoire transmise",()=>{
   assert.ok(validateSwarmJob(makeJobs(1,5)[0]));
-  assert.equal(validateSwarmJob({id:1,seed:2,steps:3,conversation:"secret"}),true);
-  // Les champs supplémentaires ne sont jamais traités par le kernel.
+  assert.equal(validateSwarmJob({id:1,seed:2,steps:3,conversation:"secret"}),false);
+  // Aucun champ de conversation ou historique ne traverse la passerelle.
   assert.equal(validateSwarmJob({id:1,seed:2,steps:0}),false);
   assert.equal(validateSwarmJob({id:1,seed:2,steps:1000001}),false);
   assert.equal(validateSwarmJob({id:256,seed:2,steps:100}),false);
