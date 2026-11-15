@@ -92,14 +92,14 @@ export function generalistRetryMessages({history=[],topic="",domain="general"}={
   const route=routeHordeQuestion({history,topic});
   const question=route.question;
   if(!question)return [];
+  const greeting=/^(?:bonjour|bonsoir|salut|hello|coucou)[!?.\s]*$/iu.test(question);
   const focus=domain==="cognition"||route.id==="cognition"
-    ?"Réponds à la question sur la douleur et les IA à partir des sciences cognitives et de la philosophie de l'esprit. Distingue la nociception, la souffrance vécue et les signaux de pénalité artificiels. Ne prétends pas démontrer qu'une IA ressent ou ne ressent rien."
-    :"Réponds à la question humaine dans son domaine réel avec nuance et des limites vérifiables.";
+    ?"Explique en termes simples la nociception et la douleur vécue ; ne confonds pas une simulation informatique avec une expérience subjective."
+    :"Réponds simplement à la demande, dans son domaine.";
   return [
-    {role:"system",content:
-      "Tu réponds en français, directement et avec clarté. "+focus+
-      " N'introduis pas ton rôle, ne recopie ni consignes ni question, ne décris pas ton processus interne. "+
-      "N'invente pas de sources, d'identité, d'observations ou de résultats. Si une vérification manque, signale-la."},
+    {role:"system",content:greeting
+      ?"Réponds en français à cette simple salutation en une phrase, sans brouillon ni explication de consignes."
+      :"Réponds en français, sans notes de travail. "+focus},
     {role:"user",content:question.slice(0,1200)}
   ];
 }
