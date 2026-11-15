@@ -30,15 +30,15 @@ test("Pas de transfert de données antérieures sans autorisation",()=>{
   assert.doesNotMatch(privateCall,/Ne pas envoyer|ancien diagnostic/);
   const shared=JSON.stringify(buildHordeMessages({history:h,includeHistory:true}));
   assert.match(shared,/Ne pas envoyer/);
-  assert.match(shared,/Intervenant IA \\[Kimi\\]/);
+  assert.ok(shared.includes("Intervenant IA [Kimi]"));
 });
 test("Salon conservé : stockage et commandes non détruits",()=>{
   const source=readFileSync(new URL("../tchat-distant.mjs",import.meta.url),"utf8");
   const page=readFileSync(new URL("../tchat.html",import.meta.url),"utf8");
   assert.match(source,/const KEY = "radio-salon-distant-v1"/);
-  assert.match(source,/localStorage\\.setItem\\(KEY,JSON\\.stringify/);
-  assert.match(source,/function retryLastHuman\\(\\)/);
-  assert.match(source,/async function nextHordeTurn\\(\\)/);
+  assert.ok(source.includes("localStorage.setItem(KEY,JSON.stringify"));
+  assert.ok(source.includes("function retryLastHuman()"));
+  assert.ok(source.includes("async function nextHordeTurn()"));
   assert.doesNotMatch(source,/detectHordeMetaOutput|lastHordeBadAnswer|initScientificCoordinator/);
   for(const id of ["fil","moi","hordeModele","hordeActualiser","reessayerDernier"])
     assert.ok(page.includes('id="'+id+'"'));
