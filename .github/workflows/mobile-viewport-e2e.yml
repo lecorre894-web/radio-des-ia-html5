@@ -1,0 +1,24 @@
+name: Radio IA — stabilité des boutons sur Chromium Android
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/mobile-viewport-e2e.mjs'
+      - '.github/workflows/mobile-viewport-e2e.yml'
+permissions:
+  contents: read
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer le navigateur de test
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.1
+          npx playwright install chromium
+      - name: Vérifier la position des boutons sur Chromium tactile
+        run: node scripts/mobile-viewport-e2e.mjs
