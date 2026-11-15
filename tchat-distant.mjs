@@ -1106,8 +1106,47 @@ function exportConversation(){
   a.href=href;a.download="radio-des-ia-conversation.json";a.click();
   setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
+// Chrome Android peut déplacer la fenêtre quand un bouton reçoit/perd le focus
+// pendant qu'un panneau ou un message change de hauteur. Ancrer le bouton sous
+// le doigt, sans bloquer le clic, le clavier ni les liens de navigation voulus.
+function installButtonViewportGuard(){
+  if(typeof document.addEventListener!=="function" ||
+     typeof window.requestAnimationFrame!=="function")return;
+  let pointerPosition=null;
+  function measure(target){
+    const button=target?.closest?.("button");
+    if(!button || button.disabled || typeof button.getBoundingClientRect!=="function")
+      return null;
+    const box=button.getBoundingClientRect();
+    if(!Number.isFinite(box.top))return null;
+    return {button,top:box.top,at:Date.now()};
+  }
+  document.addEventListener("pointerdown",event=>{
+    pointerPosition=measure(event.target);
+  },{capture:true,passive:true});
+  document.addEventListener("click",event=>{
+    const now=measure(event.target);
+    if(!now)return;
+    const anchor=pointerPosition?.button===now.button &&
+      Date.now()-pointerPosition.at<1200 ? pointerPosition : now;
+    pointerPosition=null;
+    // Deux images seulement, donc aucun rattrapage retardé pendant les
+    // réponses réseau. Un geste de défilement ultérieur reste libre.
+    const correct=()=>{
+      if(!anchor.button.isConnected)return;
+      const difference=anchor.button.getBoundingClientRect().top-anchor.top;
+      if(Number.isFinite(difference) && Math.abs(difference)>1)
+        window.scrollBy(0,difference);
+    };
+    window.requestAnimationFrame(()=>{
+      correct();
+      window.requestAnimationFrame(correct);
+    });
+  },true);
+}
 function init(){
   restore();
+  installButtonViewportGuard();
   const selection=$("modeleRecherche");
   for(const model of RESEARCH_MODELS){
     const option=document.createElement("option");
