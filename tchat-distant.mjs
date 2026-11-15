@@ -346,8 +346,10 @@ function render(){
     if(!wanted.has(card))card.remove();
   }
   for(let i=0;i<views.length;i++){
-    if(host.children[i]!==views[i].card)
-      host.insertBefore(views[i].card,host.children[i]||null);
+    if(host.children[i]!==views[i].card){
+      if(typeof host.insertBefore==="function")host.insertBefore(views[i].card,host.children[i]||null);
+      else host.append(views[i].card); // Compatibilité des tests DOM simplifiés.
+    }
     if(messages[i]===state.current)state.activeCard=views[i].text;
   }
   $("compteur").textContent=state.tours+" tours";
