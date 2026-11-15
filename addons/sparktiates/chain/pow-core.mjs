@@ -40,6 +40,24 @@ export function validateBits(bits){
   requireValid(bits===POW_POLICY.bits,"difficulté non conforme à ce regtest fixe");
   return target;
 }
+export function powDifficultyReport(){
+  const target=validateBits(POW_POLICY.bits);
+  const range=(1n<<256n);
+  return {
+    chainId:POW_POLICY.chainId,
+    mode:"FIXED_DIFFICULTY_PRIVATE_REGTEST",
+    retargetEnabled:POW_POLICY.retarget,
+    targetBits:"0x"+POW_POLICY.bits.toString(16),
+    powLimitBits:"0x"+POW_POLICY.powLimit.toString(16),
+    targetHex:target.toString(16).padStart(64,"0"),
+    relativeDifficultyToLimit:(powLimit/target).toString(),
+    expectedHashesApprox:(range/(target+1n)).toString(),
+    expectedBlockIntervalSeconds:POW_POLICY.targetSeconds,
+    observedBlockIntervalSeconds:null,
+    physicalCpuGHz:null,
+    explanation:"Expected hashes are theoretical; the 30-second target is NOT enforced in this fixed regtest."
+  };
+}
 export function serializeHeader80(h){
   requireValid(h&&h.version===1&&HASH.test(h.previousHash)&&
     HASH.test(h.merkleRoot)&&goodInt(h.timestamp,0xffffffff)&&
