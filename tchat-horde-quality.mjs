@@ -53,12 +53,16 @@ export function routeHordeQuestion({history=[],topic="",fallbackRole="Analyse cr
 export function detectHordeMetaOutput(text){
   const value=String(text||"").trim();
   if(!value)return "Réponse vide";
-  const prefix=value.slice(0,2600);
-  if(/<think(?:ing)?>|<\/think(?:ing)?>/i.test(prefix))
+  // Analyze the entire bounded output, not just the first 2600 chars:
+  // Qwen/Gemma community backends sometimes emit several pages of preparation.
+  const sample=value.slice(0,16000);
+  if(/<\/?(?:think|thinking|analysis|reasoning)>/i.test(sample))
     return "Raisonnement de travail exposé dans la réponse";
-  // Specific signatures of an assistant echoing its system/user prompts or
-  // narrating its private task. Do not ban normal scientific terminology.
-  const patterns=[
+
+  // Explicit scaffolding signatures observed from actual Horde worker replies.
+  // Anchoring list headers prevents rejecting normal discussions ABOUT prompting.
+  const lines=/(?:^|\n)\s*(?:[*-]\s*)?(?:(?:user says|constraint|system prompt constraints|internal instructions|hidden instructions|my role is|the user greeted me|the user said|the user is asking|since there(?:'s| is) no (?:actual |specific )?question|i need to acknowledge|keep it extremely brief|respond in french|direct and clear language|no working notes|no fake sources|draft\s*[1-9]\b)\s*[:.(]|\*?draft\s*[1-9]\s*\()/im;
+  const signatures=[
     /\bthe user is asking (?:about|a|an|for|why|how|whether)\b/i,
     /\bmy (?:temporary methodological )?role is (?:astrophysics|geophysics|selenology|an astrophysicist)\b/i,
     /\bmy role is astrophysics\/geophysics\b/i,
@@ -66,16 +70,20 @@ export function detectHordeMetaOutput(text){
     /\bscientific rigor,\s*explicit hypotheses,\s*equations\b/i,
     /\bno fake sources,\s*no web consultation,\s*no identity theft\b/i,
     /\bI must answer while maintaining the rigor and methodology of my assigned role\b/i,
-    /(?:^|\n)\s*(?:system prompt|internal instructions|hidden instructions)\s*:/i,
+    /\bno copying\/translating the question\b/i,
+    /\bno describing role\/instructions\/preparation\b/i,
+    /\bno fake sources\/web searches\/doctorates\b/i,
+    /\bthe user hasn't actually asked a specific question\b/i,
+    /\bi need to acknowledge the greeting and signal readiness\b/i,
+    /\bsystem prompt constraints\s*:/i,
+    /\bI'?ve understood the constraint and am waiting for the query\b/i,
     /\bje dois (?:répondre|analyser) (?:en respectant|selon) (?:mon rôle|les instructions)\b/i,
     /\bmon rôle (?:temporaire|méthodologique) est (?:astrophysique|sélénologie)\b/i
   ];
-  if(patterns.some(pattern=>pattern.test(prefix)))
+  if(lines.test(sample)||signatures.some(p=>p.test(sample)))
     return "Le modèle a recopié ou commenté des consignes au lieu de répondre";
-  // Sometimes the service prints the entire user question and the methodology
-  // scaffolding, but does not match an exact signature above.
-  if(/^\s*["“][^"”]{12,350}["”]\s*\(\s*good evening/i.test(prefix) &&
-     /\b(?:astrophysics|scientific rigor|methodological role)\b/i.test(prefix))
+  if(/^\s*["“][^"”]{12,350}["”]\s*\(\s*good evening/i.test(sample) &&
+     /\b(?:astrophysics|scientific rigor|methodological role)\b/i.test(sample))
     return "Traduction et recopie du prompt au lieu d'une réponse";
   return "";
 }
