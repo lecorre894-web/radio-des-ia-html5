@@ -7,6 +7,7 @@
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import {createVrmStore} from "./vrm-store.mjs";
+import {buildVrmVirtualWorld} from "./vrm-reality-engine.mjs";
 
 const ALLOWED_ORIGINS = new Set([
   "https://lecorre894-web.github.io",
@@ -119,6 +120,17 @@ export function createRadioServer({token=process.env.SPARKTIATES_ACCESS_TOKEN,
       if(req.method==="GET" && path==="/v1/vrm/status"){
         const result=await vrmStore.status();
         send(res,200,{service:"SPARKTIATES VRM",...result},origin);
+        return;
+      }
+      if(req.method==="GET" && path==="/v1/vrm/world"){
+        const url=new URL(req.url||"/","http://127.0.0.1");
+        const topic=String(url.searchParams.get("topic")||"");
+        if(topic.length>120)throw httpError(400,"Filtre de sujet VRM trop long.");
+        const total=(await vrmStore.status()).events;
+        const offset=Math.max(0,total-200);
+        const page=await vrmStore.read({offset,limit:200});
+        const world=buildVrmVirtualWorld(page.events,{filterTopic:topic,maxEvents:200});
+        send(res,200,world,origin);
         return;
       }
       if(req.method==="GET" && path==="/v1/vrm/events"){
