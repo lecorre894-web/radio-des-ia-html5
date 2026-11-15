@@ -10,7 +10,7 @@ const {header,start,stride,attemptLimit,shared,workerIndex}=workerData;
 const data=new Int32Array(shared);
 const raw=serializeHeader80({...header,nonce:0});
 const target=validateBits(header.bits);
-let attempts=0;
+let attempts=0,reported=false;
 try{
   for(let nonce=start;nonce<=0xffffffff&&attempts<attemptLimit;nonce+=stride){
     if(Atomics.load(data,0)!==0)break;
@@ -21,10 +21,11 @@ try{
     if(BigInt("0x"+hash)<=target){
       const winner=Atomics.compareExchange(data,0,0,workerIndex+1)===0;
       parentPort.postMessage({found:winner,nonce,hash,workerIndex,attempts});
-      // The worker completes normally after posting its result.
+      reported=true;
+      break;
     }
   }
-  parentPort.postMessage({found:false,workerIndex,attempts});
+  if(!reported)parentPort.postMessage({found:false,workerIndex,attempts});
 }catch(e){
   parentPort.postMessage({error:String(e.message||e),workerIndex,attempts});
   process.exitCode=1;
