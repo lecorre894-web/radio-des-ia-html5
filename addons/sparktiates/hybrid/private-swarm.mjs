@@ -5,7 +5,7 @@
  */
 export const SWARM_NAME="sparktiates-hybrid-private-v1";
 export function validateSwarmJob(job){
-  return Boolean(job&&Number.isInteger(job.id)&&job.id>=0&&job.id<256&&
+  return Boolean(job&&Object.keys(job).length===3&&Object.keys(job).every(k=>["id","seed","steps"].includes(k))&&Number.isInteger(job.id)&&job.id>=0&&job.id<256&&
     Number.isSafeInteger(job.seed)&&job.seed>=0&&job.seed<=0xffffffff&&
     Number.isInteger(job.steps)&&job.steps>=1&&job.steps<=1_000_000);
 }
