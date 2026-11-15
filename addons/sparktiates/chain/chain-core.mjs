@@ -165,8 +165,8 @@ export function signTransaction(draft,keys){
   return {...signed,id:txId(signed)};
 }
 export function initialState(configGenesis){
-  if(configGenesis.hash!==genesis(configGenesis.validators).hash)
-    fail("genèse incompatible");
+  if(stable(configGenesis)!==stable(genesis(configGenesis.validators)))
+    fail("genèse incompatible ou paramètres monétaires modifiés");
   return {
     height:0,hash:configGenesis.hash,timestamp:0,
     supply:0,utxos:new Map(),chain:[configGenesis]
