@@ -54,6 +54,7 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 #moi::placeholder{color:#9daeb4;opacity:1}
 #moi:focus-visible{outline:2px solid #8dffad;outline-offset:2px}
 .composer-status{font-size:14px;color:#e6d6ad;background:#282d37;border-left:3px solid #d8b177;padding:10px;border-radius:7px;margin:9px 0;overflow-wrap:anywhere}
+#etat[hidden]{display:none!important} /* Les mises à jour du statut en haut ne poussent plus tout le tchat vers le bas */
 .composer-mode{font-size:14px;color:#b8dcca;line-height:1.5;margin:9px 0}
 .composer-actions{align-items:center;gap:8px}
 .composer-actions a{font-size:14px;padding:8px 2px}
@@ -127,7 +128,7 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row"><button id="quotaVoir" type="button">📉 Consulter l’usage Puter</button></div>
 <small id="quotaEtat" role="status">Consulter le quota ne lance aucune génération IA ; les réponses peuvent consommer des crédits.</small>
 <div id="diagnosticModeles" aria-live="polite"></div>
-<div id="etat" role="status"></div>
+<div id="etat" hidden aria-hidden="true"></div>
 <small>Les requêtes sont envoyées à Puter et à ses fournisseurs de modèles ; n'entre pas de données confidentielles. L'historique du Salon est enregistré dans ce navigateur seulement, hors des appels effectués aux modèles.</small>
 </section>
 <section class="card" id="modeRecherche" aria-label="Recherche scientifique avancée dans le Salon">
@@ -360,7 +361,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=2&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3&amp;reprise=20261115c"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=3&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3&amp;reprise=20261115d"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
