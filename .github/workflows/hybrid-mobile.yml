@@ -1,0 +1,28 @@
+name: SPARKTIATES HYBRID — calcul et VRM sur Chromium mobile
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'addons/sparktiates/hybrid/**'
+      - 'scripts/hybrid-mobile-e2e.mjs'
+      - 'tests/hybrid-sparktiates.test.mjs'
+      - '.github/workflows/hybrid-mobile.yml'
+permissions:
+  contents: read
+jobs:
+  hybrid-mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer Chromium
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.1
+          npx playwright install chromium
+      - name: Vérifier noyau déterministe et essaim
+        run: node --test tests/hybrid-sparktiates.test.mjs
+      - name: Test mobile du moteur, de la VRM et de deux nœuds
+        run: node scripts/hybrid-mobile-e2e.mjs
