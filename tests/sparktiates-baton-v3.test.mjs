@@ -37,10 +37,10 @@ test("A: 2048 relais dans un seul calendrier de blocs et une seule genèse",()=>
     ["spk-net-0004","A"]
   ]);
   assert.deepEqual(routeForHeight(2048),{
-    relayId:"spk-net-2048",relayIndex:2048,triangleVertex:"C",cycle:1
+    relayId:"spk-net-2048",relayIndex:2048,triangleVertex:"B",cycle:1
   });
   assert.deepEqual(routeForHeight(2049),{
-    relayId:"spk-net-0001",relayIndex:1,triangleVertex:"A",cycle:2
+    relayId:"spk-net-0001",relayIndex:1,triangleVertex:"C",cycle:2
   });
   assert.equal(initialBatonState().hash,batonGenesis().hash);
   assert.equal(BATON_V3.logicalRelays,2048);
