@@ -21,7 +21,7 @@ try{
     if(BigInt("0x"+hash)<=target){
       const winner=Atomics.compareExchange(data,0,0,workerIndex+1)===0;
       parentPort.postMessage({found:winner,nonce,hash,workerIndex,attempts});
-      process.exit(0);
+      // The worker completes normally after posting its result.
     }
   }
   parentPort.postMessage({found:false,workerIndex,attempts});
