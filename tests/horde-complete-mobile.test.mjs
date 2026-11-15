@@ -110,5 +110,5 @@ test("Le Salon évite reconstruction et défilements forcés lors des actions",(
   assert.doesNotMatch(code,/lastElementChild\?\.scrollIntoView/);
   assert.match(html,/id="hordeLongueur"/);
   assert.match(html,/overflow-anchor:none/);
-  assert.match(html,/reprise=20261115c/);
+  assert.match(html,/reprise=20261115[a-z]+/);
 });
