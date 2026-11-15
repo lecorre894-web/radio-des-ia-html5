@@ -61,7 +61,7 @@ test("Une réponse réelle utilise la clé anonyme documentée, le modèle séle
       const request=JSON.parse(options.body);
       assert.equal(request.model,"worker-model");
       assert.equal(request.stream,false);
-      assert.ok(request.max_tokens<=400);
+      assert.equal(request.max_tokens,2500);
       assert.equal(request.horde.include_reasoning,false);
       return mockResponse({model:"worker-model",choices:[{message:{content:"Réponse documentée"}}]});
     }});
