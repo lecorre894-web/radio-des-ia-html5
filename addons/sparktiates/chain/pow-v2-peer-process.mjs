@@ -3,7 +3,7 @@
  * Access only via local IPC. Secrets must never appear in stdout/stderr.
  */
 import {newIdentity,address} from "./chain-core.mjs";
-import {candidateV2} from "./pow-v2.mjs";
+import {candidateV2,balanceV2} from "./pow-v2.mjs";
 import {mineV2Sequential} from "./pow-v2-miner.mjs";
 import {createFullDuplexOverlay} from "./pow-overlay-duplex.mjs";
 
@@ -38,7 +38,9 @@ async function handle(message){
     }else if(type==="STATUS"){
       if(!overlay)throw Error("Nœud hors ligne");
       reply({height:overlay.state.height,hash:overlay.state.hash,
-        chainId:overlay.state.chainId,
+        chainId:overlay.state.chainId,networkId:overlay.networkId,
+        supply:overlay.state.supply,
+        owner,ownBalance:balanceV2(overlay.state,owner),
         work:overlay.state.cumulativeWork.toString(),
         stats:overlay.stats,peers:overlay.peers});
     }else if(type==="STOP"){
