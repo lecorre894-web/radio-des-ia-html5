@@ -5,7 +5,8 @@
 export const HORDE_BASE = "https://oai.aihorde.net/v1";
 export const HORDE_ANONYMOUS_KEY = "0000000000"; // Official public anonymous key, NOT a secret.
 const MAX_HISTORY_CHARS = 3000;
-const MAX_REPLY_TOKENS = 400;
+export const HORDE_MAX_REPLY_TOKENS = 2500;
+export const HORDE_DEFAULT_REPLY_TOKENS = 1800;
 
 export function normalizeHordeModels(payload) {
   const list = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
@@ -80,7 +81,7 @@ export async function listHordeModels({fetcher = fetch, signal} = {}) {
   return normalizeHordeModels(data);
 }
 
-export async function chatWithHorde({model, messages, maxTokens = MAX_REPLY_TOKENS, signal, fetcher = fetch} = {}) {
+export async function chatWithHorde({model, messages, maxTokens = HORDE_DEFAULT_REPLY_TOKENS, signal, fetcher = fetch} = {}) {
   if (typeof model !== "string" || !model.trim() || !Array.isArray(messages) || !messages.length)
     throw Error("Modèle et messages valides requis.");
   const response = await fetcher(HORDE_BASE + "/chat/completions", {
@@ -91,7 +92,7 @@ export async function chatWithHorde({model, messages, maxTokens = MAX_REPLY_TOKE
     },
     body:JSON.stringify({
       model, messages, stream:false,
-      max_tokens:Math.min(MAX_REPLY_TOKENS,Math.max(16,Number(maxTokens)||400)),
+      max_tokens:Math.min(HORDE_MAX_REPLY_TOKENS,Math.max(16,Number(maxTokens)||HORDE_DEFAULT_REPLY_TOKENS)),
       temperature:0.2,
       horde:{include_reasoning:false}
     })
@@ -100,5 +101,9 @@ export async function chatWithHorde({model, messages, maxTokens = MAX_REPLY_TOKE
   if (!response.ok) throw remoteError(result,response);
   const content = result?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) throw Error("AI Horde n'a renvoyé aucune réponse textuelle.");
-  return {text:content.trim(),model:String(result?.model || model)};
+  // finish_reason=length means the provider reached its per-request cap.
+  // The caller may request a continuation without discarding the first part.
+  const finishReason=result?.choices?.[0]?.finish_reason;
+  return {text:content.trim(),model:String(result?.model || model),
+    finishReason:typeof finishReason==="string"?finishReason:null};
 }
