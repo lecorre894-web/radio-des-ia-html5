@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - 'scripts/mobile-viewport-e2e.mjs'
+      - 'scripts/vrm-mobile-e2e.mjs'
+      - 'tchat-vrm.mjs'
+      - 'tchat-distant.mjs'
+      - 'tchat.html'
       - '.github/workflows/mobile-viewport-e2e.yml'
 permissions:
   contents: read
@@ -22,3 +26,5 @@ jobs:
           npx playwright install chromium
       - name: Vérifier la position des boutons sur Chromium tactile
         run: node scripts/mobile-viewport-e2e.mjs
+      - name: Vérifier la mémoire VRM sur Chromium tactile
+        run: node scripts/vrm-mobile-e2e.mjs
