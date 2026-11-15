@@ -3,9 +3,7 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
-import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=3";
-import {routeHordeQuestion,detectHordeMetaOutput,generalistRetryMessages} from "./tchat-horde-quality.mjs?v=2";
-import {addHordeAvailability,chooseResponsiveHorde,getHordeAvailability,modelSizeB,HORDE_WAIT_LIMIT_MS} from "./tchat-horde-availability.mjs?v=1";
+import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
@@ -18,7 +16,6 @@ let researchEngine=null;
 let researchLoading=false;
 let hordeModels=[];
 let hordeLoading=false;
-let hordeStatusVerified=false;
 let pollinationsModels=[];
 let pollinationsToken="";
 let pollinationsLoading=false;
@@ -151,16 +148,9 @@ function engineReadiness(){
   if(isResearchMode())return researchEngine
     ?{ready:true,label:"Recherche locale · "+researchEngine.modelId}
     :{ready:false,label:"Recherche locale",reason:"Charge d'abord le modèle WebGPU dans le panneau scientifique. Il faut assez de mémoire sur cet appareil."};
-  if(isHordeMode()){
-    const chosen=hordeModels.find(x=>x.id===state.hordeModel);
-    if(!chosen)return {ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire."};
-    if(chosen.workers===0)return {ready:false,label:"AI Horde · "+chosen.id,
-      reason:"Aucun travailleur actif annoncé pour ce modèle. Choisis un autre modèle."};
-    const size=modelSizeB(chosen.id);
-    return {ready:true,label:"AI Horde · "+chosen.id+
-      (size!==null&&size>64?" · modèle très lourd : attente potentiellement longue":"")+
-      " (sélectionné, disponibilité instantanée non garantie)"};
-  }
+  if(isHordeMode())return state.hordeModel && hordeModels.some(x=>x.id===state.hordeModel)
+    ?{ready:true,label:"AI Horde · "+state.hordeModel}
+    :{ready:false,label:"AI Horde",reason:"Clique sur « Actualiser les modèles disponibles » puis choisis un modèle communautaire. Il peut ne pas être disponible."};
   if(isPollinationsMode()){
     if(pollinationsLoading)return {ready:false,label:"Pollinations",reason:"Connexion ou catalogue en cours de chargement. Aucune génération payante en cours."};
     const token=pollinationsToken||getPollinationsStoredToken();
@@ -191,15 +181,9 @@ function lastPollinationsCreditRefusal(){
     String(last.nom||"").startsWith("Pollinations") &&
     (last.erreurCode==="POLLINATIONS_CREDITS" || isPollinationsCreditRefusal(last.texte));
 }
-function lastHordeBadAnswer(){
-  const last=state.messages.at(-1);
-  return last?.origin==="ai" && String(last.nom||"").startsWith("AI Horde ·") &&
-    Boolean(last.texte) && Boolean(detectHordeMetaOutput(last.texte));
-}
 function unansweredHuman(){
   return state.messages.length>0 &&
-    (state.messages.at(-1)?.origin==="human" || lastPollinationsCreditRefusal() ||
-      lastHordeBadAnswer());
+    (state.messages.at(-1)?.origin==="human" || lastPollinationsCreditRefusal());
 }
 function switchToHorde(){
   if(state.busy || state.auto)return;
@@ -232,10 +216,7 @@ function buttonStates(){
   const readiness=engineReadiness();
   const indicator=$("moteurComposer");
   if(indicator)indicator.textContent=readiness.ready
-    ?"Moteur sélectionné : "+readiness.label+
-      (isHordeMode()&&unansweredHuman()
-        ?" · Ton dernier message attend une réponse : utilise « Répondre à ma dernière question »."
-        :" · tu peux demander une réponse.")
+    ?"Moteur sélectionné : "+readiness.label+" · prêt à recevoir la demande."
     :"Moteur sélectionné : "+readiness.label+" · PAS ENCORE PRÊT. "+readiness.reason;
   const retry=$("reessayerDernier");
   if(retry)retry.disabled=state.busy || state.auto || !unansweredHuman();
@@ -259,14 +240,6 @@ function buttonStates(){
   }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
-  const canSelectHorde=Boolean(!state.busy && !state.auto && !hordeLoading &&
-    hordeModels.length && chooseResponsiveHorde(hordeModels));
-  $("hordeRapide").disabled=!canSelectHorde;
-  const quickComposer=$("hordeRapideComposer");
-  if(quickComposer){
-    quickComposer.hidden=!isHordeMode();
-    quickComposer.disabled=!canSelectHorde;
-  }
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
@@ -318,26 +291,10 @@ function makeMessage(m){
     ?"⚠ Erreur de crédits Pollinations · "+String(m.heure||"")+" · "+String(m.modele||"modèle non précisé")
     :String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
   const text=document.createElement("div");text.className="body";
-  // Historic malformed Horde outputs stay in localStorage (never deleted).
-  // Hide their content behind a user-operated disclosure instead of
-  // presenting internal drafts as scientific answers.
-  const hordeBad=m.origin==="ai" && String(m.nom||"").startsWith("AI Horde ·") &&
-    Boolean(m.texte) && Boolean(detectHordeMetaOutput(m.texte));
   text.textContent=creditError
     ?"Pollinations a refusé la génération : crédits Pollen insuffisants pour ce modèle. Ce bloc n'est PAS une réponse de l'IA. La dernière question humaine reste disponible ; choisis un autre moteur pour la reprendre."
-    :hordeBad
-      ?"⚠ Sortie de travail du modèle masquée : ce n'est pas une réponse. Utilise « Répondre à ma dernière question » pour reprendre avec un modèle adapté."
-      :(m.texte||"⏳ Réflexion en cours…");
+    :(m.texte||"⏳ Réflexion en cours…");
   card.append(meta,text);
-  if(hordeBad){
-    const details=document.createElement("details");
-    const summary=document.createElement("summary");
-    summary.textContent="Afficher le texte original (conservé dans l'historique)";
-    const raw=document.createElement("pre");
-    raw.textContent=String(m.texte||"");
-    details.append(summary,raw);
-    card.append(details);
-  }
   if(creditError && m.origin==="ai"){
     const details=document.createElement("details");
     const summary=document.createElement("summary");summary.textContent="Afficher le message technique original";
@@ -613,68 +570,36 @@ async function refreshHordeModels(){
   hordeStatus("Interrogation du catalogue des travailleurs AI Horde en ligne…");
   try{
     const available=await listHordeModels();
-    // Cette sonde ne transmet ni question ni historique. Son échec ne bloque pas le Salon.
-    let stats=[];
-    try {
-      const timeout=typeof AbortSignal.timeout==="function"?AbortSignal.timeout(4500):undefined;
-      stats=await getHordeAvailability({signal:timeout});
-    }catch{}
-    hordeStatusVerified=stats.length>0;
-    hordeModels=addHordeAvailability(available,stats);
+    hordeModels=available;
     const node=$("hordeModele");
     node.replaceChildren();
     const placeholder=document.createElement("option");
     placeholder.value="";placeholder.textContent="Choisissez un modèle réellement disponible";
     node.append(placeholder);
-    for(const item of hordeModels){
+    for(const item of available){
       const option=document.createElement("option");
       option.value=item.id;
-      option.textContent=item.id+
-        (item.workers!==null?" · "+item.workers+" travailleurs":" · travailleurs inconnus")+
-        (Number.isFinite(item.etaSeconds)?" · file indiquée ~"+Math.ceil(item.etaSeconds/60)+" min":"")+
+      option.textContent=item.id+(item.workers!==null?" · "+item.workers+" travailleurs":"")+
         (item.context!==null?" · contexte "+item.context:"");
       node.append(option);
     }
-    if(hordeModels.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
+    if(available.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
     else {
       node.value="";
       state.hordeModel="";
     }
     save();
     hordeStatus(available.length
-      ?available.length+" modèles annoncés en ligne. "+
-       (hordeStatusVerified?"Files estimatives reçues. ":"Statistiques de file indisponibles. ")+
-       "Le modèle choisi peut rester en attente ; un modèle 128B exige beaucoup de ressources. "+
-       "Utilise le bouton ⚡ pour sélectionner un modèle moins encombré, puis reprends ta dernière question."
-      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; les autres moteurs restent disponibles.");
+      ?available.length+" modèles communautaires annoncés en ligne. Choisis-en un. Leur qualité scientifique et disponibilité ne sont pas garanties."
+      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; Puter et le mode local restent disponibles.");
   }catch(e){
     hordeModels=[];
-    hordeStatusVerified=false;
     $("hordeModele").replaceChildren();
     const option=document.createElement("option");option.value="";option.textContent="Catalogue indisponible";$("hordeModele").append(option);
     state.hordeModel="";
     hordeStatus("Catalogue AI Horde indisponible : "+String(e?.message||e)+
       ". Si le navigateur bloque CORS, aucun appel de génération n'est lancé. Les autres moteurs sont préservés.");
   }finally{hordeLoading=false;buttonStates();}
-}
-function selectResponsiveHorde(){
-  if(state.busy || state.auto || hordeLoading)return;
-  const selected=chooseResponsiveHorde(hordeModels);
-  if(!selected){
-    hordeStatus("Aucun modèle de 7 à 32B avec travailleur actif connu : impossible de garantir un choix rapide. Actualise les modèles ou sélectionne manuellement.");
-    return;
-  }
-  state.hordeModel=selected.id;
-  $("hordeModele").value=selected.id;
-  save();buttonStates();
-  const eta=Number.isFinite(selected.etaSeconds)
-    ?" · file indicative ~"+Math.ceil(selected.etaSeconds/60)+" min"
-    :" · "+selected.workers+" travailleur(s), délai non vérifié";
-  const msg="Choix de disponibilité : "+selected.id+eta+
-    ". Modèle simplement sélectionné : aucun nouveau message envoyé. "+
-    "Utilise « Répondre à ma dernière question ».";
-  hordeStatus(msg);
-  status(msg);
 }
 async function nextHordeTurn(){
   if(state.busy)return;
@@ -687,83 +612,42 @@ async function nextHordeTurn(){
     state.auto=false;status("AI Horde ne reçoit pas les pièces jointes. Désactive l'inclusion des documents pour continuer.");buttonStates();return;
   }
   const shareHistory=Boolean($("hordePartagerContexte")?.checked);
-  const topic=$("sujet").value||state.sujet;
-  const route=routeHordeQuestion({history:state.messages,topic});
+  const role=RESEARCH_ROLES[state.hordeIndex%RESEARCH_ROLES.length];
   const prompt=buildHordeMessages({
-    history:state.messages,topic,role:route.role,includeHistory:shareHistory
+    history:state.messages,topic:$("sujet").value||state.sujet,
+    role:role.nom+" — "+role.specialite,includeHistory:shareHistory
   });
-  const current={origin:"ai",nom:"AI Horde · "+route.label,modele:model,
+  const current={origin:"ai",nom:"AI Horde · "+role.nom,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);
   state.current=current;
   state.busy=true;
   state.controller=new AbortController();
   render();buttonStates();
-  let elapsedSeconds=0;
-  let timedOut=false;
-  const start=Date.now();
-  status("AI Horde · "+model+" : requête envoyée, en file ou génération. "+
-    "Arrêt automatique dans 180 s si aucune réponse ; tu peux choisir un autre modèle.");
-  const progressTimer=setInterval(()=>{
-    elapsedSeconds=Math.floor((Date.now()-start)/1000);
-    if(state.busy&&isHordeMode())
-      status("AI Horde · "+model+" : "+elapsedSeconds+
-        " s écoulées. La file communautaire peut être longue ; Arrêter reste disponible.");
-  },10000);
-  const deadline=setTimeout(()=>{
-    timedOut=true;
-    state.controller?.abort();
-  },HORDE_WAIT_LIMIT_MS);
+  status("AI Horde · "+model+" : attente d'un travailleur bénévole. Tu peux arrêter.");
   try{
     const answer=await chatWithHorde({
       model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
       signal:state.controller.signal
     });
-    let normalized=cleanAnswer(answer.text,state.participants);
-    let metaIssue=detectHordeMetaOutput(normalized);
-    let actualModel=answer.model;
-    if(metaIssue){
-      // ONE bounded retry, only for an exposed meta-prompt/non-answer.
-      // The same real model is asked with a smaller generalist instruction.
-      // Never retry automatically after an API error or network timeout.
-      status("AI Horde : réponse interne ou hors sujet détectée ("+metaIssue+
-        "). Une seule reformulation généraliste est tentée, sans toucher à ton message.");
-      const retryMessages=generalistRetryMessages({
-        history:state.messages.filter(m=>m!==current),topic,domain:route.id
-      });
-      if(!retryMessages.length)throw Error("Réponse non pertinente, question introuvable.");
-      const retry=await chatWithHorde({
-        model,messages:retryMessages,maxTokens:boundedTokens($("longueur").value),
-        signal:state.controller.signal
-      });
-      normalized=cleanAnswer(retry.text,state.participants);
-      actualModel=retry.model;
-      metaIssue=detectHordeMetaOutput(normalized);
-      if(metaIssue)throw Error("Deux réponses méta ou hors sujet ont été rejetées. "+
-        "Essaie un autre modèle AI Horde, sans ressaisir ta question.");
-    }
+    const normalized=cleanAnswer(answer.text,state.participants);
     const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
     if(issue)throw Error("Réponse rejetée : "+issue);
     current.texte=normalized;
-    current.modele=actualModel;
+    current.modele=answer.model;
     state.hordeIndex++;
     state.tours++;
-    status("AI Horde : réponse de "+actualModel+
-      " acceptée pour le domaine « "+route.label+" ». Tour n°"+
-      state.tours+". Aucun crédit Puter utilisé.");
+    status("AI Horde : réponse réelle de "+answer.model+
+      " enregistrée. Tour n°"+state.tours+". Aucun crédit Puter utilisé.");
     speech(current.nom,current.texte);
   }catch(e){
     state.messages=state.messages.filter(m=>m!==current);
     state.auto=false;
-    const reason=timedOut
-      ?"attente de 180 s dépassée. Ce modèle n'a pas répondu à temps ; choisis un modèle moins encombré puis relance ta dernière question"
-      :e?.name==="AbortError"
-        ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
-        :String(e?.message||e);
+    const reason=e?.name==="AbortError"
+      ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
+      :String(e?.message||e);
     status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
   }finally{
-    clearInterval(progressTimer);
-    clearTimeout(deadline);
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;
     render();buttonStates();
   }
@@ -1176,20 +1060,13 @@ function init(){
   });
   $("hordePartagerContexte").checked=false; // Consentement à renouveler pour chaque ouverture.
   $("hordeActualiser").addEventListener("click",()=>void refreshHordeModels());
-  $("hordeRapide").addEventListener("click",selectResponsiveHorde);
-  $("hordeRapideComposer").addEventListener("click",selectResponsiveHorde);
   $("hordeModele").addEventListener("change",()=>{
     const selected=$("hordeModele").value;
     state.hordeModel=hordeModels.some(m=>m.id===selected)?selected:"";
     save();
     hordeStatus(state.hordeModel
-      ?"Modèle choisi : "+state.hordeModel+
-        (modelSizeB(state.hordeModel)>64
-          ?" (très lourd : disponibilité incertaine et attente potentiellement longue)."
-          :" (disponibilité instantanée non garantie).")+
-        " Les requêtes sont envoyées seulement quand tu demandes une réponse."
+      ?"Modèle choisi : "+state.hordeModel+". Les requêtes sont envoyées seulement quand tu demandes une réponse."
       :"Sélectionne un modèle annoncé par AI Horde.");
-    buttonStates();
   });
   $("hordePartagerContexte").addEventListener("change",()=>{
     hordeStatus($("hordePartagerContexte").checked
@@ -1224,10 +1101,7 @@ function init(){
   $("dechargerRecherche").addEventListener("click",()=>void unloadResearch());
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
-  if(isHordeMode()){
-    hordeStatus("Mode AI Horde : récupération du catalogue public, sans envoyer tes conversations.");
-    void refreshHordeModels();
-  }
+  if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
   if(isSparktiatesMode())sparktiatesStatus("Mode SPARKTIATES sélectionné, serveur non encore vérifié : renseigne l'adresse et le jeton.");
   if(isPollinationsMode())pollinationsStatus(pollinationsToken
     ?"Session Pollinations disponible : actualise les modèles et choisis-en un."

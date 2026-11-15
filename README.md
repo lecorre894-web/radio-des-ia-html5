@@ -83,55 +83,6 @@ Le bouton **🎭 Émojis · Émoticônes · GIF** ouvre un panneau facultatif, s
 
 Ces modules sont optionnels. Les tests statiques sont intégrés à `npm test` et `npm run check`. Une validation manuelle reste nécessaire pour chaque navigateur, convertisseur, modèle d'image et cas d'imagerie spécialisé.
 
-## 🌊 Validation observationnelle SPARKTIATES — NOAA CO-OPS
-
-**Mesures réelles, non simulées :** le 14 novembre 2026, le script [scripts/noaa-live-check.mjs](scripts/noaa-live-check.mjs) a récupéré auprès de l'API officielle NOAA CO-OPS les hauteurs d'eau horaires vérifiées (`hourly_height`) et les prédictions harmoniques (`predictions&interval=h`) sur **deux stations et deux semaines**. Les quatre comparaisons ont réussi : [rapport d'exécution GitHub Actions](https://github.com/lecorre894-web/radio-des-ia-html5/actions/runs/43628535631), avec des URL source et valeurs reproductibles dans [l'archive JSON](research/noaa-observations-2026-11-14-replicated.json).
-
-| Station | Période | Paires mesurées/prédites | Biais obs−pred | MAE | RMSE | r |
-|---|---|---:|---:|---:|---:|---:|
-| San Francisco (9414290) | 14–20 avril 2025 | 168/168 | +9,959 cm | 9,959 cm | 10,472 cm | 0,99788 |
-| New York, The Battery (8518750) | 14–20 avril 2025 | 168/168 | +5,499 cm | 11,261 cm | 14,125 cm | 0,95484 |
-| San Francisco | 15–21 septembre 2025 | 168/168 | +8,355 cm | 8,377 cm | 9,111 cm | 0,99781 |
-| New York, The Battery | 15–21 septembre 2025 | 168/168 | +19,674 cm | 19,674 cm | 20,733 cm | 0,99097 |
-
-**Total : 672 paires exactement alignées**, format GMT, altitude en mètres, même datum vertical **MLLW**, sans interpolation. L'interface Radio propose de relancer explicitement chaque comparaison depuis **SPARKTIATES → Contrôle par de vraies observations NOAA**, de consulter les URL d'origine et de copier le rapport. La connexion ne requiert ni jeton personnel, ni crédits AI Horde/Pollinations/Puter. Si le navigateur bloque le réseau ou les requêtes croisées, aucun chiffre n'est inventé ; les résultats historiques du test GitHub restent disponibles dans une section clairement datée.
-
-Protocole :
-- **MESURÉ** : `hourly_height`, produit NOAA dont les données horaires sont vérifiées.
-- **RECONSTRUIT** : `predictions` NOAA, modèle harmonique, non une mesure supplémentaire.
-- **COMPARAISON** : résidu observation moins prédiction, biais, MAE, RMSE, corrélation Pearson et Nash–Sutcliffe NSE.
-- **INCONNU** : causes physiques de chaque résidu si météorologie, calibration, bathymétrie, incertitudes instrumentales et ajustement harmonique ne sont pas évalués indépendamment.
-- **NON DÉMONTRÉ** : validation expérimentale directe de la loi de gravitation lunaire, audit de reproductibilité interinstitutionnel et qualification doctorale d'un modèle de langage.
-
-La validation est une **vérification observationnelle de prédictions de marée** et ne remplace ni une expertise océanographique indépendante, ni un test à l'aveugle sur des données externes inédites. Les modèles harmoniques NOAA peuvent provenir d'observations antérieures de stations ; la séparation des deux produits et des horodatages ne prouve pas une indépendance institutionnelle ou une prédiction réellement hors échantillon. Voir [documentation de l'API CO-OPS](https://api.tidesandcurrents.noaa.gov/api/dev/).
-
-## 🔬 Coordinateur scientifique SPARKTIATES — analyse quantifiée V1
-
-Dans **le Salon Radio des IA existant**, ouvre le panneau **« 🔬 SPARKTIATES — coordonner, comparer et auditer les calculs scientifiques »**. Aucun des cinq moteurs n'est remplacé et les conversations ne sont pas modifiées par l'audit.
-
-Le banc d'essai scientifique initial est l'**accélération différentielle de marée lunaire**, calculée avec deux expressions indépendantes du texte généré par une IA :
-
-- premier ordre : \`a ≈ 2 G M_L R_T / d³\` ;
-- calcul non linéarisé le long de l'axe proche de la Lune : \`a = G M_L [1/(d−R_T)² − 1/d²]\`.
-
-Avec les constantes de référence documentées, le premier calcul produit environ **1,10022 × 10⁻⁶ m/s²**, contre **1,12819 × 10⁻⁶ m/s²** pour le second (écart ≈ **2,54 %**). Il s'agit d'une **reconstruction analytique**, et non d'une mesure océanographique. Le calcul ne permet pas, à lui seul, de prévoir la hauteur d'eau d'un port ou de démontrer la théorie complète des marées.
-
-**Sources des constantes :** [NASA — Moon by the numbers](https://science.nasa.gov/moon/by-the-numbers/), [DLR — The Moon](https://www.dlr.de/en/research-and-transfer/featured-topics/mission-moon/the-moon), [NIST — constante gravitationnelle](https://physics.nist.gov/cgi-bin/cuu/Value?bg).
-
-### Utilisation
-
-1. Sélectionner **Marées lunaires** ou **Question scientifique libre**. Seul le premier protocole dispose d'un oracle quantitatif.
-2. Cocher volontairement **AI Horde**, qui utilise le modèle effectivement sélectionné dans son catalogue. Le texte est transmis à des bénévoles ; les anciens messages du Salon ne sont **jamais** transmis par l'audit.
-3. Cocher facultativement **SPARKTIATES / Ollama** seulement si un vrai serveur personnel, un jeton et un modèle ont été vérifiés. Aucune installation n'est effectuée sur les ordinateurs AI Horde.
-4. Lancer l'audit. Les deux demandes, si disponibles, sont envoyées simultanément, une seule fois chacune. L'annulation est proposée. Aucun appel Pollinations/Puter, ni relance automatique.
-5. Lire le rapport et le copier. Il distingue **RECONSTRUIT** (oracle calculé), **CANDIDAT** (texte IA), **COMPATIBLE_NUMERIQUEMENT**, **ECART_NUMERIQUE** et **INCONNU**.
-
-Le rapport mentionne les modèles réellement servis, le temps de réponse, la valeur numérique **explicitement étiquetée** par chaque modèle et un éventuel désaccord. La comparaison d'une valeur avec un oracle ne certifie pas l'ensemble des affirmations du modèle ; même deux moteurs différents ne constituent **pas une validation scientifique indépendante**. Une question libre n'obtient aucune fausse note de précision numérique.
-
-**Statut des validations :** tests mathématiques de référence et essais automatisés d'intégration avec **deux fournisseurs simulés** ; les modèles d'AI Horde et le GPU Ollama réel ne sont pas exécutés dans les tests GitHub. Aucune qualification « niveau doctorat » n'est attribuée automatiquement. Pour une revue de recherche, il faudra ajouter des jeux de données instrumentaux, des procédures statistiques, des sources primaires et un audit externe.
-
-**Code :** [science-coordinator.mjs](science-coordinator.mjs), [science-panel.mjs](science-panel.mjs), [tests/science-coordinator.test.mjs](tests/science-coordinator.test.mjs), [tests/science-panel-flow.test.mjs](tests/science-panel-flow.test.mjs).
-
 ## 🖥️ SPARKTIATES avec tours sans plafond logiciel (moteur Ollama personnel)
 
 La Radio des IA propose maintenant **cinq moteurs indépendants** dans le Salon `tchat.html` : Puter, AI Horde, Pollinations, recherche WebGPU locale et **SPARKTIATES / Ollama**. Ce dernier relie le même tchat, la mémoire, les intervenants et les commandes de débat à un vrai modèle Ollama hébergé sur le PC de l'utilisateur. Uniquement lorsque ce moteur a été sélectionné, les tours automatiques ne sont pas limités en nombre par le logiciel et ne sollicitent ni Puter ni Pollinations.
@@ -140,9 +91,7 @@ Ce choix **ne supprime pas les quotas de Pollinations** : ce sont deux moteurs d
 
 Le serveur SPARKTIATES expose `/health`, `/v1/models` et `/v1/chat/completions`, accepte uniquement un jeton secret aléatoire privé, limite la taille de chaque requête et n'exécute aucune commande téléchargée ou distante. Les modèles affichés viennent directement des modèles Ollama **effectivement installés**. La Radio ne stocke pas l'URL ni le jeton d'accès dans `localStorage` ; le partage du contexte récent est facultatif et désactivé au départ. Un seul modèle produit les quatre rôles méthodologiques, sans faire croire à quatre IA indépendantes ni promettre un niveau doctoral.
 
-**Instructions complètes et lanceurs WSL** : [addons/sparktiates/README.md](addons/sparktiates/README.md).
-
-**Collaboration scientifique distribuée et workers AI Horde volontaires** : [SCIENTIFIC_HORDE_COLLABORATION.md](addons/sparktiates/SCIENTIFIC_HORDE_COLLABORATION.md). Cette architecture est documentée ; aucun code n'est déployé sur les machines d'autres opérateurs et aucune puissance supplémentaire n'est réservée. Les tests de la passerelle utilisent un backend Ollama simulé pour valider la compatibilité, l'authentification et cinq tours répétés ; ils ne signifient pas qu'un modèle Ollama tourne déjà sur le serveur réel.
+**Instructions complètes et lanceurs WSL** : [addons/sparktiates/README.md](addons/sparktiates/README.md). Les tests de la passerelle utilisent un backend Ollama simulé pour valider la compatibilité, l'authentification et cinq tours répétés ; ils ne signifient pas qu'un modèle Ollama tourne déjà sur le serveur réel.
 
 ## 🌼 Pollinations intégré à la Radio des IA (OAuth sécurisé)
 

@@ -147,8 +147,7 @@ details.card[open]>summary{margin-bottom:14px}
 <div id="hordeControls" class="card" hidden aria-label="Options du réseau AI Horde">
 <h3 style="font-size:16px;margin:2px 0 7px">🌐 AI Horde — modèle réel du réseau communautaire</h3>
 <p>Les modèles sont servis sur des ordinateurs bénévoles, avec délais et disponibilité variables. Ni identité de Claude/Perplexity/Kimi ni niveau doctoral ne sont garantis. Le réseau ne nécessite pas d'abonnement et ne consomme aucun crédit Puter.</p>
-<div class="row"><button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button><button type="button" id="hordeRapide" disabled>⚡ Choisir un modèle moins encombré</button></div>
-<small>Le bouton rapide privilégie, lorsqu'ils sont disponibles, les modèles de 7 à 32 milliards de paramètres avec travailleurs actifs. C'est une estimation, pas une garantie de rapidité ni de niveau doctoral.</small>
+<div class="row"><button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button></div>
 <label for="hordeModele"><strong>Choisir un modèle effectivement annoncé en ligne</strong></label>
 <select id="hordeModele" style="width:100%;max-width:100%" aria-label="Modèle communautaire AI Horde">
 <option value="">Clique sur « Actualiser les modèles »</option>
@@ -156,7 +155,7 @@ details.card[open]>summary{margin-bottom:14px}
 <label class="pieceOption"><input id="hordePartagerContexte" type="checkbox">
 <span><strong>Autoriser l'envoi d'extraits récents du Salon à AI Horde</strong> (jusqu'à 8 messages, taille limitée) pour poursuivre une discussion ou un débat. Désactivé par défaut à chaque ouverture de la page.</span></label>
 <p class="notice">Attention : ton message actuel est envoyé aux travailleurs communautaires lorsque tu demandes une réponse. Si la case ci-dessus est cochée, des extraits des échanges précédents sont également transmis. Ne transmets pas de documents médicaux, de secrets ni d'informations personnelles. Les fichiers joints ne sont jamais transmis par ce moteur.</p>
-<small id="hordeEtat" role="status">AI Horde sélectionné : un modèle affiché ne garantit pas qu’un travailleur puisse répondre immédiatement. Actualise le catalogue, puis choisis un modèle. Aucun envoi automatique.</small>
+<small id="hordeEtat" role="status">AI Horde sélectionné : actualise son catalogue pour choisir un modèle réellement disponible. Aucun envoi tant que tu ne demandes pas de réponse.</small>
 </div>
 <div id="pollinationsControls" class="card" hidden aria-label="Options du moteur Pollinations">
 <h3 style="font-size:16px;margin:2px 0 7px">🌼 Pollinations — modèles scientifiques et raisonnement avancé</h3>
@@ -241,7 +240,6 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row composer-actions">
 <button class="primary" type="button" id="parler" aria-label="Envoyer le message rédigé">📨 Envoyer le message</button>
 <button type="button" id="reessayerDernier">↻ Répondre à ma dernière question</button>
-<button type="button" id="hordeRapideComposer" hidden disabled>⚡ Choisir un autre modèle AI Horde disponible</button>
 <button type="button" id="passerHorde" hidden>🌐 Essayer AI Horde sans crédits Pollen</button>
 <a href="#modeRecherche">⚙️ Configurer le moteur IA</a>
 </div>
@@ -355,7 +353,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=7&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=5&amp;stable=20261115b"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=2&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
