@@ -705,7 +705,7 @@ async function nextHordeTurn(){
     role:role.nom+" — "+role.specialite,includeHistory:shareHistory
   });
   const lastQuestion=[...state.messages].reverse().find(m=>m.origin==="human")?.texte||"";
-  const vrmContext=vrmController?.context(lastQuestion)||"";
+  const vrmContext=typeof vrmController==="undefined"?"":vrmController?.context(lastQuestion)||"";
   if(vrmContext)prompt[0].content+="\n"+vrmContext;
   const current={origin:"ai",nom:"AI Horde · "+role.nom,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
@@ -1003,7 +1003,7 @@ async function nextSparktiatesTurn(){
     shareHistory:Boolean($("sparktiatesPartagerContexte").checked)
   });
   const humanQuestion=[...state.messages].reverse().find(m=>m.origin==="human")?.texte||"";
-  const vrmContext=vrmController?.context(humanQuestion)||"";
+  const vrmContext=typeof vrmController==="undefined"?"":vrmController?.context(humanQuestion)||"";
   if(vrmContext)messages[0].content+="\n"+vrmContext;
   const current={origin:"ai",nom:"SPARKTIATES · "+role.nom,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
