@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {tmpdir} from "node:os";
 import {mkdtemp,readFile,rm} from "node:fs/promises";
 import {join} from "node:path";
-import {vrmEventFromMessage,buildVrmContext,VRM_CHOICE} from "../tchat-vrm.mjs";
+import {vrmEventFromMessage,vrmEventsFromMessage,buildVrmContext,VRM_CHOICE} from "../tchat-vrm.mjs";
 import {createVrmStore,normalizeVrmEvent} from "../addons/sparktiates/vrm-store.mjs";
 import {createRadioServer} from "../addons/sparktiates/radio-server.mjs";
 
@@ -33,6 +33,15 @@ test("VRM conserve les équations exactes, les auteurs et les preuves non certif
   assert.equal(event1.text,old.texte);
   assert.equal(vrmEventFromMessage(old,{topic:"autre",at:"2027-01-01T00:00:00Z"}).id,event1.id);
   assert.equal(vrmEventFromMessage({origin:"ai",texte:"",heure:"10:00"}),null);
+});
+test("Une longue démonstration est enregistrée en plusieurs fragments sans perte",()=>{
+  const source="Potentiel : Phi=-GM_Lr²/(2d³). Accélération : 2GM_LR_T/d³. ".repeat(510);
+  const original={origin:"ai",nom:"Méthodes",heure:"09:15:02",texte:source};
+  const items=vrmEventsFromMessage(original,{topic:"Marées",at:"2026-11-15T09:15:00Z"});
+  assert.ok(items.length>=3);
+  assert.equal(items.map(x=>x.text).join(""),source);
+  assert.equal(new Set(items.map(x=>x.id)).size,items.length);
+  assert.ok(items.every(x=>x.text.length<=10000));
 });
 test("La VRM restaure la discussion sur les marées sans déclarer les propos IA vrais",()=>{
   const context=buildVrmContext([event1,event3,event2],{question:question.texte,maxChars:3200});
