@@ -97,7 +97,7 @@ export function validatorList(validators){
     ids.add(v.id);pubs.add(v.publicKey);
     return {id:v.id,publicKey:v.publicKey};
   });
-  result.sort((a,b)=>a.id.localeCompare(b.id,"en"));
+  result.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
   return result;
 }
 export function genesis(validators){
@@ -105,7 +105,8 @@ export function genesis(validators){
   const body={
     version:POLICY.version,chainId:POLICY.chainId,height:0,
     previousHash:"0".repeat(64),timestamp:0,validators:list,
-    distribution:[],supply:0,tag:"PRIVATE EXPERIMENT — ZERO VALUE"
+    policy:POLICY,distribution:[],supply:0,
+    tag:"PRIVATE EXPERIMENT — ZERO VALUE"
   };
   return {...body,hash:digest("SPK/genesis/v1",body)};
 }
@@ -117,7 +118,7 @@ export function blockReward(height){
 }
 export const mintTxid=height=>digest("SPK/mint-reference/v1",{chainId:POLICY.chainId,height});
 export function utxoRoot(map){
-  const ordered=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([ref,u])=>({
+  const ordered=[...map.entries()].sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(([ref,u])=>({
     ref,to:u.to,amount:u.amount
   }));
   return digest("SPK/utxo-state/v1",ordered);
@@ -260,12 +261,17 @@ export function transition(state,body,validators,{draft=false}={}){
   if(coinbaseAmount>0)
     utxos.set(mintTxid(body.height)+":0",{to:body.coinbase.to,amount:coinbaseAmount});
   const root=utxoRoot(utxos);
+  const supplyAfter=safeAdd(state.supply,reward);
+  let sumUTXO=0;
+  for(const value of utxos.values())sumUTXO=safeAdd(sumUTXO,value.amount);
+  if(sumUTXO!==supplyAfter)
+    fail("invariant comptable violé : somme UTXO ≠ émission totale");
   if(!draft&&body.stateRoot!==root)fail("racine d'état UTXO incorrecte");
   const next={
     height:body.height,
     hash:digest("SPK/block/v1",body),
     timestamp:body.timestamp,
-    supply:safeAdd(state.supply,reward),
+    supply:supplyAfter,
     utxos,
     chain:state.chain
   };
