@@ -191,9 +191,15 @@ function lastPollinationsCreditRefusal(){
     String(last.nom||"").startsWith("Pollinations") &&
     (last.erreurCode==="POLLINATIONS_CREDITS" || isPollinationsCreditRefusal(last.texte));
 }
+function lastHordeBadAnswer(){
+  const last=state.messages.at(-1);
+  return last?.origin==="ai" && String(last.nom||"").startsWith("AI Horde ·") &&
+    Boolean(last.texte) && Boolean(detectHordeMetaOutput(last.texte));
+}
 function unansweredHuman(){
   return state.messages.length>0 &&
-    (state.messages.at(-1)?.origin==="human" || lastPollinationsCreditRefusal());
+    (state.messages.at(-1)?.origin==="human" || lastPollinationsCreditRefusal() ||
+      lastHordeBadAnswer());
 }
 function switchToHorde(){
   if(state.busy || state.auto)return;
@@ -312,10 +318,26 @@ function makeMessage(m){
     ?"⚠ Erreur de crédits Pollinations · "+String(m.heure||"")+" · "+String(m.modele||"modèle non précisé")
     :String(m.nom||"Participant")+" · "+String(m.heure||"")+(m.modele?" · "+m.modele:"");
   const text=document.createElement("div");text.className="body";
+  // Historic malformed Horde outputs stay in localStorage (never deleted).
+  // Hide their content behind a user-operated disclosure instead of
+  // presenting internal drafts as scientific answers.
+  const hordeBad=m.origin==="ai" && String(m.nom||"").startsWith("AI Horde ·") &&
+    Boolean(m.texte) && Boolean(detectHordeMetaOutput(m.texte));
   text.textContent=creditError
     ?"Pollinations a refusé la génération : crédits Pollen insuffisants pour ce modèle. Ce bloc n'est PAS une réponse de l'IA. La dernière question humaine reste disponible ; choisis un autre moteur pour la reprendre."
-    :(m.texte||"⏳ Réflexion en cours…");
+    :hordeBad
+      ?"⚠ Sortie de travail du modèle masquée : ce n'est pas une réponse. Utilise « Répondre à ma dernière question » pour reprendre avec un modèle adapté."
+      :(m.texte||"⏳ Réflexion en cours…");
   card.append(meta,text);
+  if(hordeBad){
+    const details=document.createElement("details");
+    const summary=document.createElement("summary");
+    summary.textContent="Afficher le texte original (conservé dans l'historique)";
+    const raw=document.createElement("pre");
+    raw.textContent=String(m.texte||"");
+    details.append(summary,raw);
+    card.append(details);
+  }
   if(creditError && m.origin==="ai"){
     const details=document.createElement("details");
     const summary=document.createElement("summary");summary.textContent="Afficher le message technique original";
