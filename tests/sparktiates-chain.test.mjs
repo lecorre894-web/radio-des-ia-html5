@@ -41,6 +41,10 @@ test("Genèse reproductible et indépendante du réseau Bitcoin",()=>{
   assert.match(firstGenesis.hash,/^[0-9a-f]{64}$/);
   assert.equal(genesis([...validators].reverse()).hash,firstGenesis.hash);
   assert.equal(initialState(firstGenesis).supply,0);
+  assert.deepEqual(firstGenesis.policy,POLICY);
+  assert.throws(()=>initialState({...firstGenesis,
+    policy:{...firstGenesis.policy,firstReward:10_000_000_000}
+  }),/genèse incompatible/);
   assert.equal(firstGenesis.chainId,"sparktiates-regtest-v1");
   const alternative=validators.map(v=>({...v,publicKey:newIdentity().publicKey}));
   assert.notEqual(genesis(alternative).hash,firstGenesis.hash);
