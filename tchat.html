@@ -66,7 +66,7 @@ input[type=number]{width:85px}input[type=checkbox]{width:auto}textarea{resize:ve
 .msg{border-left:4px solid var(--green);padding:14px;background:var(--card);border-radius:8px;margin:12px 0;overflow-wrap:anywhere}
 .msg.human{border-color:var(--orange)}.msg .meta{font-size:13px;color:var(--muted);margin-bottom:8px}
 .msg .body{white-space:pre-wrap;line-height:1.65}
-#etat{color:#f3cb86;min-height:28px}#fil{min-height:75px}.pill{border:1px solid #52647b;border-radius:30px;padding:7px 12px;font-size:13px}
+#etat{color:#f3cb86;min-height:28px}#fil{min-height:75px;overflow-anchor:none}.pill{border:1px solid #52647b;border-radius:30px;padding:7px 12px;font-size:13px}
 .notice{padding:12px;border-left:3px solid var(--orange);background:#292822;border-radius:7px}
 footer{padding:30px 0;font-size:13px;color:var(--muted)}
 @media(max-width:720px){.part{grid-template-columns:1fr 1fr}.part textarea{grid-column:1/-1}.part button{width:fit-content}main{padding:10px}.card{padding:13px}}
@@ -148,6 +148,13 @@ details.card[open]>summary{margin-bottom:14px}
 <h3 style="font-size:16px;margin:2px 0 7px">🌐 AI Horde — modèle réel du réseau communautaire</h3>
 <p>Les modèles sont servis sur des ordinateurs bénévoles, avec délais et disponibilité variables. Ni identité de Claude/Perplexity/Kimi ni niveau doctoral ne sont garantis. Le réseau ne nécessite pas d'abonnement et ne consomme aucun crédit Puter.</p>
 <div class="row"><button type="button" id="hordeActualiser">🔎 Actualiser les modèles disponibles</button></div>
+<div class="row"><label for="hordeLongueur">Longueur AI Horde</label>
+<select id="hordeLongueur" aria-label="Longueur maximale par segment de réponse AI Horde">
+<option value="900">Courte · 900 tokens</option>
+<option value="1800" selected>Complète · 1 800 tokens</option>
+<option value="2500">Très longue · 2 500 tokens</option>
+</select></div>
+<small>AI Horde peut poursuivre automatiquement dans la même réponse lorsque le modèle signale une limite de longueur (jusqu'à 3 segments). Aucun crédit Puter n'est utilisé, mais la file d'attente et les limites du fournisseur restent applicables.</small>
 <label for="hordeModele"><strong>Choisir un modèle effectivement annoncé en ligne</strong></label>
 <select id="hordeModele" style="width:100%;max-width:100%" aria-label="Modèle communautaire AI Horde">
 <option value="">Clique sur « Actualiser les modèles »</option>
@@ -245,10 +252,10 @@ details.card[open]>summary{margin-bottom:14px}
 </div>
 <div id="etatComposer" class="composer-status" role="status" aria-live="polite">Pour discuter, sélectionne un moteur IA et vérifie qu'il est connecté. Un message enregistré n'est pas nécessairement une réponse reçue.</div>
 <div class="row">
-<button id="tour">Faire parler l'IA suivante</button>
-<button class="primary" id="infini">Discussion automatique ∞</button>
-<button class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
-<button id="arreter">Arrêter</button>
+<button type="button" id="tour">Faire parler l'IA suivante</button>
+<button type="button" class="primary" id="infini">Discussion automatique ∞</button>
+<button type="button" class="primary" id="debattre">🗣️ Débat IA ↔ IA ∞</button>
+<button type="button" id="arreter">Arrêter</button>
 <button type="button" id="reactionToggle" aria-expanded="false" aria-controls="reactionBoard">🎛️ Tableau multimédia</button>
 </div>
 <section class="card reactionBoard" id="reactionBoard" hidden>
@@ -286,8 +293,8 @@ details.card[open]>summary{margin-bottom:14px}
 <label><input id="voix" type="checkbox"> 🔊 Écouter</label>
 <span id="compteur" class="pill">0 tours</span>
 </div>
-<div class="row"><button id="nouveau">Nouveau salon</button><button id="exporter">Exporter les conversations</button></div>
-<small>Les réponses sont plafonnées à 600 tokens par défaut, pour protéger l’allocation. Vous pouvez choisir un autre plafond (jusqu’à 2 500). Le contexte généalogique est compacté ; les pièces jointes peuvent toujours accroître le coût. Cette limite ne garantit pas un coût fixe ni la gratuité.</small>
+<div class="row"><button type="button" id="nouveau">Nouveau salon</button><button type="button" id="exporter">Exporter les conversations</button></div>
+<small>Les limites de ce sélecteur protègent l'allocation Puter (600 à 2 500 tokens). Pour AI Horde, la longueur se règle séparément dans son panneau : 1 800 tokens par segment par défaut, avec continuation bornée si nécessaire. Les quotas et délais des fournisseurs restent applicables.</small>
 <small>Les deux modes ∞ n'imposent aucune limite de tours : le mode débat fait dialoguer les IA entre elles. La page doit cependant rester ouverte. Chaque appel peut consommer l'allocation du visiteur ; les quotas, coûts, limites de contexte et éventuelles interruptions restent fixés par Puter et ses fournisseurs. Les réponses ne sont pas garanties exactes : une vérification indépendante demeure nécessaire.</small>
 </section>
 <details class="card" id="documents">
@@ -344,7 +351,7 @@ details.card[open]>summary{margin-bottom:14px}
 <small>Nom · spécialité · identifiant du modèle distant. Les identifiants proposés sont chargés depuis le catalogue réel ; le modèle indiqué reste un choix vérifiable, pas une IA simulée.</small>
 <datalist id="modeleCatalogue"></datalist>
 <div id="parts"></div>
-<div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button id="ajouter">Ajouter une IA</button></div>
+<div class="row"><input id="nouveauNom" placeholder="Nom d'une nouvelle IA" maxlength="80"><input id="nouveauRole" placeholder="Sa spécialité"><button type="button" id="ajouter">Ajouter une IA</button></div>
 </section>
 <footer>
 <div>Radio des IA — un espace de dialogue autour de l'intelligence artificielle, pensé pour différentes générations.</div>
@@ -353,7 +360,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=2&amp;mobile=1&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3&amp;reprise=20261115b"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=2&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3&amp;reprise=20261115c"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
