@@ -115,6 +115,7 @@ export function blockReward(height){
   if(shift>=64)return 0;
   return Math.floor(POLICY.firstReward/2**shift);
 }
+export const mintTxid=height=>digest("SPK/mint-reference/v1",{chainId:POLICY.chainId,height});
 export function utxoRoot(map){
   const ordered=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([ref,u])=>({
     ref,to:u.to,amount:u.amount
@@ -257,7 +258,7 @@ export function transition(state,body,validators,{draft=false}={}){
     fail("récompense + frais incorrects");
   const coinbaseAmount=draft?safeAdd(reward,fees):body.coinbase.amount;
   if(coinbaseAmount>0)
-    utxos.set("mint:"+body.height+":0",{to:body.coinbase.to,amount:coinbaseAmount});
+    utxos.set(mintTxid(body.height)+":0",{to:body.coinbase.to,amount:coinbaseAmount});
   const root=utxoRoot(utxos);
   if(!draft&&body.stateRoot!==root)fail("racine d'état UTXO incorrecte");
   const next={
