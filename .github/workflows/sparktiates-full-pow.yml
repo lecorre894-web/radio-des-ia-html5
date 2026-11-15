@@ -1,0 +1,44 @@
+name: SPARKTIATES FULL POW — A B C D puis E difficulté
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'addons/sparktiates/chain/pow-*.mjs'
+      - 'tests/sparktiates-pow.test.mjs'
+      - '.github/workflows/sparktiates-full-pow.yml'
+permissions:
+  contents: read
+jobs:
+  full-pow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 'A — Vérifier protocoles, identité, genèse et chaîne indépendante'
+        run: |
+          node --check addons/sparktiates/chain/pow-core.mjs
+          node --check addons/sparktiates/chain/pow-worker.mjs
+          node --check addons/sparktiates/chain/pow-miner.mjs
+          node --check addons/sparktiates/chain/pow-cli.mjs
+          node --test --test-name-pattern='^A:' tests/sparktiates-pow.test.mjs
+      - name: 'B — Mesurer SHA256d de façon reproductible'
+        run: |
+          node --test --test-name-pattern='^B:' tests/sparktiates-pow.test.mjs
+          node addons/sparktiates/chain/pow-cli.mjs benchmark
+      - name: 'C — Lancer le minage privé CPU, deux blocs'
+        run: |
+          node --test --test-name-pattern='^C:' tests/sparktiates-pow.test.mjs
+          mkdir -p "$RUNNER_TEMP/spk-pow-private"
+          HOME="$RUNNER_TEMP/spk-pow-private" node addons/sparktiates/chain/pow-cli.mjs mine 2
+      - name: 'D — Contrôler la correspondance des hachages et des soldes'
+        run: |
+          node --test --test-name-pattern='^D:' tests/sparktiates-pow.test.mjs
+          HOME="$RUNNER_TEMP/spk-pow-private" node addons/sparktiates/chain/pow-cli.mjs correspondence
+          HOME="$RUNNER_TEMP/spk-pow-private" node addons/sparktiates/chain/pow-cli.mjs status
+      - name: 'E — APRÈS la concordance, tester la difficulté et le travail cumulé'
+        run: |
+          node --test --test-name-pattern='^E:' tests/sparktiates-pow.test.mjs
+          HOME="$RUNNER_TEMP/spk-pow-private" node addons/sparktiates/chain/pow-cli.mjs difficulty
