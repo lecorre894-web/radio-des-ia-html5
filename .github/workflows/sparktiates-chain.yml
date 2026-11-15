@@ -1,0 +1,27 @@
+name: SPARKTIATES CHAIN — réseau privé expérimental
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'addons/sparktiates/chain/**'
+      - 'tests/sparktiates-chain.test.mjs'
+      - '.github/workflows/sparktiates-chain.yml'
+permissions:
+  contents: read
+jobs:
+  regtest-three-validators:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vérification syntaxique et tests de sécurité
+        run: |
+          node --check addons/sparktiates/chain/chain-core.mjs
+          node --check addons/sparktiates/chain/validator-node.mjs
+          node --check addons/sparktiates/chain/private-cluster.mjs
+          node --test tests/sparktiates-chain.test.mjs
+      - name: Trois validateurs réseau loopback et transaction réelle de test
+        run: node addons/sparktiates/chain/demo.mjs
