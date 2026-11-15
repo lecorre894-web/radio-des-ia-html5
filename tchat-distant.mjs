@@ -587,15 +587,37 @@ async function refreshHordeModels(){
         (item.context!==null?" · contexte "+item.context:"");
       node.append(option);
     }
+    // Reconstruction : le catalogue ouvert ne donne parfois aucun compteur de workers.
+    // Le modèle Qwen3.5-9B a réellement répondu au test du 15/11/2026.
+    // Réparer UNE SEULE FOIS la préférence Gemma qui affichait des brouillons.
+    const knownWorking="lmstudio/Qwen3.5-9B";
+    const qwenListed=available.some(m=>m.id===knownWorking);
+    let repairGemma=false;
+    if(/^Nimbz\/Gemma-4-Dark-Orthia-31B$/i.test(state.hordeModel)){
+      try{repairGemma=localStorage.getItem("radio-horde-reprise-20261115")!=="fait";}
+      catch{repairGemma=true;}
+    }
+    const autoSelect=qwenListed && (!state.hordeModel || repairGemma);
+    if(autoSelect){
+      state.hordeModel=knownWorking;
+      if(repairGemma){
+        try{localStorage.setItem("radio-horde-reprise-20261115","fait");}catch{}
+      }
+    }
     if(available.some(m=>m.id===state.hordeModel))node.value=state.hordeModel;
     else {
       node.value="";
       state.hordeModel="";
     }
     save();
-    hordeStatus(available.length
-      ?available.length+" modèles communautaires annoncés en ligne. Choisis-en un. Leur qualité scientifique et disponibilité ne sont pas garanties."
-      :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement ; Puter et le mode local restent disponibles.");
+    hordeStatus(autoSelect
+      ?"Reprise : "+knownWorking+" sélectionné, car il a répondu au test réel. "+
+        "Aucun message n'est envoyé automatiquement ; appuie sur « Répondre à ma dernière question »."
+      :available.length
+        ?available.length+" modèles annoncés. Le nombre de travailleurs et le délai sont parfois inconnus. Choisis-en un."
+        :"Aucun modèle en ligne. AI Horde ne peut pas répondre actuellement.");
+    if(autoSelect)status("AI Horde : "+knownWorking+" sélectionné pour la reprise. "+
+      "Ta conversation est conservée. Utilise « Répondre à ma dernière question ».");
   }catch(e){
     hordeModels=[];
     $("hordeModele").replaceChildren();
@@ -1084,6 +1106,7 @@ function init(){
     $("pollinationsControls").hidden=!isPollinationsMode();
     $("hordeControls").hidden=!isHordeMode();
     save();buttonStates();
+    if(isHordeMode() && !hordeModels.length)void refreshHordeModels();
     if(isPollinationsMode() && (pollinationsToken || getPollinationsStoredToken()) &&
        !pollinationsLoading && !pollinationsModels.length)
       void refreshPollinationsModels();
@@ -1105,7 +1128,10 @@ function init(){
   $("dechargerRecherche").addEventListener("click",()=>void unloadResearch());
   $("sujet").value=state.sujet;restoreDraft();renderParts();render();buttonStates();
   if(isResearchMode())researchStatus("Mode de recherche sélectionné. Recharge le modèle sur cet appareil pour poursuivre sans Puter.");
-  if(isHordeMode())hordeStatus("Mode AI Horde sélectionné. Actualise le catalogue avant de continuer. Anciens messages non partagés par défaut.");
+  if(isHordeMode()){
+    hordeStatus("Mode AI Horde : chargement du catalogue, sans transmettre les anciens messages.");
+    void refreshHordeModels();
+  }
   if(isSparktiatesMode())sparktiatesStatus("Mode SPARKTIATES sélectionné, serveur non encore vérifié : renseigne l'adresse et le jeton.");
   if(isPollinationsMode())pollinationsStatus(pollinationsToken
     ?"Session Pollinations disponible : actualise les modèles et choisis-en un."
