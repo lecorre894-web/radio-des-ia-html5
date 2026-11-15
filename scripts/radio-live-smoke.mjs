@@ -5,9 +5,13 @@ const listResponse=await fetch(ROOT+"/models",{signal:timeout(15_000),headers:{"
 if(!listResponse.ok)throw Error("AI Horde catalog HTTP "+listResponse.status);
 const body=await listResponse.json();
 const models=Array.isArray(body?.data)?body.data:[];
+console.log("LIVE_CATALOG_COUNT="+models.length);
+console.log("LIVE_CATALOG_SAMPLE",JSON.stringify(models.slice(0,18).map(m=>({
+  id:m?.id,worker_count:m?.x_horde?.worker_count,owned_by:m?.owned_by
+}))));
 const available=models
-  .filter(m=>typeof m?.id==="string"&&m.id.trim()&&Number(m?.x_horde?.worker_count)>0)
-  .map(m=>({id:m.id,workers:Number(m.x_horde.worker_count),
+  .filter(m=>typeof m?.id==="string"&&m.id.trim()&& !(m?.x_horde?.worker_count===0))
+  .map(m=>({id:m.id,workers:m.x_horde?.worker_count ?? null,
     size:Number(m.id.match(/(?:^|[^a-z0-9])(\d+(?:\.\d+)?)b(?:$|[^a-z0-9])/i)?.[1]||0)}))
   .filter(m=>m.size>=7 && m.size<=32)
   .sort((a,b)=>{
