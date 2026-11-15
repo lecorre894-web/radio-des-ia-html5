@@ -24,6 +24,28 @@ export function vrmEventFromMessage(m,{topic="",at=new Date().toISOString()}={})
     evidence:m.origin==="human"?"DÉCLARATION_HUMAINE":"PROPOSITION_IA_NON_VÉRIFIÉE"
   };
 }
+export function vrmEventsFromMessage(m,options={}){
+  if(!m||typeof m.texte!=="string"||!["human","ai"].includes(m.origin)||
+     !m.texte.trim()||m.gifId)return [];
+  // Aucun caractère du texte scientifique n'est volontairement perdu :
+  // messages trop longs segmentés en fragments au lieu d'être ignorés.
+  const text=m.texte,limit=7800;
+  if(text.length<=limit){
+    const value=vrmEventFromMessage(m,options);
+    return value?[value]:[];
+  }
+  const count=Math.ceil(text.length/limit);
+  const result=[];
+  for(let n=0;n<count;n++){
+    const part=text.slice(n*limit,(n+1)*limit);
+    const value=vrmEventFromMessage({
+      ...m,heure:String(m.heure||"")+"#VRM"+(n+1)+"/"+count,
+      texte:part
+    },options);
+    if(value)result.push(value);
+  }
+  return result;
+}
 function words(s){
   const lower=String(s||"").toLocaleLowerCase("fr")
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -138,8 +160,9 @@ export function createVrmController(options={}){
     const seen=new Set(entries.map(e=>e.id)),extra=[];
     const at=new Date().toISOString();
     for(const m of Array.isArray(messages)?messages:[]){
-      const e=vrmEventFromMessage(m,{topic:getTopic(),at});
-      if(e&&!seen.has(e.id)){seen.add(e.id);extra.push(e);}
+      for(const e of vrmEventsFromMessage(m,{topic:getTopic(),at})){
+        if(!seen.has(e.id)){seen.add(e.id);extra.push(e);}
+      }
     }
     if(extra.length){
       await putAll(db,extra);
