@@ -75,9 +75,16 @@ try{
 
   // IndexedDB survives navigation and the sharing permission is session-only.
   await page.reload({waitUntil:"domcontentloaded"});
-  await page.locator("#vrmPanel > summary").click();
+  await page.locator("#vrmPanel").evaluate(el=>{el.open=true;});
+  await page.waitForTimeout(900);
+  console.log("VRM_RELOAD_DIAGNOSTIC",JSON.stringify(await page.evaluate(()=>({
+    status:document.querySelector("#vrmEtat")?.textContent,
+    enabled:document.querySelector("#vrmActiver")?.checked,
+    stored:localStorage.getItem("radio-vrm-enabled-v1"),
+    messages:document.querySelectorAll("#fil .msg").length
+  }))),"ERRORS",errors);
   await page.waitForFunction(()=>/4 événements/.test(
-    document.querySelector("#vrmEtat")?.textContent||""));
+    document.querySelector("#vrmEtat")?.textContent||""),null,{timeout:7000});
   assert.equal(await page.locator("#vrmActiver").isChecked(),true);
   assert.equal(await page.locator("#vrmPartagerIA").isChecked(),false);
   assert.equal(requests.length,0);
