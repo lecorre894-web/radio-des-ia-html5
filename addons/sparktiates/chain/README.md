@@ -16,6 +16,8 @@ ni vente, ni paiement commercial, ni connexion au mainnet, ni fonds réels.
   de transactions et engagement sur l'état UTXO.
 - Transactions multi-entrées et multi-sorties, autorisées par signatures
   Ed25519 ; référence UTXO anti-double-dépense, montants **entiers atomiques**.
+- Invariant vérifié à chaque bloc : **somme de toutes les sorties UTXO = offre
+  monétaire créée jusqu'à cette hauteur**.
 - Émission de monnaie contrôlée, frais de transaction, récompense au proposeur.
 - Proposeur tournant, certificat de 2 votes signés sur 3 validateurs,
   verrou persistant **par hauteur** avant signature.
@@ -76,8 +78,8 @@ format des en-têtes et mécanismes de réseau sont différents.
   canoniquement et avec séparation de domaine \`SPK/block/v1\`.
 - Certificat : 2 signatures Ed25519 d'identités de validateurs distinctes.
 
-La genèse (hauteur zéro, 0 SPK) est calculée avec la liste ordonnée de clés
-publiques des validateurs. Elle est **reproductible avec la même configuration**,
+La genèse (hauteur zéro, 0 SPK) engage **les paramètres monétaires
+et la liste ordonnée de clés publiques des validateurs**. Elle est **reproductible avec la même configuration**,
 mais une première installation locale génère de nouvelles clés et donc une
 empreinte de genèse propre à cette installation.
 
