@@ -11,7 +11,8 @@ import {
 import {join,resolve} from "node:path";
 import {tmpdir,homedir} from "node:os";
 import {randomBytes} from "node:crypto";
-import {stable,sha256} from "./chain-core.mjs";
+import {stable,sha256,newIdentity,address} from "./chain-core.mjs";
+import {createPrivateKey,createPublicKey} from "node:crypto";
 import {stateRootV2,V2_POLICY} from "./pow-v2.mjs";
 import {
   BATON_V3,batonGenesis,initialBatonState,
@@ -137,4 +138,40 @@ export function createBatonLedger({
     persist,
     verify(){return verifiedBatonSnapshot(current);}
   };
+}
+/**
+ * Wallet private keys are maintained in a separate 0600 file.
+ * Unlike the public chain ledger, this file MUST NEVER be shared.
+ */
+export function createOrLoadBatonWallet({
+  directory=DEFAULT_BATON_LEDGER_DIR,vertex
+}={}){
+  check(BATON_V3.vertices.includes(vertex),"sommet wallet invalide");
+  const dir=resolve(directory);
+  mkdirSync(dir,{recursive:true,mode:0o700});
+  const filename=join(dir,"PRIVATE-wallet-"+vertex+".json");
+  let wallet;
+  if(existsSync(filename)){
+    try{wallet=JSON.parse(readFileSync(filename,"utf8"));}
+    catch{throw Error("SPK-V3-REGISTRE: clé privée illisible");}
+  }else{
+    wallet=newIdentity();
+    const fd=openSync(filename,"wx",0o600);
+    try{
+      writeFileSync(fd,JSON.stringify(wallet)+"\n");
+      fsyncSync(fd);
+    }finally{closeSync(fd);}
+  }
+  check(wallet&&typeof wallet.publicKey==="string"&&
+    typeof wallet.privateKey==="string","portefeuille privé invalide");
+  try{
+    const restored=createPublicKey(createPrivateKey({
+      key:Buffer.from(wallet.privateKey,"base64"),format:"der",type:"pkcs8"
+    })).export({format:"der",type:"spki"}).toString("base64");
+    check(restored===wallet.publicKey,"clé privée et publique discordantes");
+  }catch(e){
+    throw Error("SPK-V3-REGISTRE: identité du wallet non validée: "+
+      String(e.message||e));
+  }
+  return {...wallet,owner:address(wallet.publicKey)};
 }
