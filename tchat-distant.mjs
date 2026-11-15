@@ -3,7 +3,7 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
-import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=reprise-simple-20261115b";
+import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=reponse-complete-20261115";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
@@ -195,7 +195,7 @@ function switchToHorde(){
   save();buttonStates();
   status("AI Horde sélectionné sans crédits Pollen. Le catalogue sera recherché ; choisis ensuite un modèle réellement disponible. Aucun message n'est envoyé automatiquement.");
   if(!hordeModels.length)void refreshHordeModels();
-  $("hordeControls").scrollIntoView?.({behavior:"smooth",block:"start"});
+  // Conserver la position de lecture après un changement de fournisseur.
 }
 function retryLastHuman(){
   if(state.busy || state.auto)return;
@@ -244,6 +244,7 @@ function buttonStates(){
   }
   $("hordeModele").disabled=state.busy || state.auto || hordeLoading;
   $("hordeActualiser").disabled=state.busy || state.auto || hordeLoading;
+  $("hordeLongueur").disabled=state.busy || state.auto || hordeLoading;
   $("hordePartagerContexte").disabled=state.busy || state.auto || hordeLoading;
   $("modeleRecherche").disabled=state.busy || state.auto || researchLoading || Boolean(researchEngine);
   $("chargerRecherche").disabled=state.busy || researchLoading || Boolean(researchEngine);
@@ -656,6 +657,30 @@ async function refreshHordeModels(){
       ". Si le navigateur bloque CORS, aucun appel de génération n'est lancé. Les autres moteurs sont préservés.");
   }finally{hordeLoading=false;buttonStates();}
 }
+function mergeHordeAnswerParts(prior,continuation){
+  const previous=String(prior||"").trimEnd();
+  let next=String(continuation||"").trimStart();
+  if(!previous)return next;
+  // La réponse suivante peut répéter quelques mots. Couper la zone commune
+  // seulement si la répétition est certaine, sans modifier les idées.
+  const left=previous.toLowerCase(),right=next.toLowerCase();
+  let overlap=0;
+  const max=Math.min(250,previous.length,next.length);
+  for(let n=max;n>=18;n--){
+    if(left.slice(-n)===right.slice(0,n)){overlap=n;break;}
+  }
+  if(overlap)next=next.slice(overlap).trimStart();
+  if(!next)return previous;
+  const join=/[\s]$/.test(prior)||/^[.,;:!?)]/.test(next)?"":" ";
+  return previous+join+next;
+}
+function hordeContinuationPrompt(original,answer){
+  return [
+    ...original,
+    {role:"assistant",content:String(answer||"").slice(-9000)},
+    {role:"user",content:"Continue exactement à l'endroit interrompu, sans recommencer ni recopier le texte précédent. Termine l'explication naturellement en français."}
+  ];
+}
 async function nextHordeTurn(){
   if(state.busy)return;
   if(hordeLoading){state.auto=false;status("Actualisation des modèles AI Horde en cours.");buttonStates();return;}
@@ -666,6 +691,7 @@ async function nextHordeTurn(){
   if($("pieceUtiliser")?.checked && documentManager?.hasAttachments?.()){
     state.auto=false;status("AI Horde ne reçoit pas les pièces jointes. Désactive l'inclusion des documents pour continuer.");buttonStates();return;
   }
+  const maxTokens=Math.max(100,Math.min(2500,Number($("hordeLongueur")?.value)||1800));
   const shareHistory=Boolean($("hordePartagerContexte")?.checked);
   const role=RESEARCH_ROLES[state.hordeIndex%RESEARCH_ROLES.length];
   const prompt=buildHordeMessages({
@@ -679,29 +705,61 @@ async function nextHordeTurn(){
   state.busy=true;
   state.controller=new AbortController();
   render();buttonStates();
-  status("AI Horde · "+model+" : attente d'un travailleur bénévole. Tu peux arrêter.");
+  status("AI Horde · "+model+" : génération jusqu'à "+maxTokens+
+    " tokens par segment. Si la limite est atteinte, deux continuations au maximum. Le bouton Arrêter reste disponible.");
+  let answerText="";
+  let finalModel=model;
+  let finishReason=null;
+  let segments=0;
   try{
-    const answer=await chatWithHorde({
-      model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
-      signal:state.controller.signal
-    });
-    const normalized=cleanAnswer(answer.text,state.participants);
+    let messages=prompt;
+    const MAX_SEGMENTS=3;
+    for(let n=0;n<MAX_SEGMENTS;n++){
+      const answer=await chatWithHorde({
+        model,messages,maxTokens,signal:state.controller.signal
+      });
+      answerText=mergeHordeAnswerParts(answerText,answer.text);
+      finalModel=answer.model;
+      finishReason=answer.finishReason;
+      segments=n+1;
+      current.texte=answerText;
+      current.modele=answer.model;
+      // Keep the same message bubble and scroll position even after each segment.
+      render();
+      if(finishReason!=="length")break;
+      if(n===MAX_SEGMENTS-1)break;
+      status("AI Horde : "+segments+" segment(s) reçu(s), réponse coupée par le plafond du fournisseur. "+
+        "Je demande la suite dans la même bulle, sans supprimer le texte reçu.");
+      messages=hordeContinuationPrompt(prompt,answerText);
+    }
+    const normalized=cleanAnswer(answerText,state.participants);
     const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
     if(issue)throw Error("Réponse rejetée : "+issue);
     current.texte=normalized;
-    current.modele=answer.model;
+    current.modele=finalModel;
     state.hordeIndex++;
     state.tours++;
-    status("AI Horde : réponse réelle de "+answer.model+
-      " enregistrée. Tour n°"+state.tours+". Aucun crédit Puter utilisé.");
+    status(finishReason==="length"
+      ?"AI Horde : "+segments+" segments conservés. Le fournisseur a encore atteint sa limite ; "+
+        "le texte reste visible et enregistré. Aucun appel supplémentaire automatique."
+      :"AI Horde : réponse complète reçue de "+finalModel+
+        " en "+segments+" segment(s). Tour n°"+state.tours+". Aucun crédit Puter utilisé.");
     speech(current.nom,current.texte);
   }catch(e){
-    state.messages=state.messages.filter(m=>m!==current);
     state.auto=false;
-    const reason=e?.name==="AbortError"
-      ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
-      :String(e?.message||e);
-    status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
+    if(answerText.trim()){
+      current.texte=answerText;
+      current.modele=finalModel;
+      state.tours++;
+      status("AI Horde : réponse partielle conservée ; la suite a échoué ou été interrompue ("+
+        String(e?.message||e)+"). Aucune partie reçue n'a été effacée.");
+    }else{
+      state.messages=state.messages.filter(m=>m!==current);
+      const reason=e?.name==="AbortError"
+        ?"demande arrêtée dans le navigateur ; le réseau peut poursuivre une requête déjà lancée"
+        :String(e?.message||e);
+      status("AI Horde : "+reason+". Message humain et historique préservés. Aucun nouvel essai automatique.");
+    }
   }finally{
     state.busy=false;state.controller=null;state.current=null;state.activeCard=null;
     render();buttonStates();
@@ -1213,7 +1271,8 @@ function init(){
           const end=field.selectionEnd??start;
           field.setRangeText(String(value),start,end,"end");
           saveDraft();
-          field.focus();
+          // Ne pas forcer le navigateur à descendre vers le clavier mobile.
+          // Le bouton d'insertion garde le défilement où l'utilisateur était.
         },
         onSendGif:({id,name})=>{
           state.messages.push({
@@ -1222,7 +1281,7 @@ function init(){
             heure:new Date().toLocaleTimeString("fr-FR")
           });
           render();
-          $("fil").lastElementChild?.scrollIntoView({behavior:"smooth",block:"nearest"});
+          // Ne pas déplacer la page lors de l'ajout d'un GIF.
           status("GIF ajouté à votre conversation personnelle ; aucun appel IA ni crédit consommé.");
         }
       });
