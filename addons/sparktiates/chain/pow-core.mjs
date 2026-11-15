@@ -4,12 +4,13 @@
  * No automatic conversion between signed-quorum SPK and mined SPK.
  */
 import {createHash} from "node:crypto";
-import {address,validAddress,signData,verifyData,stable,sha256,digest,blockReward} from "./chain-core.mjs";
+import {address,validAddress,signData,verifyData,stable,digest} from "./chain-core.mjs";
 
 export const POW_POLICY=Object.freeze({
   version:1,chainId:"sparktiates-pow-regtest-v1",symbol:"SPK-POW",
   bits:0x1f0fffff,powLimit:0x207fffff,
   unit:100_000_000,maxSupply:2_100_000_000_000_000,
+  firstReward:5_000_000_000,halvingInterval:210_000,
   targetSeconds:30,retarget:false,maxTransactions:40,maxInputs:32,maxOutputs:32
 });
 const HASH=/^[a-f0-9]{64}$/;
@@ -87,6 +88,11 @@ export function initialPowState(gen=powGenesis()){
   requireValid(stable(gen)===stable(powGenesis()),"genèse ou politique de chaîne incompatible");
   return {height:0,hash:gen.hash,timestamp:0,
     supply:0,utxos:new Map(),chain:[gen],cumulativeWork:0n};
+}
+export function powBlockReward(height){
+  requireValid(goodInt(height)&&height>0,"hauteur de récompense incorrecte");
+  const halves=Math.floor(height/POW_POLICY.halvingInterval);
+  return halves>=64?0:Math.floor(POW_POLICY.firstReward/2**halves);
 }
 export const powMintId=h=>digest("SPK-POW/mint",{
   chainId:POW_POLICY.chainId,height:h
@@ -178,7 +184,7 @@ function evaluate(state,height,miner,transactions){
     ids.add(tx.id);
     fees=safeAdd(fees,consumeTransaction(map,tx));
   }
-  const reward=blockReward(height);
+  const reward=powBlockReward(height);
   requireValid(state.supply+reward<=POW_POLICY.maxSupply,"offre maximale atteinte");
   const coinbaseAmount=safeAdd(reward,fees);
   if(coinbaseAmount)map.set(powMintId(height)+":0",{to:miner,amount:coinbaseAmount});
@@ -204,7 +210,7 @@ export function powMerkle(leaves){
   return layer[0];
 }
 function bodyCommitment(body){
-  return displayedHash(Buffer.from("SPK-POW/BO DY-V1\0"+stable(body),"utf8"));
+  return displayedHash(Buffer.from("SPK-POW/BODY-V1\0"+stable(body),"utf8"));
 }
 export function makePowCandidate(state,{miner,transactions=[],timestamp=Math.floor(Date.now()/1000)}={}){
   requireValid(goodInt(timestamp,0xffffffff)&&timestamp>=state.timestamp,
@@ -241,6 +247,40 @@ export function validateMinedBlock(state,block,{now=Math.floor(Date.now()/1000)}
     supply:expected.supply,utxos:expected.map,
     cumulativeWork:state.cumulativeWork+work,
     chain:[...state.chain,{header,body,hash}]
+  };
+}
+/**
+ * Deterministic most-chainwork selection for candidate PRIVATE PoW branches.
+ * Re-validates every header, transaction, UTXO and state transition from genesis.
+ * On equal work keep the existing chain to prevent unnecessary reorgs.
+ * This single-machine regtest has no automatic peer discovery or networking.
+ */
+export function chooseMostWorkPowChain(currentChain,candidateChain){
+  const replay=chain=>{
+    requireValid(Array.isArray(chain)&&chain.length>=1&&chain.length<=10001,
+      "chaîne PoW candidate invalide");
+    let state=initialPowState(chain[0]);
+    for(const entry of chain.slice(1)){
+      requireValid(entry?.header&&entry?.body,"bloc PoW manquant");
+      const verified=validateMinedBlock(state,entry);
+      if(entry.hash!==undefined)
+        requireValid(entry.hash===verified.hash,"hash de bloc déclaré différent");
+      state=verified;
+    }
+    return state;
+  };
+  const existing=replay(currentChain);
+  const contender=replay(candidateChain);
+  const replace=contender.cumulativeWork>existing.cumulativeWork;
+  return {
+    selected:replace?"candidate":"current",
+    tip:replace?contender.hash:existing.hash,
+    height:replace?contender.height:existing.height,
+    work: (replace?contender:existing).cumulativeWork.toString(),
+    currentWork:existing.cumulativeWork.toString(),
+    candidateWork:contender.cumulativeWork.toString(),
+    tie:existing.cumulativeWork===contender.cumulativeWork,
+    bothValid:true,reason:"WORK_CUMULATIF_VALIDÉ"
   };
 }
 export function minedCorrespondence(state,block){
