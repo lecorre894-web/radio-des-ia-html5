@@ -1,0 +1,20 @@
+name: "Radio IA — réponse longue réelle AI Horde"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/horde-long-answer-live.mjs'
+      - '.github/workflows/horde-long-answer-live.yml'
+permissions:
+  contents: read
+jobs:
+  horde-real-long:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Mesurer la réponse longue réelle de Qwen3.5-9B
+        run: node scripts/horde-long-answer-live.mjs
