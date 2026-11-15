@@ -7,6 +7,8 @@ on:
       - 'addons/sparktiates/chain/pow-networks.mjs'
       - 'addons/sparktiates/chain/pow-overlay-duplex.mjs'
       - 'tests/sparktiates-pow-v2-p2p.test.mjs'
+      - 'tests/sparktiates-triangle-3d.test.mjs'
+      - 'addons/sparktiates/chain/triangle-3d*.mjs'
       - '.github/workflows/sparktiates-v2-p2p.yml'
 permissions:
   contents: read
@@ -38,3 +40,7 @@ jobs:
         run: node --test --test-name-pattern='^E:' tests/sparktiates-pow-v2-p2p.test.mjs
       - name: 'F — synchronisation P2P Full Duplex et isolation entre réseaux'
         run: node --test --test-name-pattern='^F:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'G — géométrie triangulaire 3D et 2048 réseaux isolés'
+        run: node --test --test-name-pattern='^G:' tests/sparktiates-triangle-3d.test.mjs
+      - name: 'H — 3 vrais processus OS : chaque sommet mine, les 2 autres vérifient'
+        run: node addons/sparktiates/chain/triangle-3d-demo.mjs
