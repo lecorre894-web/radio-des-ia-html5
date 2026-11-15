@@ -1,0 +1,38 @@
+name: SPARKTIATES BATON V3 — registre unique et test Bitcoin regtest
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'addons/sparktiates/chain/baton-v3*.mjs'
+      - 'addons/sparktiates/chain/bitcoin-regtest-reference.mjs'
+      - 'tests/sparktiates-baton-v3.test.mjs'
+      - '.github/workflows/sparktiates-baton-v3.yml'
+permissions:
+  contents: read
+jobs:
+  shared-pow-ledger:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntaxe des modules et architecture V3
+        run: |
+          node --check addons/sparktiates/chain/baton-v3.mjs
+          node --check addons/sparktiates/chain/baton-v3-ledger.mjs
+          node --check addons/sparktiates/chain/baton-v3-overlay.mjs
+          node --check addons/sparktiates/chain/baton-v3-peer.mjs
+          node --check addons/sparktiates/chain/baton-v3-demo.mjs
+          node --check addons/sparktiates/chain/bitcoin-regtest-reference.mjs
+      - name: 'A-D — bloc unique, hachage de parent, registre et concordance'
+        run: node --test --test-name-pattern='^(A:|B:|C-D:|D:)' tests/sparktiates-baton-v3.test.mjs
+      - name: 'E — difficulté après validation du registre, 3 sommets full duplex'
+        run: node --test --test-name-pattern='^D-E-F:' tests/sparktiates-baton-v3.test.mjs
+      - name: 'Test Bitcoin regtest — empreinte officielle de genèse et header-only'
+        run: |
+          node --test --test-name-pattern='^Mode Bitcoin:' tests/sparktiates-baton-v3.test.mjs
+          node addons/sparktiates/chain/bitcoin-regtest-reference.mjs
+      - name: 'Rapport réel V3 — trois processus et registre rétabli après redémarrage'
+        run: node addons/sparktiates/chain/baton-v3-demo.mjs
