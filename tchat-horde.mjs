@@ -37,7 +37,7 @@ export function buildHordeMessages({history = [], topic = "", role = "Analyse cr
   // Topic may be about the Moon while the new human question is about pain.
   // The current human question always wins.
   const system=[
-    "Tu es un modèle de langage communautaire authentiquement servi par AI Horde.",
+    "Tu es un modèle de langage communautaire authentiquement servi par AI Horde (non ChatGPT, Claude, Kimi ou Perplexity).",
     "Domaine pertinent pour CETTE question : "+routed.role+".",
     "Réponds à l'intervention humaine en français, directement et en langage clair.",
     "Ne copie pas la question, ne la traduis pas, ne donne pas de notes de travail, "+
