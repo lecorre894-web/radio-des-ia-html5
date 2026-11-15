@@ -10,7 +10,7 @@ import {randomBytes} from "node:crypto";
 import {newIdentity,address,stable} from "./chain-core.mjs";
 import {
   POW_POLICY,powGenesis,initialPowState,
-  makePowCandidate,validateMinedBlock,powBalance,minedCorrespondence
+  makePowCandidate,validateMinedBlock,powBalance,minedCorrespondence,powDifficultyReport
 } from "./pow-core.mjs";
 import {mineCandidate,benchmarkSha256d} from "./pow-miner.mjs";
 import {demonstratePow} from "./pow-demo.mjs";
@@ -158,6 +158,9 @@ async function main(){
   }else if(action==="benchmark"){
     console.log("SPARKTIATES_POW_SHA256D_BENCH",JSON.stringify(
       benchmarkSha256d({iterations:10000}),null,2));
+  }else if(action==="difficulty"){
+    console.log("SPARKTIATES_POW_DIFFICULTY_AFTER_CORRESPONDENCE",JSON.stringify(
+      powDifficultyReport(),null,2));
   }else if(action==="correspondence"){
     const {state}=await loadPowLedger(DEFAULT_POW_DIRECTORY);
     if(state.height===0)throw Error("Aucun bloc miné : commence par mine 2");
@@ -174,7 +177,7 @@ async function main(){
       validatedBlocks:reports.length,proofs:reports
     },null,2));
   }else{
-    throw Error("Commande: demo | benchmark | mine [1..8] | status | correspondence");
+    throw Error("Commande: demo | benchmark | mine [1..8] | status | correspondence | difficulty");
   }
 }
 if(process.argv[1]&&import.meta.url===new URL("file://"+process.argv[1]).href){
