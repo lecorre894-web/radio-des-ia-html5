@@ -25,3 +25,31 @@ jobs:
           node --test tests/sparktiates-chain.test.mjs
       - name: Trois validateurs réseau loopback et transaction réelle de test
         run: node addons/sparktiates/chain/demo.mjs
+      - name: Réseau persistant puis commandes réelles CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/spk-private-home"
+          mkdir -p "$HOME"
+          node addons/sparktiates/chain/start-private.mjs > "$RUNNER_TEMP/spk-node.log" 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:19401/health >/dev/null; then break; fi
+            sleep 0.3
+          done
+          node addons/sparktiates/chain/client.mjs status
+          node addons/sparktiates/chain/client.mjs forge
+          node addons/sparktiates/chain/client.mjs transfer alpha beta 12.5
+          node addons/sparktiates/chain/client.mjs status
+          kill "$PID"
+          wait "$PID" || true
+          node addons/sparktiates/chain/start-private.mjs > "$RUNNER_TEMP/spk-restart.log" 2>&1 &
+          PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:19401/health >/dev/null; then break; fi
+            sleep 0.3
+          done
+          node addons/sparktiates/chain/client.mjs status
+          kill "$PID"
+          wait "$PID" || true
