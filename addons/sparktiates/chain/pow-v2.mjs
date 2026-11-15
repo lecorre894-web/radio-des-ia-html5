@@ -75,8 +75,8 @@ export const mintRefV2=(networkId,height)=>digest("SPK-V2/mint",{
 });
 export function medianPast(state){
   if(state.height===0)return 0;
-  const values=state.chain.slice(-V2_POLICY.medianWindow).map(x=>x.header.timestamp)
-    .sort((a,b)=>a-b);
+  const values=state.chain.filter(x=>x?.header).slice(-V2_POLICY.medianWindow)
+    .map(x=>x.header.timestamp).sort((a,b)=>a-b);
   return values[Math.floor(values.length/2)];
 }
 /**
