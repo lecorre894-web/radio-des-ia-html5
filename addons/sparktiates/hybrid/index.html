@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0c1425">
+  <meta name="description" content="SPARKTIATES HYBRID : calcul local vérifié, VRM et essaim privé entre onglets, sans machines publiques.">
+  <title>SPARKTIATES HYBRID — moteur privé</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">SPARKTIATES · LABORATOIRE HYBRIDE</p>
+      <h1>Moteur numérique privé</h1>
+      <p>Calcul exécuté par le matériel réel de cet appareil, avec cœurs logiciels, mémoire scientifique et coopération entre onglets. La Radio des IA n'est pas modifiée.</p>
+      <a class="plain-link" href="../../../tchat.html">Retourner à la Radio des IA</a>
+    </header>
+
+    <section class="stats" aria-label="État du moteur">
+      <div class="metric"><small>Horloge de simulation</small>
+        <strong>110 GHz</strong><span>Virtuelle seulement, pas CPU réel</span></div>
+      <div class="metric"><small>Ordonnanceur logique</small>
+        <strong>16 384</strong><span>32 groupes × 512 emplacements</span></div>
+      <div class="metric"><small>Workers physiques allouables</small>
+        <strong id="workersCount">—</strong><span>Parallélisme mesuré sur l'appareil</span></div>
+    </section>
+
+    <section class="panel" id="compute">
+      <h2>1 · Calcul hybride mesurable</h2>
+      <p>Le programme distribue des travaux numériques reproductibles aux Web Workers, compare des échantillons avec une exécution indépendante, et affiche uniquement le débit réellement observé.</p>
+      <div class="controls">
+        <label for="workCount">Travaux à répartir
+          <select id="workCount"><option value="32">32 · rapide</option>
+            <option value="64" selected>64 · normal</option>
+            <option value="128">128 · étendu</option></select>
+        </label>
+        <label for="rounds">Opérations par travail
+          <select id="rounds"><option value="30000">30 000</option>
+            <option value="60000" selected>60 000</option>
+            <option value="120000">120 000</option></select>
+        </label>
+        <label for="poolSize">Workers actifs
+          <select id="poolSize"></select>
+        </label>
+      </div>
+      <div class="buttons"><button type="button" id="run">Lancer le calcul vérifié</button>
+        <button type="button" id="resetResult" class="secondary">Effacer l'affichage</button></div>
+      <p class="notice" id="computeStatus" role="status">Prêt. Aucun calcul actif.</p>
+      <div class="results" id="results" hidden>
+        <div><small>Débit CPU réel</small><strong id="realRate">—</strong><span>itérations du noyau / seconde</span></div>
+        <div><small>Durée réelle</small><strong id="realTime">—</strong><span>mesure de l'horloge du navigateur</span></div>
+        <div><small>Temps virtuel nominal</small><strong id="virtualTime">—</strong><span>hypothèse 110 GHz, non mesuré</span></div>
+        <div><small>Intégrité des résultats</small><strong id="integrity">—</strong><span id="checksum">—</span></div>
+      </div>
+    </section>
+
+    <section class="panel" id="swarm">
+      <h2>2 · Essaim privé de calcul</h2>
+      <p>Équivalent expérimental d'un essaim P2P limité aux onglets de <strong>ce même navigateur et de cette même origine</strong>. Chaque onglet doit donner son accord. Les calculs partagés sont uniquement synthétiques ; aucune conversation n'est distribuée.</p>
+      <div class="buttons">
+        <button type="button" id="joinSwarm">Activer l'essaim privé</button>
+        <button type="button" id="leaveSwarm" class="secondary" disabled>Quitter l'essaim</button>
+        <button type="button" id="newTab" class="secondary">Ouvrir un deuxième nœud</button>
+      </div>
+      <p class="notice" id="swarmStatus" role="status">Essaim arrêté. Aucun partage entre onglets.</p>
+      <small>Plusieurs onglets sur un seul appareil ne créent ni nouveaux processeurs physiques ni puissance gratuite. L'ouverture d'un second onglet exige d'y activer séparément l'essaim.</small>
+    </section>
+
+    <section class="panel" id="memory">
+      <h2>3 · Mémoire VRM et réalité virtuelle</h2>
+      <p>Importer, après autorisation, les événements scientifiques déjà enregistrés par la Radio dans IndexedDB. Une projection locale construit un graphe de citations et de rapprochements non vérifiés, sans inventer de nouvelles mesures.</p>
+      <div class="buttons">
+        <button type="button" id="loadVrm">Lire la mémoire VRM locale</button>
+        <button type="button" id="exportWorld" class="secondary" disabled>Exporter le graphe JSON</button>
+      </div>
+      <p class="notice" id="memoryStatus" role="status">Aucune mémoire lue. Aucun transfert externe.</p>
+      <div class="memory-grid" id="memoryResults" hidden>
+        <div class="result-small"><small>Événements</small><strong id="nodes">0</strong></div>
+        <div class="result-small"><small>Associations candidates</small><strong id="edges">0</strong></div>
+        <div class="result-small"><small>Contrôles à effectuer</small><strong id="checks">0</strong></div>
+      </div>
+      <ul id="worldPreview" class="preview"></ul>
+    </section>
+    <section class="panel small-panel">
+      <h2>4 · Réalité physique et confidentialité</h2>
+      <p><strong>110 GHz est une échelle virtuelle de simulation.</strong> Ce n'est ni une fréquence de silicium atteinte ni une augmentation garantie de puissance. Les seuls résultats de performances affichés proviennent du chronomètre des calculs réellement exécutés.</p>
+      <p>La mémoire reste locale et le calcul n'utilise aucun PC public. Les fichiers statiques sont servis depuis GitHub Pages lors du premier chargement ; le programme peut ensuite être mis en cache pour être réouvert sans réseau. Un transfert entre appareils distincts demandera une passerelle privée supplémentaire.</p>
+      <p><a class="plain-link" href="https://github.com/lecorre894-web/radio-des-ia-html5/tree/main/addons/sparktiates/hybrid">Voir le code du moteur</a></p>
+    </section>
+  </main>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
