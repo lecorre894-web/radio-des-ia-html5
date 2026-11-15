@@ -17,7 +17,7 @@ export function normalizeHordeModels(payload) {
     return [{
       id,
       context: Number.isFinite(Number(model?.context_length)) ? Number(model.context_length) : null,
-      workers: Number.isFinite(Number(model?.x_horde?.worker_count)) ? Number(model.x_horde.worker_count) : null
+      workers: model?.x_horde?.worker_count != null && Number.isFinite(Number(model.x_horde.worker_count)) ? Number(model.x_horde.worker_count) : null
     }];
   }).sort((a,b) =>
     (b.workers ?? 0) - (a.workers ?? 0) || a.id.localeCompare(b.id, "fr")
