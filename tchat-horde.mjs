@@ -1,4 +1,4 @@
-import {routeHordeQuestion} from "./tchat-horde-quality.mjs?v=1";
+import {routeHordeQuestion} from "./tchat-horde-quality.mjs?v=2";
 
 /**
  * AI Horde adapter for Radio des IA. Additive; no Puter access, no local storage.
