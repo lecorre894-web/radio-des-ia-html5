@@ -6,6 +6,7 @@
  */
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
+import {createVrmStore} from "./vrm-store.mjs";
 
 const ALLOWED_ORIGINS = new Set([
   "https://lecorre894-web.github.io",
@@ -53,7 +54,7 @@ async function readJSONBody(request) {
 }
 
 export function createRadioServer({token=process.env.SPARKTIATES_ACCESS_TOKEN,
-    fetcher=fetch,ollama=OLLAMA}={}) {
+    fetcher=fetch,ollama=OLLAMA,vrmStore=createVrmStore()}={}) {
   if(!token||String(token).length<24)
     throw Error("Définir SPARKTIATES_ACCESS_TOKEN (24 caractères aléatoires minimum).");
   if(ollama!==OLLAMA && !/^http:\/\/(?:127\.0\.0\.1|localhost):\d{2,5}$/.test(ollama))
@@ -113,6 +114,37 @@ export function createRadioServer({token=process.env.SPARKTIATES_ACCESS_TOKEN,
       const supplied=String(req.headers.authorization||"").replace(/^Bearer /i,"");
       if(!constantTimeEqual(supplied,token))
         throw httpError(401,"Jeton SPARKTIATES requis.");
+      // VRM is authenticated and persisted independently of the inference
+      // engine; Ollama need not be online for memory sync.
+      if(req.method==="GET" && path==="/v1/vrm/status"){
+        const result=await vrmStore.status();
+        send(res,200,{service:"SPARKTIATES VRM",...result},origin);
+        return;
+      }
+      if(req.method==="GET" && path==="/v1/vrm/events"){
+        const url=new URL(req.url||"/","http://127.0.0.1");
+        const offset=Number(url.searchParams.get("offset")||0);
+        const limit=Number(url.searchParams.get("limit")||100);
+        if(!Number.isSafeInteger(offset)||offset<0||offset>50_000||
+           !Number.isSafeInteger(limit)||limit<1||limit>200)
+          throw httpError(400,"Pagination VRM invalide.");
+        send(res,200,await vrmStore.read({offset,limit}),origin);
+        return;
+      }
+      if(req.method==="POST" && path==="/v1/vrm/events"){
+        const data=await readJSONBody(req);
+        let result;
+        try{result=await vrmStore.merge(data?.events);}
+        catch(e){
+          if(/capacit|trop d'événements/i.test(String(e?.message)))
+            throw httpError(507,String(e.message));
+          if(/corrompu/i.test(String(e?.message)))
+            throw httpError(500,String(e.message));
+          throw httpError(422,String(e?.message||"Événements VRM invalides."));
+        }
+        send(res,200,result,origin);
+        return;
+      }
       if(req.method==="GET" && path==="/v1/models"){
         const result=await ollamaJSON("/api/tags");
         const models=(Array.isArray(result.models)?result.models:[])
