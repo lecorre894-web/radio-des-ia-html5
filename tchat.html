@@ -240,6 +240,29 @@ details.card[open]>summary{margin-bottom:14px}
 <div class="row"><button type="button" id="memoireEffacer">Effacer les archives des anciens Salons</button></div>
 <small>La question fondatrice, les corrections humaines et les réponses successives alimentent les prochains tours. Les textes transmis aux IA sont limités et identifiés comme des extraits. Le suivi est local à ce navigateur et peut être désactivé pour les anciens Salons.</small>
 </details>
+<details class="card" id="vrmPanel">
+<summary>🧠 VRM — mémoire scientifique collective SPARKTIATES</summary>
+<p>Journal local persistant : conserve les questions, démonstrations, équations et corrections comme <strong>citations attribuées</strong>, pas comme des faits certifiés. Il survit à l'ouverture d'un nouveau Salon sur ce navigateur. Rien n'est transmis à un serveur ou à une IA sans ton action.</p>
+<label class="pieceOption"><input id="vrmActiver" type="checkbox">
+<span><strong>Activer la VRM locale</strong> et enregistrer les échanges disponibles de ce navigateur</span></label>
+<label class="pieceOption"><input id="vrmPartagerIA" type="checkbox" disabled>
+<span><strong>Partager les extraits pertinents avec l'IA du prochain tour</strong> (AI Horde ou SPARKTIATES) — désactivé à chaque ouverture. Les travailleurs AI Horde sont externes.</span></label>
+<div class="row"><button type="button" id="vrmApercu">Voir les extraits scientifiques préparés</button></div>
+<pre id="vrmExtrait" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;font-size:12px" aria-label="Extraits vérifiables de la mémoire"></pre>
+<details>
+<summary>Synchronisation privée vers un serveur SPARKTIATES réel (facultatif)</summary>
+<p class="notice">Le serveur SPARKTIATES doit être démarré et accessible par HTTPS depuis le téléphone. Un serveur virtuel écrit dans le code ne fournit aucun stockage distant tant qu'il n'est pas réellement exécuté. Le jeton n'est pas conservé par la Radio.</p>
+<label for="vrmServeurAdresse">Adresse HTTPS SPARKTIATES</label>
+<input id="vrmServeurAdresse" type="url" style="width:100%" placeholder="https://ton-serveur-spartiates.exemple" autocomplete="off" spellcheck="false">
+<label for="vrmServeurJeton">Jeton privé SPARKTIATES</label>
+<input id="vrmServeurJeton" type="password" style="width:100%" placeholder="Jeton du serveur, non enregistré" autocomplete="off">
+<div class="row">
+<button type="button" id="vrmPush">Archiver sur SPARKTIATES</button>
+<button type="button" id="vrmPull">Récupérer du serveur</button>
+</div>
+</details>
+<small id="vrmEtat" role="status">VRM désactivée. Aucune transmission automatique.</small>
+</details>
 <section class="card">
 <label for="moi"><strong>Votre message</strong></label>
 <textarea id="moi" rows="5" enterkeyhint="enter" aria-describedby="aideSaisie" placeholder="Écrivez votre message ici… Entrée crée une nouvelle ligne."></textarea>
@@ -361,7 +384,7 @@ details.card[open]>summary{margin-bottom:14px}
 </footer>
 </main>
 <script defer src="./presence.js"></script>
-<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=3&amp;pollinations=4&amp;sparktiates=1&amp;diagnostic=3&amp;reprise=20261115d"></script>
+<script type="module" src="./tchat-distant.mjs?v=budget-1&amp;horde=3&amp;mobile=3&amp;pollinations=4&amp;sparktiates=1&amp;vrm=1&amp;diagnostic=3&amp;reprise=20261115d"></script>
 <script type="module" src="./tchat-images.mjs?v=images-audit-1"></script>
 <script type="module" src="./bookmark.mjs?v=favoris-1"></script>
 </body></html>
