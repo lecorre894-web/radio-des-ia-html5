@@ -3,15 +3,14 @@
  * The same PoW chain is shared among all vertices and 2048 relay channels.
  * Private IPC only. No wallet seed, secret or private key is printed.
  */
-import {newIdentity,address} from "./chain-core.mjs";
+
 import {makeBatonCandidate,expectedRoute,BATON_V3} from "./baton-v3.mjs";
 import {balanceV2} from "./pow-v2.mjs";
 import {mineV2Sequential} from "./pow-v2-miner.mjs";
 import {createBatonOverlay} from "./baton-v3-overlay.mjs";
-import {createBatonLedger} from "./baton-v3-ledger.mjs";
+import {createBatonLedger,createOrLoadBatonWallet} from "./baton-v3-ledger.mjs";
 
-let overlay=null,ledger=null;
-const wallet=newIdentity(),owner=address(wallet.publicKey);
+let overlay=null,ledger=null,wallet=null,owner=null;
 async function handle(msg){
   const {type,requestId}=msg||{};
   if(!Number.isSafeInteger(requestId))return;
@@ -20,6 +19,8 @@ async function handle(msg){
     if(type==="START"){
       if(overlay)throw Error("Vertex already online");
       ledger=createBatonLedger({vertex:msg.vertex,directory:msg.directory});
+      wallet=createOrLoadBatonWallet({vertex:msg.vertex,directory:msg.directory});
+      owner=wallet.owner;
       overlay=createBatonOverlay({
         vertex:msg.vertex,secret:msg.secret,
         initialChain:ledger.state.chain,
