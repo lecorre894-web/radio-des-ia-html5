@@ -3,7 +3,7 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
-import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
+import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=reprise-simple-20261115";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
@@ -216,7 +216,11 @@ function buttonStates(){
   const readiness=engineReadiness();
   const indicator=$("moteurComposer");
   if(indicator)indicator.textContent=readiness.ready
-    ?"Moteur sélectionné : "+readiness.label+" · prêt à recevoir la demande."
+    ?isHordeMode()
+      ?"Modèle AI Horde sélectionné : "+readiness.label+
+        ". La disponibilité d'un travailleur n'est pas garantie."+
+        (unansweredHuman()?" Dernier message conservé : utilise « Répondre à ma dernière question ».":"")
+      :"Moteur sélectionné : "+readiness.label+" · prêt à recevoir la demande."
     :"Moteur sélectionné : "+readiness.label+" · PAS ENCORE PRÊT. "+readiness.reason;
   const retry=$("reessayerDernier");
   if(retry)retry.disabled=state.busy || state.auto || !unansweredHuman();
