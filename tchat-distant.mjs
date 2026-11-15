@@ -7,6 +7,7 @@ import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mj
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
 import {sparktiatesEndpoint,sparktiatesModels,sparktiatesChat,buildSparktiatesMessages} from "./tchat-sparktiates.mjs?v=1";
+import {createVrmController} from "./tchat-vrm.mjs?v=1";
 // Le module documents est optionnel : une erreur d'import ne doit pas désactiver le Salon.
 
 const $ = id => document.getElementById(id);
@@ -22,6 +23,7 @@ let pollinationsLoading=false;
 let pollinationsApproved=false;
 let sparktiatesModelsReady=[];
 let sparktiatesLoading=false;
+let vrmController=null;
 const KEY = "radio-salon-distant-v1";
 const DRAFT_KEY = "radio-salon-brouillon-v1";
 const START = [
@@ -81,6 +83,8 @@ function save(){
     }));
   }catch{status("Stockage local saturé : exporte ta conversation pour en conserver une copie.");}
   renderLineageStatus();
+  // VRM is optional, asynchronous and separate from the original Salon key.
+  vrmController?.observe(state.messages);
 }
 function restore(){
   try{
@@ -700,6 +704,9 @@ async function nextHordeTurn(){
     history:state.messages,topic:$("sujet").value||state.sujet,
     role:role.nom+" — "+role.specialite,includeHistory:shareHistory
   });
+  const lastQuestion=[...state.messages].reverse().find(m=>m.origin==="human")?.texte||"";
+  const vrmContext=vrmController?.context(lastQuestion)||"";
+  if(vrmContext)prompt[0].content+="\n"+vrmContext;
   const current={origin:"ai",nom:"AI Horde · "+role.nom,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);
@@ -995,6 +1002,9 @@ async function nextSparktiatesTurn(){
     role:role.nom+" — "+role.specialite,
     shareHistory:Boolean($("sparktiatesPartagerContexte").checked)
   });
+  const humanQuestion=[...state.messages].reverse().find(m=>m.origin==="human")?.texte||"";
+  const vrmContext=vrmController?.context(humanQuestion)||"";
+  if(vrmContext)messages[0].content+="\n"+vrmContext;
   const current={origin:"ai",nom:"SPARKTIATES · "+role.nom,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);state.current=current;state.busy=true;
@@ -1147,6 +1157,23 @@ function installButtonViewportGuard(){
 function init(){
   restore();
   installButtonViewportGuard();
+  // Separate opt-in scientific memory; no writes to the stable Salon format.
+  vrmController=createVrmController({
+    getMessages:()=>state.messages,
+    getTopic:()=>state.sujet,
+    getBusy:()=>state.busy,
+    getShare:()=>Boolean($("vrmPartagerIA")?.checked),
+    getServerConfig:()=>({
+      endpoint:$("vrmServeurAdresse")?.value?.trim()||
+        $("sparktiatesAdresse")?.value?.trim()||"",
+      token:$("vrmServeurJeton")?.value?.trim()||
+        $("sparktiatesToken")?.value?.trim()||""
+    })
+  });
+  void vrmController.init().catch(e=>{
+    const box=$("vrmEtat");
+    if(box)box.textContent="VRM indisponible : "+String(e.message||e);
+  });
   const selection=$("modeleRecherche");
   for(const model of RESEARCH_MODELS){
     const option=document.createElement("option");
