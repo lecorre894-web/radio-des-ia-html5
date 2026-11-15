@@ -8,8 +8,9 @@ import {makeBatonCandidate,expectedRoute,BATON_V3} from "./baton-v3.mjs";
 import {balanceV2} from "./pow-v2.mjs";
 import {mineV2Sequential} from "./pow-v2-miner.mjs";
 import {createBatonOverlay} from "./baton-v3-overlay.mjs";
+import {createBatonLedger} from "./baton-v3-ledger.mjs";
 
-let overlay=null;
+let overlay=null,ledger=null;
 const wallet=newIdentity(),owner=address(wallet.publicKey);
 async function handle(msg){
   const {type,requestId}=msg||{};
@@ -18,8 +19,11 @@ async function handle(msg){
   try{
     if(type==="START"){
       if(overlay)throw Error("Vertex already online");
+      ledger=createBatonLedger({vertex:msg.vertex,directory:msg.directory});
       overlay=createBatonOverlay({
-        vertex:msg.vertex,secret:msg.secret
+        vertex:msg.vertex,secret:msg.secret,
+        initialChain:ledger.state.chain,
+        onState:next=>ledger.persist(next)
       });
       const listener=await overlay.listen();
       reply({listener,owner,vertex:overlay.vertex});
@@ -37,6 +41,8 @@ async function handle(msg){
         issued:overlay.state.supply,
         balance:balanceV2(overlay.state,owner),
         owner,nextRelay:next.relayId,nextVertex:next.triangleVertex,
+        ledger:{height:ledger.state.height,tip:ledger.state.hash,
+          entries:ledger.verify().entries.length},
         peers:overlay.peers,stats:overlay.stats
       });
     }else if(type==="MINE"){
