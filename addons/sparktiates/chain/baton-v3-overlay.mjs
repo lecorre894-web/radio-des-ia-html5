@@ -26,7 +26,7 @@ const auth=(key,value)=>createHmac("sha256",key)
 
 export function createBatonOverlay({
   vertex,secret,host="127.0.0.1",port=0,
-  initialChain=null,onEvent=()=>{}
+  initialChain=null,onEvent=()=>{},onState=()=>{}
 }={}){
   check(BATON_V3.vertices.includes(vertex),"sommet A, B ou C requis");
   check(typeof secret==="string"&&secret.length>=32,
@@ -139,6 +139,7 @@ export function createBatonOverlay({
         if(selected.selected==="candidate"){
           const next=replayBatonChain(msg.blocks);
           const added=Math.max(0,next.height-state.height);
+          onState(next,{source:"P2P_SYNC",peer:ctx.vertex});
           state=next;stats.adoptedBlocks+=added;
           emit("SYNCED",{height:state.height,hash:state.hash});
           broadcast(head(),ctx);
@@ -236,6 +237,7 @@ export function createBatonOverlay({
       check(route.triangleVertex===vertex,
         "this vertex is not scheduled to generate the next block");
       const next=acceptBatonBlock(state,block);
+      onState(next,{source:"LOCAL_MINING",vertex});
       state=next;
       broadcast(head());
       emit("MINED",{height:state.height,relayId:route.relayId,hash:state.hash});
