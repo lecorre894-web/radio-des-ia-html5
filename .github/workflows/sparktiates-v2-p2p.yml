@@ -1,0 +1,40 @@
+name: SPARKTIATES V2 — Retarget puis P2P Full Duplex × 2048
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'addons/sparktiates/chain/pow-v2*.mjs'
+      - 'addons/sparktiates/chain/pow-networks.mjs'
+      - 'addons/sparktiates/chain/pow-overlay-duplex.mjs'
+      - 'tests/sparktiates-pow-v2-p2p.test.mjs'
+      - '.github/workflows/sparktiates-v2-p2p.yml'
+permissions:
+  contents: read
+jobs:
+  private-pow-overlay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vérifier la syntaxe des modules
+        run: |
+          node --check addons/sparktiates/chain/pow-v2.mjs
+          node --check addons/sparktiates/chain/pow-v2-miner.mjs
+          node --check addons/sparktiates/chain/pow-v2-worker.mjs
+          node --check addons/sparktiates/chain/pow-networks.mjs
+          node --check addons/sparktiates/chain/pow-overlay-duplex.mjs
+      - name: 'A — 2048 réseaux à genèse indépendante'
+        run: node --test --test-name-pattern='^A:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'B — calcul SHA256d'
+        run: node --test --test-name-pattern='^B:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'C — minage physique CPU'
+        run: node --test --test-name-pattern='^C:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'D — concordance PoW / UTXO / émission'
+        run: node --test --test-name-pattern='^D:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'E — régulation difficulté après concordance'
+        run: node --test --test-name-pattern='^E:' tests/sparktiates-pow-v2-p2p.test.mjs
+      - name: 'F — synchronisation P2P Full Duplex et isolation entre réseaux'
+        run: node --test --test-name-pattern='^F:' tests/sparktiates-pow-v2-p2p.test.mjs
