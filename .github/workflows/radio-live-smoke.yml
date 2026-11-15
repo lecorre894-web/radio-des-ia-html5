@@ -1,0 +1,20 @@
+name: "Radio IA — essai réel AI Horde (Bonjour)"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/radio-live-smoke.mjs'
+      - '.github/workflows/radio-live-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  live-horde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Un seul Bonjour au worker AI Horde réellement disponible
+        run: node scripts/radio-live-smoke.mjs
