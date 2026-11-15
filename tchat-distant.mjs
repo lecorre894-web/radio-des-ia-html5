@@ -3,7 +3,8 @@ import {updateLineageMemory,archiveLineageSession} from "./tchat-lineage.mjs?v=l
 import {boundedTokens,requestSize,formatUsageSummary} from "./tchat-budget.mjs?v=budget-1";
 import {resolveParticipantModel,nextEligibleIndex,providerForSpeaker,providerMatches,catalogOptions} from "./tchat-models.mjs?v=diagnostic-1";
 import {RESEARCH_MODELS,RESEARCH_ROLES,researchPrompts} from "./tchat-recherche-core.mjs?v=1";
-import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=1";
+import {listHordeModels,chatWithHorde,buildHordeMessages} from "./tchat-horde.mjs?v=2";
+import {routeHordeQuestion,detectHordeMetaOutput,generalistRetryMessages} from "./tchat-horde-quality.mjs?v=1";
 import {addHordeAvailability,chooseResponsiveHorde,getHordeAvailability,modelSizeB,HORDE_WAIT_LIMIT_MS} from "./tchat-horde-availability.mjs?v=1";
 import {loadPuter} from "./puter-lazy.mjs?v=1";
 import {POLLINATIONS_PENDING,POLLINATIONS_ACCESS,POLLINATIONS_APP,POLLINATIONS_CLIENT_ID,createPollinationsAuthorization,verifyPollinationsClient,exchangePollinationsCode,listPollinationsModels,buildPollinationsMessages,chatWithPollinations,isPollinationsCreditRefusal} from "./tchat-pollinations.mjs?v=4";
@@ -664,12 +665,12 @@ async function nextHordeTurn(){
     state.auto=false;status("AI Horde ne reçoit pas les pièces jointes. Désactive l'inclusion des documents pour continuer.");buttonStates();return;
   }
   const shareHistory=Boolean($("hordePartagerContexte")?.checked);
-  const role=RESEARCH_ROLES[state.hordeIndex%RESEARCH_ROLES.length];
+  const topic=$("sujet").value||state.sujet;
+  const route=routeHordeQuestion({history:state.messages,topic});
   const prompt=buildHordeMessages({
-    history:state.messages,topic:$("sujet").value||state.sujet,
-    role:role.nom+" — "+role.specialite,includeHistory:shareHistory
+    history:state.messages,topic,role:route.role,includeHistory:shareHistory
   });
-  const current={origin:"ai",nom:"AI Horde · "+role.nom,modele:model,
+  const current={origin:"ai",nom:"AI Horde · "+route.label,modele:model,
     heure:new Date().toLocaleTimeString("fr-FR"),texte:""};
   state.messages.push(current);
   state.current=current;
@@ -696,15 +697,38 @@ async function nextHordeTurn(){
       model,messages:prompt,maxTokens:boundedTokens($("longueur").value),
       signal:state.controller.signal
     });
-    const normalized=cleanAnswer(answer.text,state.participants);
+    let normalized=cleanAnswer(answer.text,state.participants);
+    let metaIssue=detectHordeMetaOutput(normalized);
+    let actualModel=answer.model;
+    if(metaIssue){
+      // ONE bounded retry, only for an exposed meta-prompt/non-answer.
+      // The same real model is asked with a smaller generalist instruction.
+      // Never retry automatically after an API error or network timeout.
+      status("AI Horde : réponse interne ou hors sujet détectée ("+metaIssue+
+        "). Une seule reformulation généraliste est tentée, sans toucher à ton message.");
+      const retryMessages=generalistRetryMessages({
+        history:state.messages.filter(m=>m!==current),topic,domain:route.id
+      });
+      if(!retryMessages.length)throw Error("Réponse non pertinente, question introuvable.");
+      const retry=await chatWithHorde({
+        model,messages:retryMessages,maxTokens:boundedTokens($("longueur").value),
+        signal:state.controller.signal
+      });
+      normalized=cleanAnswer(retry.text,state.participants);
+      actualModel=retry.model;
+      metaIssue=detectHordeMetaOutput(normalized);
+      if(metaIssue)throw Error("Deux réponses méta ou hors sujet ont été rejetées. "+
+        "Essaie un autre modèle AI Horde, sans ressaisir ta question.");
+    }
     const issue=qualityIssue(normalized,state.messages.filter(m=>m!==current));
     if(issue)throw Error("Réponse rejetée : "+issue);
     current.texte=normalized;
-    current.modele=answer.model;
+    current.modele=actualModel;
     state.hordeIndex++;
     state.tours++;
-    status("AI Horde : réponse réelle de "+answer.model+
-      " enregistrée. Tour n°"+state.tours+". Aucun crédit Puter utilisé.");
+    status("AI Horde : réponse de "+actualModel+
+      " acceptée pour le domaine « "+route.label+" ». Tour n°"+
+      state.tours+". Aucun crédit Puter utilisé.");
     speech(current.nom,current.texte);
   }catch(e){
     state.messages=state.messages.filter(m=>m!==current);
