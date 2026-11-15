@@ -313,12 +313,41 @@ function makeMessage(m){
   }
   return {card,text};
 }
+// Les bulles conservées évitent l'effondrement puis la reconstruction du fil,
+// principale cause des déplacements de la page après un clic sur Chrome Android.
+const renderedMessageViews=new WeakMap();
 function render(){
-  const host=$("fil");host.replaceChildren();
-  for(const m of state.messages.slice(-100)){
-    const view=makeMessage(m);
-    host.append(view.card);
-    if(m===state.current)state.activeCard=view.text;
+  const host=$("fil");
+  const messages=state.messages.slice(-100);
+  const views=messages.map(m=>{
+    const creditError=["ai","error"].includes(m.origin) &&
+      String(m.nom||"").startsWith("Pollinations") &&
+      (m.erreurCode==="POLLINATIONS_CREDITS" || isPollinationsCreditRefusal(m.texte));
+    let view=renderedMessageViews.get(m);
+    if(!view || view.creditError!==creditError){
+      view=makeMessage(m);
+      view.creditError=creditError;
+      renderedMessageViews.set(m,view);
+    }else if(!creditError){
+      const nextText=m.texte||"⏳ Réflexion en cours…";
+      if(view.text.textContent!==nextText)view.text.textContent=nextText;
+      const meta=view.card.querySelector(".meta");
+      if(meta){
+        const value=String(m.nom||"Participant")+" · "+String(m.heure||"")+
+          (m.modele?" · "+m.modele:"");
+        if(meta.textContent!==value)meta.textContent=value;
+      }
+    }
+    return view;
+  });
+  const wanted=new Set(views.map(v=>v.card));
+  for(const card of Array.from(host.children)){
+    if(!wanted.has(card))card.remove();
+  }
+  for(let i=0;i<views.length;i++){
+    if(host.children[i]!==views[i].card)
+      host.insertBefore(views[i].card,host.children[i]||null);
+    if(messages[i]===state.current)state.activeCard=views[i].text;
   }
   $("compteur").textContent=state.tours+" tours";
   save();
