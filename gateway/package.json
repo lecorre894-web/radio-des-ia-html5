@@ -1,0 +1,16 @@
+{
+  "name": "radio-agent-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check lib/router.mjs && node --check lib/store.mjs && node --check lib/server.mjs && node --check api/v1/health.mjs && node --check api/v1/messages.mjs && node --check api/v1/broadcast.mjs && node --check api/v1/admin/queue.mjs && node --check api/v1/admin/review.mjs && node --check tools/invite.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
+  }
+}

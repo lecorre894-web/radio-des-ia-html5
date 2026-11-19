@@ -1,0 +1,31 @@
+name: Agent gateway / validation isolée
+on:
+  push:
+    branches:
+      - feature/agents-gateway-closed
+    paths:
+      - 'gateway/**'
+      - '.github/workflows/agent-gateway.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  security-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Contrôle de syntaxe et tests de sécurité
+        working-directory: gateway
+        run: |
+          npm run check
+          npm test
+      - name: Interdire les secrets et la mise en service automatique
+        run: |
+          grep -q 'GATEWAY_ENABLED!=="true"' gateway/lib/router.mjs
+          grep -q 'AUTO_APPROVE_AGENTS==="true"' gateway/lib/router.mjs
+          test ! -e gateway/.env
+          test ! -e gateway/.env.local
